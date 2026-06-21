@@ -1,0 +1,6 @@
+{
+  "name": "Paths to Power: World Election Simulator",
+  "description": "A comprehensive political strategy simulation where you select countries on a world map to manage parliament, party congresses, create parties, and lead election campaigns.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
