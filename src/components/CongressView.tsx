@@ -18,6 +18,8 @@ interface CongressViewProps {
   onUpdateParty: (updatedParty: Party) => void;
   onSpendTurn: () => void;
   darkMode: boolean;
+  isJuniorMember?: boolean;
+  onWinLeadership?: () => void;
 }
 
 export const CongressView: React.FC<CongressViewProps> = ({
@@ -26,6 +28,8 @@ export const CongressView: React.FC<CongressViewProps> = ({
   onUpdateParty,
   onSpendTurn,
   darkMode,
+  isJuniorMember = false,
+  onWinLeadership,
 }) => {
   const [delegates, setDelegates] = useState<Delegate[]>([]);
   const [activeSpeechIndex, setActiveSpeechIndex] = useState<number | null>(null);
@@ -255,7 +259,42 @@ export const CongressView: React.FC<CongressViewProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full py-2">
+    <div className="flex flex-col gap-6 w-full">
+      {isJuniorMember && (
+        <div className={`p-6 rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-4 ${
+          darkMode ? 'bg-indigo-950/25 border-indigo-500/30' : 'bg-indigo-50/50 border-indigo-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl select-none">👑</span>
+            <div>
+              <h3 className="text-sm font-black tracking-tight text-indigo-400">JUNIOR MEMBER CONGRESS CHALLENGE</h3>
+              <p className="text-xs text-slate-300 mt-1">
+                You are currently a junior member of <strong>{party.name}</strong>. You must secure at least <strong>50%</strong> delegate loyalty to call an extraordinary congress and claim the party leadership.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0">
+            {averageLoyalty >= 50 ? (
+              <button
+                id="claim-leadership-btn"
+                type="button"
+                onClick={() => {
+                  if (onWinLeadership) onWinLeadership();
+                }}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold text-xs cursor-pointer shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all transform hover:scale-105"
+              >
+                💥 TRIGGER EXTRAORDINARY CONGRESS! ({averageLoyalty}% Loyalty)
+              </button>
+            ) : (
+              <div className="px-5 py-2.5 rounded-xl bg-slate-500/10 border border-slate-500/20 text-xs text-slate-400 font-bold">
+                🔒 {averageLoyalty}% / 50% Loyalty Required
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full py-2">
       {/* Delegates Directory */}
       <div className="col-span-12 lg:col-span-6 flex flex-col gap-4">
         <div className={`p-5 rounded-3xl border ${
@@ -600,6 +639,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

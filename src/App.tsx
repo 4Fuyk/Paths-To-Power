@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Country, Party } from './types';
+import { Country, Party, MinisterCandidate, Coalition } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
 import { ThemeToggle } from './components/ThemeToggle';
 import { WorldMap } from './components/WorldMap';
@@ -50,13 +50,19 @@ export default function App() {
   // Sovereign Government and Diplomacy States
   const [isRuling, setIsRuling] = useState<boolean>(false);
   const [hasReshuffledPrompt, setHasReshuffledPrompt] = useState<boolean>(false);
+  const [coalitions, setCoalitions] = useState<Coalition[]>([]);
+  const [rulingMonthsCount, setRulingMonthsCount] = useState<number>(0);
+  const [isJuniorMember, setIsJuniorMember] = useState<boolean>(false);
+  const [currentEvent, setCurrentEvent] = useState<{
+    title: string;
+    description: string;
+    options: {
+      text: string;
+      effect: () => void;
+    }[];
+  } | null>(null);
 
-  const [cabinet, setCabinet] = useState<Record<string, { name: string; avatar: string; skill: string; bonus: string; salary: number }>>({
-    finance: { name: 'Unassigned', avatar: '💼', skill: 'None', bonus: 'None', salary: 0 },
-    interior: { name: 'Unassigned', avatar: '🛡️', skill: 'None', bonus: 'None', salary: 0 },
-    defense: { name: 'Unassigned', avatar: '⚔️', skill: 'None', bonus: 'None', salary: 0 },
-    foreign: { name: 'Unassigned', avatar: '🌐', skill: 'None', bonus: 'None', salary: 0 }
-  });
+  const [cabinet, setCabinet] = useState<Record<string, MinisterCandidate | null>>({});
 
   const [taxRates, setTaxRates] = useState({
     income: 25,
@@ -259,13 +265,195 @@ export default function App() {
           regions: updatedRegions
         };
         setSelectedCountry(updatedCountry);
+        setIsJuniorMember(true);
+      } else {
+        setIsJuniorMember(false);
       }
     }
 
     setPlayerParty(party);
     setCampaignTurn(1);
-    setDashboardTab('CAMPAIGN');
+    const startTab = (selectedCountry && party && (party.id === 'player_party' && !party.photo)) ? 'CAMPAIGN' : 'CONGRESS';
+    setDashboardTab(startTab);
     setActiveScreen('MAIN_DASHBOARD');
+  };
+
+  const handleWinLeadership = () => {
+    setIsJuniorMember(false);
+    setDashboardTab('CAMPAIGN');
+  };
+
+  const getNextElectionCountdown = () => {
+    if (!selectedCountry) return "";
+    const total = selectedCountry.electionCycleYears * 12;
+    const remaining = total - rulingMonthsCount;
+    if (remaining <= 0) return "Election day is now!";
+    const yrs = Math.floor(remaining / 12);
+    const mos = remaining % 12;
+    let str = "";
+    if (yrs > 0) str += `${yrs} year${yrs > 1 ? 's' : ''} `;
+    if (mos > 0) str += `${mos} month${mos > 1 ? 's' : ''} `;
+    return `${str.trim()} left`;
+  };
+
+  const handleNextMonth = () => {
+    if (!selectedCountry) return;
+
+    playSound('success');
+
+    // 1. Advance the months count
+    const nextMonths = rulingMonthsCount + 1;
+    setRulingMonthsCount(nextMonths);
+
+    // Calculate tax revenues based on tax rates
+    const incomeTaxRevenue = taxRates.income * 1200;
+    const corporateTaxRevenue = taxRates.corporate * 1500;
+    const vatRevenue = taxRates.vat * 1000;
+    const tariffRevenue = taxRates.tariffs * 400;
+    
+    const baseTaxYield = (incomeTaxRevenue + corporateTaxRevenue + vatRevenue + tariffRevenue);
+    
+    // Find finance/treasury minister
+    const financeMinister = cabinet['finance'] || cabinet['treasury'];
+    const financeCompetence = financeMinister ? financeMinister.competence : 0;
+    const financeMultiplier = 1 + (financeCompetence * 0.003);
+    
+    // final tax revenue scaled by investor confidence
+    const finalTaxRevenue = Math.round(baseTaxYield * (investorConfidence / 100) * financeMultiplier);
+    
+    // expenses: base + inflation + minister salaries
+    const baseGovExpenses = 45000;
+    const inflationImpact = Math.round(inflation * 4500);
+    const ministerSalariesSum = Object.values(cabinet).reduce((sum: number, c) => sum + (c ? 15000 : 0), 0) as number;
+    const totalExpenses = baseGovExpenses + inflationImpact + ministerSalariesSum;
+    
+    const netMonthlyChange = finalTaxRevenue - totalExpenses;
+    const nextTreasury = Math.max(0, treasury + netMonthlyChange);
+    setTreasury(nextTreasury);
+
+    // 2. Economic & confidence indicators drift
+    const taxConfidenceImpact = (taxRates.corporate > 35 ? -2 : 0) + (taxRates.income > 40 ? -2 : 0);
+    const inflationDelta = (inflation > 2.5 ? -0.15 : 0.05) - (financeCompetence * 0.003);
+    const nextInflation = Math.max(1.0, parseFloat((inflation + inflationDelta).toFixed(2)));
+    setInflation(nextInflation);
+
+    const confidenceDelta = taxConfidenceImpact + (nextInflation > 7.5 ? -3 : 2);
+    const nextConfidence = Math.max(10, Math.min(100, investorConfidence + confidenceDelta));
+    setInvestorConfidence(nextConfidence);
+
+    // 3. National election countdown check
+    const totalCycleMonths = selectedCountry.electionCycleYears * 12;
+    if (nextMonths >= totalCycleMonths) {
+      alert(`Your ruling term is complete! It is time for the next General Elections in ${selectedCountry.name}!`);
+      setIsRuling(false);
+      setCampaignTurn(1);
+      setRulingMonthsCount(0);
+      setActiveScreen('ELECTION_SIMULATOR');
+      return;
+    }
+
+    // 4. Random Crisis / Governance Events (every 3 months, or 25% chance)
+    const shouldTriggerEvent = nextMonths % 3 === 0 || Math.random() < 0.25;
+    if (shouldTriggerEvent) {
+      const events = [
+        {
+          title: "Public Sector Infrastructure Project",
+          description: "Your Minister of Transport proposes a massive investment in new high-speed rail lines to boost rural economies. It will cost the treasury but improve public approval.",
+          options: [
+            {
+              text: "Fund the project (Costs 150,000)",
+              effect: () => {
+                setTreasury(prev => Math.max(0, prev - 150000));
+                setInvestorConfidence(prev => Math.min(100, prev + 8));
+                setFreedomIndex(prev => Math.min(100, prev + 5));
+                alert("Infrastructure project funded! Public transport is modernized, boosting approval and long-term confidence.");
+              }
+            },
+            {
+              text: "Austerity: Focus on Budget Balance",
+              effect: () => {
+                setTreasury(prev => prev + 50000);
+                setInvestorConfidence(prev => Math.max(10, prev - 5));
+                alert("Budget austerity maintained! Savings of 50,000 added to state reserves.");
+              }
+            }
+          ]
+        },
+        {
+          title: "Sudden Inflation Shock",
+          description: "Global commodity prices are rising rapidly, causing immediate inflation spikes in domestic markets. How do you respond?",
+          options: [
+            {
+              text: "Impose Price Controls (-5 Freedom, -2% Inflation)",
+              effect: () => {
+                setFreedomIndex(prev => Math.max(10, prev - 5));
+                setInflation(prev => Math.max(1.0, parseFloat((prev - 2.0).toFixed(2))));
+                alert("Price controls imposed! Inflation is curbed but individual freedom suffers.");
+              }
+            },
+            {
+              text: "Rely on Market Correction (-8% Confidence, +3% Inflation)",
+              effect: () => {
+                setInvestorConfidence(prev => Math.max(10, prev - 8));
+                setInflation(prev => parseFloat((prev + 3.0).toFixed(2)));
+                alert("Let the market decide. Inflation rises but investors appreciate the lack of state interference.");
+              }
+            }
+          ]
+        },
+        {
+          title: "Trade Tariff Negotiation",
+          description: "A major neighboring coalition proposes a reciprocal trade deal. They demand we lower our import tariffs in exchange for higher access.",
+          options: [
+            {
+              text: "Accept Lower Tariffs (-5% Tariffs, +15% Confidence)",
+              effect: () => {
+                setTaxRates(prev => ({ ...prev, tariffs: Math.max(0, prev.tariffs - 5) }));
+                setInvestorConfidence(prev => Math.min(100, prev + 15));
+                alert("Tariffs lowered! International trade surges, boosting investor confidence massively.");
+              }
+            },
+            {
+              text: "Protect Domestic Industry (+10% Tariffs, -5% Confidence)",
+              effect: () => {
+                setTaxRates(prev => ({ ...prev, tariffs: Math.min(50, prev.tariffs + 10) }));
+                setInvestorConfidence(prev => Math.max(10, prev - 5));
+                alert("Protective tariffs raised! Domestic factories are shielded, but import costs increase.");
+              }
+            }
+          ]
+        },
+        {
+          title: "Cabinet Integrity Scan",
+          description: "A major media outlet threatens to leak details of a tax evasion scandal involving one of your prominent cabinet ministers. How do you proceed?",
+          options: [
+            {
+              text: "Dismiss the suspect minister (+10 Freedom)",
+              effect: () => {
+                setFreedomIndex(prev => Math.min(100, prev + 10));
+                const keys = Object.keys(cabinet).filter(k => cabinet[k] !== null);
+                if (keys.length > 0) {
+                  const target = keys[Math.floor(Math.random() * keys.length)];
+                  setCabinet(prev => ({ ...prev, [target]: null }));
+                }
+                alert("Minister dismissed! Your prompt anti-corruption stance receives universal praise.");
+              }
+            },
+            {
+              text: "Cover up the scandal (-15 Freedom, -10 Confidence)",
+              effect: () => {
+                setFreedomIndex(prev => Math.max(10, prev - 15));
+                setInvestorConfidence(prev => Math.max(10, prev - 10));
+                alert("Scandal covered up. Word still leaked out slightly, damaging your international reputation.");
+              }
+            }
+          ]
+        }
+      ];
+
+      const chosenEvent = events[Math.floor(Math.random() * events.length)];
+      setCurrentEvent(chosenEvent);
+    }
   };
 
   // Spend turn action decrementer
@@ -346,12 +534,79 @@ export default function App() {
   };
 
   // Election simulator end callback
-  const handleElectionFinished = (success: boolean) => {
+  const handleElectionFinished = (success: boolean, finalSeats?: Record<string, number>) => {
     if (success && selectedCountry && playerParty) {
       // Add and save completed country
       if (!completedCountries.includes(selectedCountry.id)) {
         setCompletedCountries([...completedCountries, selectedCountry.id]);
       }
+
+      // Generate dynamic AI-to-AI coalitions if no majority
+      if (finalSeats) {
+        const playerSeats = finalSeats[playerParty.id] || 0;
+        const halfTotal = selectedCountry.seats / 2;
+        if (playerSeats < halfTotal) {
+          const partiesList = [
+            { id: playerParty.id, name: playerParty.name, seats: finalSeats[playerParty.id] || 0, ideology: playerParty.ideology },
+            ...selectedCountry.rivals.map(r => ({
+              id: r.id,
+              name: r.name,
+              seats: finalSeats[r.id] || 0,
+              ideology: r.ideology
+            }))
+          ];
+
+          const generated: Coalition[] = [];
+
+          const leftParties = partiesList.filter(p => p.id !== playerParty.id && (p.ideology.includes("Social") || p.ideology.includes("Left") || p.ideology.includes("Green") || p.ideology.includes("Marxist") || p.ideology.includes("Democratic Socialist") || p.ideology.includes("Socialist")));
+          const rightParties = partiesList.filter(p => p.id !== playerParty.id && (p.ideology.includes("Conservative") || p.ideology.includes("Nationalist") || p.ideology.includes("Islamist") || p.ideology.includes("Right") || p.ideology.includes("Religious")));
+          const centristParties = partiesList.filter(p => p.id !== playerParty.id && (p.ideology.includes("Centrist") || p.ideology.includes("Liberal") || p.ideology.includes("Moderate") || p.ideology.includes("Democrat")));
+
+          if (leftParties.length >= 2) {
+            const seatsSum = leftParties.reduce((sum, p) => sum + p.seats, 0);
+            generated.push({
+              name: "Socialist Alliance",
+              parties: leftParties.map(p => p.name),
+              totalSeats: seatsSum,
+              ideologyAvg: "Left-Wing Progressive"
+            });
+          } else if (leftParties.length === 1 && centristParties.length > 0) {
+            const pool = [...leftParties, centristParties[0]];
+            const seatsSum = pool.reduce((sum, p) => sum + p.seats, 0);
+            generated.push({
+              name: "Progressive Front",
+              parties: pool.map(p => p.name),
+              totalSeats: seatsSum,
+              ideologyAvg: "Socialist-Green Pact"
+            });
+          }
+
+          if (rightParties.length >= 2) {
+            const seatsSum = rightParties.reduce((sum, p) => sum + p.seats, 0);
+            generated.push({
+              name: "Conservative Bloc",
+              parties: rightParties.map(p => p.name),
+              totalSeats: seatsSum,
+              ideologyAvg: "National Coalition"
+            });
+          }
+
+          if (centristParties.length >= 2) {
+            const seatsSum = centristParties.reduce((sum, p) => sum + p.seats, 0);
+            generated.push({
+              name: "Centrist Pact",
+              parties: centristParties.map(p => p.name),
+              totalSeats: seatsSum,
+              ideologyAvg: "Grand Coalition"
+            });
+          }
+
+          setCoalitions(generated);
+        } else {
+          setCoalitions([]);
+        }
+      }
+
       setShowElectionSuccessModal(true);
       return;
     }
@@ -564,7 +819,7 @@ export default function App() {
                       className="w-16 h-16 rounded-full overflow-hidden border-2 shadow-md relative bg-slate-800"
                       style={{ borderColor: playerParty.color }}
                     >
-                      {playerParty.photo && selectedCountry.id !== 'DE' ? (
+                      {playerParty.photo ? (
                         <img 
                           src={playerParty.photo} 
                           alt={playerParty.leader} 
@@ -616,10 +871,10 @@ export default function App() {
                     <Calendar className="w-5 h-5 text-indigo-400 shrink-0 animate-pulse" />
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono font-bold uppercase">
-                        {isRuling ? 'YEARS IN POWER' : 'CAMPAIGN WEEK'}
+                        {isRuling ? 'NEXT ELECTION' : 'CAMPAIGN WEEK'}
                       </span>
-                      <div className="text-sm font-black font-mono">
-                        {isRuling ? 'Year 1 (Active Term)' : `${campaignTurn} / ${selectedCountry.campaignTurns} Wk`}
+                      <div className="text-xs font-black font-mono text-indigo-400">
+                        {isRuling ? getNextElectionCountdown() : `${campaignTurn} / ${selectedCountry.campaignTurns} Wk`}
                       </div>
                     </div>
                   </div>
@@ -666,6 +921,15 @@ export default function App() {
 
                 {/* 3. General election day triggers / Exit Sovereign */}
                 <div className="flex flex-row sm:flex-col gap-2 shrink-0">
+                  {isRuling && (
+                    <button
+                      id="next-month-btn"
+                      onClick={handleNextMonth}
+                      className="py-2.5 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 animate-pulse"
+                    >
+                      <Calendar className="w-3.5 h-3.5" /> Next Month
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       const msg = isRuling 
@@ -750,29 +1014,48 @@ export default function App() {
                   darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <button
-                    onClick={() => { playSound('click'); setDashboardTab('CAMPAIGN'); }}
+                    onClick={() => {
+                      if (isJuniorMember) {
+                        playSound('error');
+                        setWarningAlert("🔒 You must win the extraordinary party congress first to become the party leader before you can launch a national election campaign!");
+                        return;
+                      }
+                      playSound('click'); 
+                      setDashboardTab('CAMPAIGN'); 
+                    }}
                     className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
                       dashboardTab === 'CAMPAIGN'
                         ? 'bg-indigo-600 text-white shadow-md'
                         : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
                     }`}
                   >
-                    <Megaphone className="w-3.5 h-3.5" /> Campaign & Rallies
+                    <Megaphone className="w-3.5 h-3.5" /> Campaign & Rallies {isJuniorMember && '🔒'}
                   </button>
                   
                   <button
-                    onClick={() => { playSound('click'); setDashboardTab('PARLIAMENT'); }}
+                    onClick={() => {
+                      if (isJuniorMember) {
+                        playSound('error');
+                        setWarningAlert("🔒 Parliament access is restricted to official party leaders during active national campaigns.");
+                        return;
+                      }
+                      playSound('click'); 
+                      setDashboardTab('PARLIAMENT'); 
+                    }}
                     className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
                       dashboardTab === 'PARLIAMENT'
                         ? 'bg-indigo-600 text-white shadow-md'
                         : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
                     }`}
                   >
-                    <Landmark className="w-3.5 h-3.5" /> Parliament
+                    <Landmark className="w-3.5 h-3.5" /> Parliament {isJuniorMember && '🔒'}
                   </button>
 
                   <button
-                    onClick={() => { playSound('click'); setDashboardTab('CONGRESS'); }}
+                    onClick={() => {
+                      playSound('click'); 
+                      setDashboardTab('CONGRESS'); 
+                    }}
                     className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
                       dashboardTab === 'CONGRESS'
                         ? 'bg-indigo-600 text-white shadow-md'
@@ -783,14 +1066,22 @@ export default function App() {
                   </button>
 
                   <button
-                    onClick={() => { playSound('click'); setDashboardTab('FINANCE'); }}
+                    onClick={() => {
+                      if (isJuniorMember) {
+                        playSound('error');
+                        setWarningAlert("🔒 Junior members do not have access to the official party treasury.");
+                        return;
+                      }
+                      playSound('click'); 
+                      setDashboardTab('FINANCE'); 
+                    }}
                     className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
                       dashboardTab === 'FINANCE'
                         ? 'bg-indigo-600 text-white shadow-md'
                         : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
                     }`}
                   >
-                    <Coins className="w-3.5 h-3.5" /> Finance & Treasury
+                    <Coins className="w-3.5 h-3.5" /> Finance & Treasury {isJuniorMember && '🔒'}
                   </button>
 
                   <button
@@ -946,6 +1237,8 @@ export default function App() {
                 onUpdateCountry={setSelectedCountry}
                 onUpdateParty={setPlayerParty}
                 darkMode={darkMode}
+                coalitions={coalitions}
+                onUpdateCoalitions={setCoalitions}
               />
             )}
 
@@ -956,6 +1249,8 @@ export default function App() {
                 onUpdateParty={setPlayerParty}
                 onSpendTurn={handleSpendTurn}
                 darkMode={darkMode}
+                isJuniorMember={isJuniorMember}
+                onWinLeadership={handleWinLeadership}
               />
             )}
 
@@ -1225,6 +1520,52 @@ export default function App() {
               >
                 Dünya Haritasına Dön
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GOVERNANCE EVENT OVERLAY POPUP */}
+      {currentEvent && (
+        <div className="fixed inset-0 z-[130] h-full w-full bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className={`w-full max-w-lg rounded-3xl border p-8 flex flex-col gap-6 items-center text-center animate-scale-up ${
+            darkMode ? 'bg-slate-950 border-indigo-500/30' : 'bg-white border-slate-200 shadow-2xl'
+          }`}>
+            <div className="p-4 rounded-full bg-indigo-500/10 text-indigo-400 animate-bounce">
+              <Globe className="w-12 h-12" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
+                ⚠️ STATE GOVERNANCE ALERT • RANDOM EVENT
+              </span>
+              <h3 className={`text-xl font-black uppercase tracking-tight ${
+                darkMode ? 'text-slate-100' : 'text-slate-900'
+              }`}>
+                {currentEvent.title}
+              </h3>
+              <p className={`text-xs leading-relaxed ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                {currentEvent.description}
+              </p>
+            </div>
+
+            <div className="w-full flex flex-col gap-3">
+              {currentEvent.options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    playSound('click');
+                    opt.effect();
+                    setCurrentEvent(null);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-indigo-650 hover:bg-indigo-600 text-white font-bold text-xs shadow-md cursor-pointer text-left transition-all flex items-center justify-between group"
+                >
+                  <span>{opt.text}</span>
+                  <span className="text-indigo-400 group-hover:translate-x-1 transition-transform">➔</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

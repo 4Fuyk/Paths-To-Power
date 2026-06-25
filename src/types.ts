@@ -85,6 +85,30 @@ export interface Country {
   rivals: RivalParty[];
   bills: Bill[];
   campaignTurns: number; // Total weeks or campaign actions allowed
+  electionCycleYears: number; // election cycle frequency in years
+}
+
+export interface Coalition {
+  name: string;
+  parties: string[]; // party IDs (can include 'player' or playerParty.id, and rival ids)
+  totalSeats: number;
+  ideologyAvg: string;
+}
+
+export interface MinisterCandidate {
+  name: string;
+  party: string;
+  portrait?: string;
+  loyalty: number; // 1-100
+  competence: number; // 1-100
+  popularity: number; // 1-100
+  role?: string; // current assigned role if any
+}
+
+export interface Ministry {
+  id: string; // e.g. "finance", "defence"
+  name: string; // display name in English
+  assignedMinister: MinisterCandidate | null;
 }
 
 export interface GameState {

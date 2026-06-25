@@ -1,27 +1,17 @@
 import React, { useState } from 'react';
-import { Country, Party } from '../types';
+import { Country, Party, MinisterCandidate } from '../types';
 import { playSound } from '../lib/sounds';
-import { Briefcase, ArrowRight, CheckCircle, Shield, Landmark, Sparkles, User, Users, Coins, AlertTriangle } from 'lucide-react';
+import { CABINET_POSITIONS_BY_COUNTRY, POLITICIAN_CANDIDATES_POOL, CabinetPosition } from '../constants/cabinetData';
+import { Briefcase, ArrowRight, CheckCircle, Shield, Landmark, Sparkles, User, Users, Coins, AlertTriangle, ShieldCheck, Heart, Medal, X } from 'lucide-react';
 
 interface CabinetViewProps {
   country: Country;
   party: Party;
-  cabinet: Record<string, { name: string; avatar: string; skill: string; bonus: string; salary: number }>;
-  onUpdateCabinet: (updatedCabinet: any) => void;
+  cabinet: Record<string, MinisterCandidate | null>;
+  onUpdateCabinet: (updatedCabinet: Record<string, MinisterCandidate | null>) => void;
   treasury: number;
   onUpdateTreasury: (updatedTreasury: number) => void;
   darkMode: boolean;
-}
-
-export interface Candidate {
-  id: string;
-  name: string;
-  avatar: string;
-  skill: string;
-  bonus: string;
-  salary: number;
-  description: string;
-  specialty: 'finance' | 'interior' | 'defense' | 'foreign' | 'general';
 }
 
 export const CabinetView: React.FC<CabinetViewProps> = ({
@@ -33,127 +23,13 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   onUpdateTreasury,
   darkMode,
 }) => {
+  const [selectedPost, setSelectedPost] = useState<CabinetPosition | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Available Candidates Pool (Dynamic names based on country)
-  const isTurkey = country.id === 'TR';
-  const isGermany = country.id === 'DE';
-
-  const candidates: Candidate[] = [
-    {
-      id: 'cand_1',
-      name: isTurkey ? 'Ahmet Yılmaz' : isGermany ? 'Dr. Wolfgang Schmidt' : 'James Carter',
-      avatar: '👨‍💼',
-      specialty: 'finance',
-      skill: 'Economist',
-      bonus: '+5% Corporate & Income Tax Revenue, -1% Inflation',
-      salary: 15000,
-      description: isTurkey 
-        ? 'Maliye ve iktisat alanında 20 yıllık deneyim. Vergileri maximize eder.' 
-        : 'Former central bank director. Elite fiscal coordinator.',
-    },
-    {
-      id: 'cand_2',
-      name: isTurkey ? 'Zeynep Kaya' : isGermany ? 'Sophia Weber' : 'Sarah Jenkins',
-      avatar: '👩‍⚖️',
-      specialty: 'interior',
-      skill: 'Human Rights Jurist',
-      bonus: '+10 Freedom Index, +5% Public Approval, Lowers Unrest',
-      salary: 12000,
-      description: isTurkey 
-        ? 'Sivil özgürlükler ve anayasa hukuku uzmanı. Halk desteğini artırır.' 
-        : 'Constitutional law specialist. Safeguards press liberties.',
-    },
-    {
-      id: 'cand_3',
-      name: isTurkey ? 'Tuğgeneral Hakan Demir' : isGermany ? 'Gen. Gerhard von Bülow' : 'Gen. Arthur Vance',
-      avatar: '🎖️',
-      specialty: 'defense',
-      skill: 'Tactical Commander',
-      bonus: '-15% Civil War/Revolt Risk, +20 Military Readiness',
-      salary: 18000,
-      description: isTurkey 
-        ? 'Terörle mücadele ve savunma sanayii kıdemlisi. İsyan riskini sıfırlar.' 
-        : 'Military strategist. Drastically mitigates internal insurgencies.',
-    },
-    {
-      id: 'cand_4',
-      name: isTurkey ? 'Büyükelçi Selim Aras' : isGermany ? 'Dietrich von Ribbeck' : 'Julian Vance',
-      avatar: '🌐',
-      specialty: 'foreign',
-      skill: 'Veteran Diplomat',
-      bonus: '+15 International Reputation, +10 Diplomatic Relations globally',
-      salary: 14000,
-      description: isTurkey 
-        ? 'Eski Birleşmiş Milletler temsilcisi. Dış ilişkileri canlandırır.' 
-        : 'Experienced global negotiator. Lowers alliance treaty friction.',
-    },
-    {
-      id: 'cand_5',
-      name: isTurkey ? 'Meltem Şahin' : isGermany ? 'Franziska Brandt' : 'Eleanor Sterling',
-      avatar: '👩‍🎤',
-      specialty: 'general',
-      skill: 'Populist Spokesperson',
-      bonus: '+2% Monthly Popularity Boost across all regions',
-      salary: 10000,
-      description: isTurkey 
-        ? 'Medya ve halkla ilişkiler uzmanı. Parti tabanını diri tutar.' 
-        : 'Charismatic public relations lead. Keeps voters aligned.',
-    },
-    {
-      id: 'cand_6',
-      name: isTurkey ? 'Kemal Özkan' : isGermany ? 'Jan van Aken' : 'Heidi Reichinnek',
-      avatar: '👨‍🌾',
-      specialty: 'general',
-      skill: 'Social Coordinator',
-      bonus: '+10% Worker & Youth demographic support',
-      salary: 8000,
-      description: isTurkey 
-        ? 'Sendikal arka planı olan teşkilatçı. Alt gelir gruplarını bağlar.' 
-        : 'Union mediator. Deep roots in working class logistics.',
-    }
-  ];
-
-  const handleAppoint = (post: string, candidate: Candidate) => {
-    // Check if player has enough budget to hire this minister (at least salary * 2 as safety deposit)
-    if (treasury < candidate.salary) {
-      playSound('error');
-      setErrorMessage(`Insufficient National Treasury budget! Appointing ${candidate.name} requires paying a sign-on salary of ${candidate.salary.toLocaleString()}.`);
-      setSuccessMessage(null);
-      return;
-    }
-
-    // Deduct salary from treasury
-    onUpdateTreasury(treasury - candidate.salary);
-
-    const updatedCabinet = {
-      ...cabinet,
-      [post]: {
-        name: candidate.name,
-        avatar: candidate.avatar,
-        skill: candidate.skill,
-        bonus: candidate.bonus,
-        salary: candidate.salary,
-      }
-    };
-
-    onUpdateCabinet(updatedCabinet);
-    playSound('success');
-    setSuccessMessage(`Successfully appointed ${candidate.name} as your new Minister! Special Bonus: ${candidate.bonus} activated.`);
-    setErrorMessage(null);
-  };
-
-  const handleDismiss = (post: string) => {
-    const updatedCabinet = {
-      ...cabinet,
-      [post]: { name: 'Unassigned', avatar: '💼', skill: 'None', bonus: 'None', salary: 0 }
-    };
-    onUpdateCabinet(updatedCabinet);
-    playSound('error');
-    setSuccessMessage(`Minister has been dismissed from the cabinet post.`);
-    setErrorMessage(null);
-  };
+  const countryCode = country.id;
+  const positions = CABINET_POSITIONS_BY_COUNTRY[countryCode] || CABINET_POSITIONS_BY_COUNTRY['DE'];
+  const candidatesPool = POLITICIAN_CANDIDATES_POOL[countryCode] || POLITICIAN_CANDIDATES_POOL['DE'];
 
   const getCurrencySymbol = () => {
     if (country.id === 'US') return '$';
@@ -166,83 +42,194 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
 
   const currency = getCurrencySymbol();
 
+  // Appoint candidate to a specific post
+  const handleAppoint = (postKey: string, candidate: MinisterCandidate) => {
+    // 10k salary sign-on
+    const cost = 10000;
+    if (treasury < cost) {
+      playSound('error');
+      setErrorMessage(`Insufficient National Treasury! You need at least ${currency}${cost.toLocaleString()} to appoint a new minister.`);
+      setSuccessMessage(null);
+      return;
+    }
+
+    onUpdateTreasury(treasury - cost);
+
+    // If the candidate was already assigned to another post, free that post
+    const nextCabinet = { ...cabinet };
+    Object.keys(nextCabinet).forEach((k) => {
+      if (nextCabinet[k]?.name === candidate.name) {
+        nextCabinet[k] = null;
+      }
+    });
+
+    nextCabinet[postKey] = {
+      ...candidate,
+      role: postKey
+    };
+
+    onUpdateCabinet(nextCabinet);
+    playSound('success');
+    setSuccessMessage(`Successfully appointed ${candidate.name} as ${positions.find(p => p.id === postKey)?.name}!`);
+    setErrorMessage(null);
+    setSelectedPost(null);
+  };
+
+  // Dismiss minister from a post
+  const handleDismiss = (postKey: string) => {
+    const nextCabinet = { ...cabinet };
+    const dismissed = nextCabinet[postKey];
+    nextCabinet[postKey] = null;
+    onUpdateCabinet(nextCabinet);
+    playSound('error');
+    setSuccessMessage(dismissed ? `Dismissed ${dismissed.name} from office.` : `Position vacated.`);
+    setErrorMessage(null);
+  };
+
+  // Check if candidate is currently holding any office
+  const isCandidateAppointed = (name: string) => {
+    return Object.values(cabinet).some((c: any) => c && c.name === name);
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto p-4 lg:p-6 animate-fade-in flex flex-col gap-6">
       
-      {/* Reshuffle Notice Banner */}
-      <div className="p-5 rounded-3xl bg-gradient-to-r from-indigo-900/60 to-slate-900/60 border border-indigo-500/30 text-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Banner */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 text-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
-          <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> CABINET FORMATION ENGINE (GOVERNMENT PHASE)
+          <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" /> SOVEREIGN EXECUTIVE CABINET
           </span>
-          <h3 className="text-lg font-black tracking-tight mt-1">Form or Reshuffle Your Cabinet Ministers</h3>
-          <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-            Assign specialists to key government posts. Each minister draws a salary from the National Treasury every turn, but awards massive strategic buffs to your taxation, internal freedom index, and defense networks.
+          <h3 className="text-xl font-black tracking-tight mt-1 uppercase">Form or Reshuffle Your Cabinet</h3>
+          <p className="text-xs text-slate-450 mt-1.5 max-w-2xl leading-relaxed">
+            As Head of State of <strong className="text-white">{country.name}</strong>, appoint elite political figures to direct national policy. High competence boosts national stats (Finance increases tax yield, Defense lowers civil war risk). Low loyalty poses high scandal and betrayal risks!
           </p>
         </div>
-        <div className="flex flex-col items-end shrink-0">
-          <span className="text-[10px] font-mono text-slate-400">STATE TREASURY</span>
+        <div className="flex flex-col items-end bg-black/30 p-3.5 rounded-2xl border border-indigo-500/10 shrink-0">
+          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">STATE TREASURY</span>
           <span className="text-2xl font-black font-mono text-emerald-400">{currency}{treasury.toLocaleString()}</span>
         </div>
       </div>
 
       {successMessage && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-start gap-2.5">
-          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+          <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {errorMessage && (
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Grid of 4 Ministerial Posts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { key: 'finance', title: 'Minister of Finance', placeholder: '💼 No Fiscal Lead' },
-          { key: 'interior', title: 'Minister of Interior', placeholder: '🛡️ No Civil/Unrest Lead' },
-          { key: 'defense', title: 'Minister of Defense', placeholder: '⚔️ No Defence Commander' },
-          { key: 'foreign', title: 'Minister of Foreign Affairs', placeholder: '🌐 No Diplomacy Ambassador' }
-        ].map((post) => {
-          const assigned = cabinet[post.key];
-          const hasAssigned = assigned && assigned.name !== 'Unassigned';
+      {/* Grid of Ministries */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {positions.map((post) => {
+          const assigned = cabinet[post.id];
+          const hasAssigned = !!assigned;
 
           return (
             <div
-              key={post.key}
-              className={`p-5 rounded-3xl border flex flex-col justify-between gap-4 transition-all ${
+              key={post.id}
+              className={`p-5 rounded-3xl border flex flex-col justify-between gap-5 transition-all duration-300 ${
                 hasAssigned 
-                  ? darkMode ? 'bg-indigo-950/15 border-indigo-500/30' : 'bg-indigo-50/50 border-indigo-200'
+                  ? darkMode ? 'bg-indigo-950/20 border-indigo-500/35 shadow-lg shadow-indigo-950/40' : 'bg-indigo-50/60 border-indigo-200'
                   : darkMode ? 'bg-slate-900/30 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
               }`}
             >
               <div>
-                <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider font-mono pb-2 border-b border-slate-500/10 flex items-center justify-between">
-                  <span>{post.title}</span>
-                  {hasAssigned && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
-                </h4>
+                <div className="flex justify-between items-start pb-3 border-b border-slate-500/10">
+                  <div>
+                    <h4 className={`text-xs font-black uppercase tracking-wider font-mono ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                      {post.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      {post.description}
+                    </p>
+                  </div>
+                  {hasAssigned && (
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-md animate-pulse"></span>
+                  )}
+                </div>
 
                 {hasAssigned ? (
-                  <div className="mt-4 text-center">
-                    <span className="text-4xl block animate-bounce">{assigned.avatar}</span>
-                    <h5 className="font-extrabold text-sm text-slate-100 mt-2">{assigned.name}</h5>
-                    <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full font-mono mt-1 inline-block">
-                      {assigned.skill}
-                    </span>
-                    <p className="text-[11px] text-slate-400 mt-2.5 bg-black/10 p-2.5 rounded-xl border border-slate-500/5 leading-relaxed font-medium">
-                      <strong>Active Buff:</strong> {assigned.bonus}
-                    </p>
-                    <div className="text-[10px] font-mono text-slate-500 mt-2 font-bold">
-                      Salary: {currency}{assigned.salary.toLocaleString()} / Turn
+                  <div className="mt-4 flex flex-col gap-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-indigo-500/10 flex items-center justify-center text-xl shrink-0 border border-indigo-500/20">
+                        {assigned.portrait ? (
+                          <img src={assigned.portrait} alt={assigned.name} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span>👤</span>
+                        )}
+                      </div>
+                      <div>
+                        <h5 className={`font-black text-sm uppercase tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                          {assigned.name}
+                        </h5>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-400 px-1.5 py-0.5 rounded uppercase">
+                            {assigned.party}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Attributes progress gauges */}
+                    <div className="space-y-2.5 bg-black/20 p-3 rounded-2xl border border-slate-500/5">
+                      {/* Competence */}
+                      <div>
+                        <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                          <span className="flex items-center gap-1">
+                            <Landmark className="w-3 h-3 text-cyan-400" /> Competence (Skill)
+                          </span>
+                          <span className="font-bold text-cyan-400">{assigned.competence}/100</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-cyan-500 h-full rounded-full transition-all" style={{ width: `${assigned.competence}%` }}></div>
+                        </div>
+                      </div>
+
+                      {/* Loyalty */}
+                      <div>
+                        <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                          <span className="flex items-center gap-1">
+                            <Shield className="w-3 h-3 text-amber-400" /> Loyalty (Stability)
+                          </span>
+                          <span className={`font-bold ${assigned.loyalty < 50 ? 'text-rose-400 animate-pulse' : 'text-amber-400'}`}>
+                            {assigned.loyalty}/100
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${assigned.loyalty < 50 ? 'bg-rose-500' : 'bg-amber-500'}`} style={{ width: `${assigned.loyalty}%` }}></div>
+                        </div>
+                        {assigned.loyalty < 50 && (
+                          <span className="text-[8px] text-rose-400 font-bold uppercase mt-1 flex items-center gap-1 font-mono">
+                            <AlertTriangle className="w-2.5 h-2.5 animate-bounce" /> Warning: Treason & Scandal Risk!
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Popularity */}
+                      <div>
+                        <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-rose-400" /> Popularity
+                          </span>
+                          <span className="font-bold text-rose-400">{assigned.popularity}/100</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-rose-500 h-full rounded-full transition-all" style={{ width: `${assigned.popularity}%` }}></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-slate-500 font-mono text-xs">
-                    {post.placeholder}
+                  <div className="py-8 text-center text-slate-500 font-mono text-xs border border-dashed border-slate-700/30 rounded-2xl mt-4 flex flex-col items-center justify-center gap-2">
+                    <span className="text-xl">💼</span>
+                    <span>VACANT OFFICE</span>
                   </div>
                 )}
               </div>
@@ -250,96 +237,119 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
               {hasAssigned ? (
                 <button
                   type="button"
-                  onClick={() => handleDismiss(post.key)}
-                  className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 hover:border-rose-500/30 text-rose-400 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  onClick={() => handleDismiss(post.id)}
+                  className="w-full mt-4 py-2 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 hover:border-rose-500/30 text-rose-400 text-xs font-bold rounded-xl transition-all cursor-pointer text-center uppercase tracking-wider"
                 >
                   Dismiss Minister
                 </button>
               ) : (
-                <div className="text-center text-[10px] text-slate-500 font-mono uppercase font-bold">
-                  VACANT POSITION
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setSelectedPost(post);
+                  }}
+                  className="w-full mt-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider shadow-lg shadow-indigo-600/10"
+                >
+                  Appoint Politician <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Available Candidates Pool section */}
-      <div className={`p-6 rounded-3xl border ${
-        darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-      }`}>
-        <h3 className="text-xs font-bold tracking-wider font-mono uppercase text-slate-400 mb-4 pb-2 border-b border-slate-500/10">
-          AVAILABLE ELITE MINISTER CANDIDATES
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {candidates.map((cand) => {
-            // Find which post can take this candidate
-            let postKey = 'finance';
-            if (cand.specialty === 'interior') postKey = 'interior';
-            else if (cand.specialty === 'defense') postKey = 'defense';
-            else if (cand.specialty === 'foreign') postKey = 'foreign';
-            else {
-              // General candidates can be appointed to any vacant post
-              const vacancies = ['finance', 'interior', 'defense', 'foreign'].filter(k => (cabinet as any)[k].name === 'Unassigned');
-              postKey = vacancies.length > 0 ? vacancies[0] : 'finance';
-            }
-
-            const isAlreadyAppointed = Object.values(cabinet as any).some((c: any) => c.name === cand.name);
-
-            return (
-              <div
-                key={cand.id}
-                className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
-                  isAlreadyAppointed
-                    ? 'opacity-40 bg-slate-950/20 border-slate-900'
-                    : darkMode ? 'bg-slate-950/40 border-slate-850 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:shadow-md'
-                }`}
-              >
-                <div className="flex gap-3">
-                  <span className="text-3xl p-1 bg-slate-500/5 rounded-xl border border-slate-500/10 h-fit shrink-0">
-                    {cand.avatar}
-                  </span>
-                  <div>
-                    <h4 className="font-extrabold text-sm text-slate-100">{cand.name}</h4>
-                    <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/10 uppercase inline-block mt-0.5 font-bold">
-                      {cand.skill}
-                    </span>
-                    <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                      {cand.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-2.5 border-t border-slate-500/5 flex flex-col gap-2">
-                  <div className="text-[10px] font-mono text-slate-400 flex justify-between">
-                    <span>SPECIALTY POST: <strong className="text-indigo-400 uppercase">{cand.specialty}</strong></span>
-                    <span>SALARY: <strong className="text-amber-400">{currency}{cand.salary.toLocaleString()}</strong></span>
-                  </div>
-                  <div className="text-[10px] font-mono text-slate-400 leading-relaxed bg-black/15 p-2 rounded-lg border border-slate-500/5">
-                    <strong>Buff:</strong> {cand.bonus}
-                  </div>
-
-                  {!isAlreadyAppointed ? (
-                    <button
-                      type="button"
-                      onClick={() => handleAppoint(postKey, cand)}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-indigo-600/10"
-                    >
-                      Appoint as Minister of {postKey.charAt(0).toUpperCase() + postKey.slice(1)} <ArrowRight className="w-3 h-3" />
-                    </button>
-                  ) : (
-                    <span className="w-full py-2 text-center text-[10px] font-mono text-slate-500 uppercase font-bold border border-dashed border-slate-800 rounded-xl">
-                      Active Minister
-                    </span>
-                  )}
-                </div>
+      {/* Appoint Politician Drawer Modal */}
+      {selectedPost && (
+        <div className="fixed inset-0 z-[150] h-full w-full bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className={`w-full max-w-2xl rounded-3xl border p-6 flex flex-col gap-5 ${
+            darkMode ? 'bg-slate-950 border-indigo-500/30' : 'bg-white border-slate-250 shadow-2xl'
+          }`}>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-500/10">
+              <div>
+                <span className="text-[9px] font-mono text-indigo-400 font-bold uppercase tracking-widest">APPOINTMENT DRILL</span>
+                <h3 className="text-lg font-black uppercase tracking-tight text-white">
+                  Appoint Minister to: {selectedPost.name}
+                </h3>
               </div>
-            );
-          })}
+              <button
+                onClick={() => setSelectedPost(null)}
+                className="p-1.5 rounded-full hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 -mt-2">
+              Select an influential political leader from your candidate pool. Re-assigning an already employed minister will transfer their responsibilities immediately.
+            </p>
+
+            <div className="max-h-[350px] overflow-y-auto space-y-3.5 pr-1 custom-scrollbar">
+              {candidatesPool.map((cand) => {
+                const appointed = isCandidateAppointed(cand.name);
+
+                return (
+                  <div
+                    key={cand.name}
+                    className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-250 ${
+                      appointed
+                        ? 'opacity-60 bg-slate-950/35 border-slate-900'
+                        : darkMode ? 'bg-slate-900/40 border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-lg shrink-0">
+                        {cand.portrait ? (
+                          <img src={cand.portrait} alt={cand.name} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span>👤</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-white">{cand.name}</h4>
+                          <span className="text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-400 px-1.5 py-0.5 rounded uppercase">
+                            {cand.party}
+                          </span>
+                        </div>
+                        {/* Attributes HUD */}
+                        <div className="flex items-center gap-4 mt-2 flex-wrap">
+                          <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                            <Medal className="w-3 h-3 text-cyan-400" /> Comp: <strong className="text-cyan-400">{cand.competence}</strong>
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-amber-400" /> Loyalty: <strong className="text-amber-400">{cand.loyalty}</strong>
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-rose-400" /> Pop: <strong className="text-rose-400">{cand.popularity}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full sm:w-auto shrink-0">
+                      <button
+                        onClick={() => {
+                          playSound('success');
+                          handleAppoint(selectedPost.id, cand);
+                        }}
+                        className={`w-full py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all uppercase tracking-wider text-center ${
+                          appointed
+                            ? 'bg-amber-600/20 border border-amber-500/30 text-amber-400 hover:bg-amber-600/30'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'
+                        }`}
+                      >
+                        {appointed ? 'Re-Appoint Here' : 'Appoint Minister'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 };

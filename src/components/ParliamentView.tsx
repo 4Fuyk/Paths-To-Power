@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Country, Party, Bill, VoterGroup } from '../types';
+import { Country, Party, Bill, VoterGroup, Coalition } from '../types';
 import { playSound } from '../lib/sounds';
 import { 
   Landmark, AlertCircle, CheckCircle2, XCircle, 
@@ -17,6 +17,8 @@ interface ParliamentViewProps {
   onUpdateCountry: (updatedCountry: Country) => void;
   onUpdateParty: (updatedParty: Party) => void;
   darkMode: boolean;
+  coalitions?: Coalition[];
+  onUpdateCoalitions?: (updatedCoalitions: Coalition[]) => void;
 }
 
 export const ParliamentView: React.FC<ParliamentViewProps> = ({
@@ -25,11 +27,14 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   onUpdateCountry,
   onUpdateParty,
   darkMode,
+  coalitions = [],
+  onUpdateCoalitions,
 }) => {
   const [selectedBill, setSelectedBill] = useState<Bill>(country.bills[0]);
   const [votingAnimation, setVotingAnimation] = useState<boolean>(false);
   const [votingScoreboard, setVotingScoreboard] = useState<{ yes: number; no: number; current: number } | null>(null);
   const [lobbyAlert, setLobbyAlert] = useState<{ title: string; message: string } | null>(null);
+  const [showCoalitionModal, setShowCoalitionModal] = useState<boolean>(false);
 
   // Helper to determine currency symbol based on country ID
   const getCurrency = (countryId: string) => {
@@ -70,6 +75,45 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
     const seats = Math.round(share * remainingSeats);
     return { ...rival, seats };
   });
+
+  const handleProposeCoalition = (partnerName: string) => {
+    const partner = country.rivals.find(r => r.name === partnerName);
+    if (!partner) return;
+
+    // Reject coalition if they are polar opposites
+    const isOpposite = (party.ideology.includes("Socialist") && partner.ideology.includes("Nationalist")) ||
+                       (party.ideology.includes("Nationalist") && partner.ideology.includes("Socialist")) ||
+                       (party.ideology.includes("Left") && partner.ideology.includes("Right")) ||
+                       (party.ideology.includes("Right") && partner.ideology.includes("Left"));
+
+    if (isOpposite) {
+      playSound('error');
+      setLobbyAlert({
+        title: 'COALITION REJECTED',
+        message: `"${partner.name}" (${partner.ideology}) has rejected the coalition proposal from "${party.name}" (${party.ideology}) due to severe ideological incompatibility.`
+      });
+    } else {
+      playSound('success');
+      const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
+      const combinedSeats = playerSeatsCount + partnerSeats;
+
+      const newCoalition: Coalition = {
+        name: `Grand ${party.name.substring(0, 5)}-${partner.name.substring(0, 5)} Pact`,
+        parties: [party.name, partner.name],
+        totalSeats: combinedSeats,
+        ideologyAvg: `${party.ideology} / ${partner.ideology}`
+      };
+
+      if (onUpdateCoalitions) {
+        onUpdateCoalitions([...coalitions, newCoalition]);
+      }
+      setShowCoalitionModal(false);
+      setLobbyAlert({
+        title: 'ALLIANCE FORMED',
+        message: `The new "${newCoalition.name}" coalition alliance has been formed successfully, commanding a total of ${newCoalition.totalSeats} parliamentary seats!`
+      });
+    }
+  };
 
   // Calculate seat rows to render a stunning semi-circle representation of parliament/meclis
   const generateParliamentArch = () => {
@@ -357,6 +401,48 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
             ))}
           </div>
         </div>
+
+        {/* COALITIONS PANEL */}
+        <div className={`p-5 rounded-3xl border w-full flex flex-col gap-3 ${
+          darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          <div className="flex justify-between items-center pb-2.5 border-b border-slate-500/10">
+            <h3 className="text-xs font-bold tracking-tight uppercase text-slate-400 flex items-center gap-1.5">
+              💼 Active Coalitions
+            </h3>
+            <button
+              id="propose-coalition-btn"
+              type="button"
+              onClick={() => setShowCoalitionModal(true)}
+              className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[9px] uppercase tracking-wider cursor-pointer"
+            >
+              + Propose Alliance
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {coalitions.length === 0 ? (
+              <div className="text-[11px] text-slate-400 text-center py-2 italic">
+                No active legislative coalitions. Most seats are held by single political groups or there are no rival agreements.
+              </div>
+            ) : (
+              coalitions.map((coal, idx) => (
+                <div key={idx} className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-indigo-400 font-mono">{coal.name}</span>
+                    <span className="text-[10px] font-bold font-mono text-amber-500">{coal.totalSeats} Seats</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    <strong>Parties:</strong> {coal.parties.join(', ')}
+                  </div>
+                  <div className="text-[9px] text-slate-500 font-mono uppercase mt-0.5">
+                    {coal.ideologyAvg}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Bill lists & Interactive lobby action board */}
@@ -578,6 +664,59 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
             >
               Dismiss
             </button>
+          </div>
+        </div>
+      )}
+
+      {showCoalitionModal && (
+        <div className="fixed inset-0 z-[120] h-full w-full bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-3xl border p-6 flex flex-col gap-4 animate-scale-up ${
+            darkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-500/10">
+              <h3 className="text-sm font-black font-mono uppercase tracking-wide">Propose Coalition Alliance</h3>
+              <button
+                type="button"
+                onClick={() => setShowCoalitionModal(false)}
+                className="p-1 rounded hover:bg-slate-500/10 text-slate-450 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Forming a coalition increases your joint legislative power, improving the probability of passing heavy reforms. Select a compatible party to invite to the alliance:
+            </p>
+
+            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+              {country.rivals.map((rival) => {
+                const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
+                return (
+                  <div
+                    key={rival.id}
+                    className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rival.color }}></span>
+                        <span className="text-xs font-bold">{rival.name}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                        {rival.ideology} • {partnerSeats} Seats
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleProposeCoalition(rival.name)}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase cursor-pointer"
+                    >
+                      Invite
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

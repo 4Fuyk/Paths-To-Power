@@ -426,6 +426,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     regions: getTurkeyRegions(),
     bills: createBills('TR'),
     campaignTurns: 53,
+    electionCycleYears: 5,
   },
   {
     id: 'US',
@@ -450,6 +451,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     bills: createBills('US'),
     campaignTurns: 53,
+    electionCycleYears: 4,
   },
   {
     id: 'DE',
@@ -474,6 +476,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     regions: getGermanyRegions(),
     bills: createBills('DE'),
     campaignTurns: 53,
+    electionCycleYears: 4,
   },
   {
     id: 'GB',
@@ -498,6 +501,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     bills: createBills('GB'),
     campaignTurns: 53,
+    electionCycleYears: 5,
   },
   {
     id: 'BR',
@@ -522,6 +526,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     bills: createBills('BR'),
     campaignTurns: 53,
+    electionCycleYears: 4,
   },
   {
     id: 'JP',
@@ -546,11 +551,12 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     bills: createBills('JP'),
     campaignTurns: 53,
+    electionCycleYears: 4,
   },
   {
     id: 'EG',
     name: 'Mısır',
-    description: 'Köklü Akdeniz ve Nil medeniyeti, yoğun genç nüfus ve bölgesel kalkınma odaklı ticaret yolları.',
+    description: 'Köklü Akdeniz ve Nil medeniyeti, yoğun genç nüfum ve bölgesel kalkınma odaklı ticaret yolları.',
     flag: '🇪🇬',
     seats: 596,
     parliamentName: 'Halk Meclisi',
@@ -570,6 +576,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     bills: createBills('EG'),
     campaignTurns: 53,
+    electionCycleYears: 5,
   }
 ];
 

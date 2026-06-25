@@ -14,7 +14,7 @@ import {
 interface ElectionSimulatorProps {
   country: Country;
   party: Party;
-  onElectionFinished: (success: boolean) => void;
+  onElectionFinished: (success: boolean, finalSeats?: Record<string, number>) => void;
   darkMode: boolean;
 }
 
@@ -437,7 +437,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
 
                     <button
                       id="save-success-return-btn"
-                      onClick={() => onElectionFinished(true)}
+                      onClick={() => onElectionFinished(true, seatsWon)}
                       className="px-8 py-3.5 rounded-2xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer mt-2 group animate-pulse"
                     >
                       Color the Map & Expand Globally! <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
