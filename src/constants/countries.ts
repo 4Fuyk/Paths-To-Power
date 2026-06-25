@@ -199,6 +199,111 @@ export const getTurkeyRegions = (): Region[] => {
   });
 };
 
+const GERMANY_STATES_SPEC = [
+  { name: 'Baden-Württemberg', seats: 83, winner: 'CDU' },
+  { name: 'Bayern', seats: 99, winner: 'CDU' },
+  { name: 'Berlin', seats: 28, winner: 'CDU' },
+  { name: 'Brandenburg', seats: 19, winner: 'AfD' },
+  { name: 'Bremen', seats: 5, winner: 'SPD' },
+  { name: 'Hamburg', seats: 14, winner: 'SPD' },
+  { name: 'Hessen', seats: 47, winner: 'CDU' },
+  { name: 'Mecklenburg-Vorpommern', seats: 13, winner: 'AfD' },
+  { name: 'Niedersachsen', seats: 60, winner: 'CDU' },
+  { name: 'Nordrhein-Westfalen', seats: 136, winner: 'CDU' },
+  { name: 'Rheinland-Pfalz', seats: 31, winner: 'CDU' },
+  { name: 'Saarland', seats: 8, winner: 'CDU' },
+  { name: 'Sachsen', seats: 31, winner: 'AfD' },
+  { name: 'Sachsen-Anhalt', seats: 17, winner: 'AfD' },
+  { name: 'Schleswig-Holstein', seats: 22, winner: 'CDU' },
+  { name: 'Thüringen', seats: 17, winner: 'AfD' }
+];
+
+export const getGermanyRegions = (): Region[] => {
+  return GERMANY_STATES_SPEC.map((spec) => {
+    const base: Record<string, number> = {
+      CDU: 25,
+      AfD: 18,
+      SPD: 14,
+      GRÜNE: 10,
+      LINKE: 7,
+      BSW: 4,
+      FDP: 3,
+      SSW: 0
+    };
+
+    if (spec.winner === 'CDU') {
+      base.CDU = 35 + Math.floor(Math.random() * 5);
+      base.AfD = 18 + Math.floor(Math.random() * 3);
+      base.SPD = 14 + Math.floor(Math.random() * 3);
+      base.GRÜNE = 11 + Math.floor(Math.random() * 3);
+      base.LINKE = 7 + Math.floor(Math.random() * 2);
+    } else if (spec.winner === 'AfD') {
+      base.AfD = 34 + Math.floor(Math.random() * 5);
+      base.CDU = 22 + Math.floor(Math.random() * 3);
+      base.SPD = 12 + Math.floor(Math.random() * 2);
+      base.GRÜNE = 7 + Math.floor(Math.random() * 2);
+      base.LINKE = 11 + Math.floor(Math.random() * 3);
+    } else if (spec.winner === 'SPD') {
+      base.SPD = 31 + Math.floor(Math.random() * 5);
+      base.CDU = 22 + Math.floor(Math.random() * 3);
+      base.GRÜNE = 14 + Math.floor(Math.random() * 3);
+      base.AfD = 13 + Math.floor(Math.random() * 3);
+      base.LINKE = 7 + Math.floor(Math.random() * 2);
+    }
+
+    if (spec.name === 'Schleswig-Holstein') {
+      base.SSW = 6;
+    }
+
+    const total = Object.values(base).reduce((s, v) => s + v, 0);
+    const scale = 100 / total;
+    const supports: Record<string, number> = {};
+    Object.entries(base).forEach(([pId, val]) => {
+      supports[pId] = parseFloat((val * scale).toFixed(2));
+    });
+
+    const workers = 18 + Math.floor(Math.random() * 15);
+    const youth = 16 + Math.floor(Math.random() * 15);
+    const nationalists = 8 + Math.floor(Math.random() * 12);
+    const liberals = 12 + Math.floor(Math.random() * 10);
+    const traditionalists = 12 + Math.floor(Math.random() * 15);
+    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+
+    const voterDistribution = {
+      'İşçiler': workers,
+      'Gençler': youth,
+      'Milliyetçiler': nationalists,
+      'Liberaller': liberals,
+      'Gelenekçiler': traditionalists,
+      'Esnaflar': Math.max(2, shopkeepers),
+    };
+
+    const isEast = ['Brandenburg', 'Mecklenburg-Vorpommern', 'Sachsen', 'Sachsen-Anhalt', 'Thüringen'].includes(spec.name);
+    const infrastructure = isEast ? 3 : ['Nordrhein-Westfalen', 'Bayern', 'Baden-Württemberg', 'Hamburg', 'Berlin'].includes(spec.name) ? 5 : 4;
+
+    const normalized = spec.name.toLowerCase()
+      .replace(/ä/g, 'a')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ß/g, 'ss')
+      .replace(/[^a-z]/g, '');
+
+    const id = `DE_${normalized}`;
+
+    return {
+      id,
+      name: spec.name,
+      seats: spec.seats,
+      voterDistribution,
+      supports,
+      infrastructure,
+      campaignLevel: 0,
+      ownerPartyId: spec.winner,
+      mayorName: spec.winner === 'CDU' ? 'Christian Schmidt' : spec.winner === 'AfD' ? 'Uwe Schulz' : 'Lukas Schneider'
+    };
+  });
+};
+
 
 // Helper to generate a baseline distribution of voters for a region
 const makeVoterGroup = (
@@ -320,7 +425,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     ],
     regions: getTurkeyRegions(),
     bills: createBills('TR'),
-    campaignTurns: 8,
+    campaignTurns: 53,
   },
   {
     id: 'US',
@@ -344,32 +449,31 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'US_reg_4', name: 'Güney Eyaletleri (The South)', seats: 168, voterDistribution: makeVoterGroup(18, 12, 26, 12, 24, 8), supports: {}, infrastructure: 3, campaignLevel: 0 },
     ],
     bills: createBills('US'),
-    campaignTurns: 10,
+    campaignTurns: 53,
   },
   {
     id: 'DE',
     name: 'Almanya',
     description: 'Avrupa Birliği\'nin ekonomik lokomotifi olan, koalisyon kültürünün hakim olduğu parlamenter dev.',
     flag: '🇩🇪',
-    seats: 598,
+    seats: 630,
     parliamentName: 'Bundestag (Federal Meclis)',
     system: 'Hükümet Koalisyonu',
     population: '84 Milyon',
-    primaryColor: '#10b981', // Tailwind emerald-500
+    primaryColor: '#1f2937', // Germany Slate
     rivals: [
-      { id: 'DE_rival_1', name: 'Hristiyan Demokrat Birliği', leader: 'Dieter Schulz', ideology: 'Muhafazakar', symbol: 'Handshake', color: '#1f2937', baseSupport: 29 },
-      { id: 'DE_rival_2', name: 'Yeşil Dönüşüm Hareketi', leader: 'Elena Grüne', ideology: 'Ekolojist', symbol: 'Leaf', color: '#16a34a', baseSupport: 22 },
-      { id: 'DE_rival_3', name: 'Sosyalist İşçi Komitesi', leader: 'Walter Adler', ideology: 'Sosyalist', symbol: 'Briefcase', color: '#dc2626', baseSupport: 20 },
-      { id: 'DE_rival_4', name: 'Hür Demokrat Büro', leader: 'Maximilian Lind', ideology: 'Liberal', symbol: 'Zap', color: '#eab308', baseSupport: 13 },
+      { id: 'CDU', name: 'CDU/CSU (Union)', leader: 'Friedrich Merz', ideology: 'Muhafazakar', symbol: 'Building', color: '#000000', baseSupport: 28.5, startingSeats: 208, photo: 'https://thf.bing.com/th/id/OIP.C6IhExWdSFCEi8UMuMPLpgHaEs?w=265&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'AfD', name: 'AfD (Alternative für Deutschland)', leader: 'Alice Weidel', ideology: 'Milliyetçi', symbol: 'ShieldAlert', color: '#009EE0', baseSupport: 20.8, startingSeats: 152, photo: 'https://thf.bing.com/th/id/OIP.HMj4SiIh4c7KS6KMTvXSSAHaEu?w=236&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'SPD', name: 'SPD (Sozialdemokratische Partei)', leader: 'Lars Klingbeil', ideology: 'Sosyal Demokrat', symbol: 'Users', color: '#E3000F', baseSupport: 16.4, startingSeats: 120, photo: 'https://thf.bing.com/th/id/OIP.AtJS2ybczy_TBZrRMeiCJwHaE7?w=283&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'GRÜNE', name: 'GRÜNE (Bündnis 90/Die Grünen)', leader: 'Franziska Brantner', ideology: 'Ekolojist', symbol: 'Leaf', color: '#46962B', baseSupport: 11.6, startingSeats: 85, photo: 'https://thf.bing.com/th/id/OIP.IyG5NwjRofDj4_FbuGZNRQHaEK?w=322&h=181&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'LINKE', name: 'Die Linke', leader: 'Heidi Reichinnek / Jan van Aken', ideology: 'Sosyalist', symbol: 'Heart', color: '#BE3075', baseSupport: 8.8, startingSeats: 64, photo: 'https://thf.bing.com/th/id/OIP.d4VFRFsa1VBK8V33hKRESAHaEK?w=327&h=184&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'BSW', name: 'BSW (Bündnis Sahra Wagenknecht)', leader: 'Sahra Wagenknecht', ideology: 'Sosyalist', symbol: 'Sparkles', color: '#8B1A4B', baseSupport: 4.9, startingSeats: 0, photo: 'https://thf.bing.com/th/id/OIP.tU_3IENu_tkFM8v2XC_MQgHaEK?w=314&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'FDP', name: 'FDP (Freie Demokraten)', leader: 'Christian Lindner', ideology: 'Liberal', symbol: 'Zap', color: '#FFED00', baseSupport: 4.3, startingSeats: 0, photo: 'https://thf.bing.com/th/id/OIP.t97fKXH73vpJGAMOigSoPwHaEK?w=333&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'SSW', name: 'SSW (Südschleswigscher Wählerverband)', leader: 'Stefan Seidler', ideology: 'Sosyal Demokrat', symbol: 'Anchor', color: '#003D8F', baseSupport: 0.5, startingSeats: 1, photo: 'https://thf.bing.com/th/id/OIP.ZMWMp-FO5VvshEQLlsaR0gHaEK?w=325&h=183&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' }
     ],
-    regions: [
-      { id: 'DE_reg_1', name: 'Batı ve Ruhr Vadisi', seats: 210, voterDistribution: makeVoterGroup(30, 20, 8, 15, 15, 12), supports: {}, infrastructure: 5, campaignLevel: 0 },
-      { id: 'DE_reg_2', name: 'Bavyera ve Güney', seats: 150, voterDistribution: makeVoterGroup(12, 14, 25, 15, 24, 10), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'DE_reg_3', name: 'Berlin ve Doğu Eyaletleri', seats: 130, voterDistribution: makeVoterGroup(20, 30, 14, 12, 10, 14), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'DE_reg_4', name: 'Kuzey Limanları (Hamburg)', seats: 108, voterDistribution: makeVoterGroup(22, 24, 6, 20, 13, 15), supports: {}, infrastructure: 5, campaignLevel: 0 },
-    ],
+    regions: getGermanyRegions(),
     bills: createBills('DE'),
-    campaignTurns: 8,
+    campaignTurns: 53,
   },
   {
     id: 'GB',
@@ -393,7 +497,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'GB_reg_4', name: 'Galler ve Kuzey İrlanda', seats: 130, voterDistribution: makeVoterGroup(25, 22, 12, 12, 15, 14), supports: {}, infrastructure: 3, campaignLevel: 0 },
     ],
     bills: createBills('GB'),
-    campaignTurns: 8,
+    campaignTurns: 53,
   },
   {
     id: 'BR',
@@ -417,7 +521,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'BR_reg_4', name: 'Orta-Batı Federal Bölge', seats: 93, voterDistribution: makeVoterGroup(15, 14, 26, 15, 18, 12), supports: {}, infrastructure: 3, campaignLevel: 0 },
     ],
     bills: createBills('BR'),
-    campaignTurns: 9,
+    campaignTurns: 53,
   },
   {
     id: 'JP',
@@ -441,7 +545,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'JP_reg_4', name: 'Kyushu ve Shikoku (Güney)', seats: 65, voterDistribution: makeVoterGroup(20, 15, 20, 12, 22, 11), supports: {}, infrastructure: 3, campaignLevel: 0 },
     ],
     bills: createBills('JP'),
-    campaignTurns: 8,
+    campaignTurns: 53,
   },
   {
     id: 'EG',
@@ -465,7 +569,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'EG_reg_4', name: 'Süveyş ve Sinai Bölgesi', seats: 86, voterDistribution: makeVoterGroup(26, 18, 18, 14, 14, 10), supports: {}, infrastructure: 3, campaignLevel: 0 },
     ],
     bills: createBills('EG'),
-    campaignTurns: 8,
+    campaignTurns: 53,
   }
 ];
 
@@ -476,6 +580,24 @@ export const DELEGATE_NAMES_POOL = [
   'Selin Öztürk', 'Emre Koç', 'Büşra Aydın', 'Taylan Bulut', 'Merve Polat',
   'Oğuzhan Kıraç', 'Banu Çevik', 'Fatih Güler', 'Eda Yavuz', 'Serkan Aktaş'
 ];
+
+export const NAMES_BY_COUNTRY: Record<string, { first: string[]; last: string[] }> = {
+  TR: { first: ['Berk','Ahmet','Mehmet','Ayşe','Zeynep','Mustafa','Emre','Elif','Deniz','Sedef','Yiğit','Aslı','Caner','Gizem','Uğur','Ecem','Murat','Selin','Büşra','Taylan','Merve','Oğuzhan','Banu','Fatih','Eda','Serkan'], last: ['Yılmaz','Demir','Kaya','Şahin','Çelik','Öztürk','Şimşek','Arslan','Koç','Aydın','Bulut','Polat','Kıraç','Çevik','Güler','Yavuz','Aktaş'] },
+  BR: { first: ['João','Carlos','Maria','Ana','Pedro','Lucas','Rafael','Isabela','Roberto','Fernanda','Gabriel','Camila'], last: ['Silva','Santos','Oliveira','Souza','Costa','Pereira','Rodrigues','Almeida','Nascimento','Lima'] },
+  US: { first: ['John','Michael','Sarah','Emily','David','Jessica','Eleanor','Julian','Garry','Robert','Mary','James'], last: ['Smith','Johnson','Williams','Brown','Jones','Miller','Sterling','Vance','Moss','Davis','Wilson'] },
+  DE: { first: ["Hans","Michael","Andreas","Thomas","Stefan","Klaus","Anna","Sabine","Julia","Katrin","Lukas","Maximilian"], last: ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Becker","Hoffmann","Schulz","Bauer","Richter"] },
+  FR: { first: ['Jean','Pierre','Marie','Sophie','Louis','Camille','François','Lucas','Chloé','Emma','Antoine','Léa'], last: ['Martin','Bernard','Dubois','Thomas','Robert','Richard','Petit','Durand','Leroy','Moreau'] },
+  GB: { first: ['James','Oliver','Emma','Charlotte','Harry','Alistair','Rachel','Thomas','William','Emily','George'], last: ['Smith','Jones','Taylor','Brown','Wilson','Sterling','Green','Davies','Evans','Thomas'] },
+  JP: { first: ['Hiroshi','Takashi','Yuki','Sakura','Kenji','Shinzo','Tanaka','Sato','Haruto','Mei','Yuto','Yua'], last: ['Sato','Suzuki','Takahashi','Tanaka','Watanabe','Ito','Nakamura','Kobayashi','Saito','Yamamoto'] },
+  EG: { first: ['Mustafa','Fatma','Rami','Ahmed','Mohamed','Ali','Youssef','Ibrahim','Aisha','Mariam','Omar'], last: ['El-Kadir','Mansur','El-Masri','Hassan','Ali','Sayed','Mahmoud','Khalil','Soliman','Salem'] }
+};
+
+export function generateName(countryCode: string): string {
+  const pool = NAMES_BY_COUNTRY[countryCode] ?? NAMES_BY_COUNTRY.US;
+  const f = pool.first[Math.floor(Math.random() * pool.first.length)];
+  const l = pool.last[Math.floor(Math.random() * pool.last.length)];
+  return `${f} ${l}`;
+}
 
 // Mock speech cards for campaigning
 export const SPEECH_CARDS_POOL: SpeechCard[] = [

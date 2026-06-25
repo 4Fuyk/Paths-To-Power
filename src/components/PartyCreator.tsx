@@ -14,15 +14,6 @@ interface PartyCreatorProps {
   darkMode: boolean;
 }
 
-const PLAYER_AVATARS = [
-  { id: 'av1', label: 'Classic State Leader', url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80' },
-  { id: 'av2', label: 'Modern Reformer', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80' },
-  { id: 'av3', label: 'Veteran Diplomat', url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80' },
-  { id: 'av4', label: 'Charismatic Leader', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&h=150&q=80' },
-  { id: 'av5', label: 'Progressive Reformer', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80' },
-  { id: 'av6', label: 'Visionary Campaigner', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80' },
-];
-
 const TURKEY_AVATARS = [
   {
     id: 'tr_ozgur_ozel',
@@ -122,6 +113,73 @@ const TURKEY_AVATARS = [
   }
 ];
 
+const GERMANY_AVATARS = [
+  {
+    id: 'de_merz',
+    name: 'Friedrich Merz',
+    url: 'https://thf.bing.com/th/id/OIP.C6IhExWdSFCEi8UMuMPLpgHaEs?w=265&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'CDU/CSU',
+    color: '#111827',
+    ideology: 'Muhafazakar' as Ideology,
+  },
+  {
+    id: 'de_weidel',
+    name: 'Alice Weidel',
+    url: 'https://thf.bing.com/th/id/OIP.HMj4SiIh4c7KS6KMTvXSSAHaEu?w=236&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'AfD',
+    color: '#009EE0',
+    ideology: 'Milliyetçi' as Ideology,
+  },
+  {
+    id: 'de_klingbeil',
+    name: 'Lars Klingbeil',
+    url: 'https://thf.bing.com/th/id/OIP.AtJS2ybczy_TBZrRMeiCJwHaE7?w=283&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'SPD',
+    color: '#E3000F',
+    ideology: 'Sosyal Demokrat' as Ideology,
+  },
+  {
+    id: 'de_brantner',
+    name: 'Franziska Brantner',
+    url: 'https://thf.bing.com/th/id/OIP.IyG5NwjRofDj4_FbuGZNRQHaEK?w=322&h=181&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'GRÜNE',
+    color: '#46962B',
+    ideology: 'Ekolojist' as Ideology,
+  },
+  {
+    id: 'de_reichinnek',
+    name: 'Heidi Reichinnek',
+    url: 'https://thf.bing.com/th/id/OIP.d4VFRFsa1VBK8V33hKRESAHaEK?w=327&h=184&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'Die Linke',
+    color: '#BE3075',
+    ideology: 'Sosyalist' as Ideology,
+  },
+  {
+    id: 'de_wagenknecht',
+    name: 'Sahra Wagenknecht',
+    url: 'https://thf.bing.com/th/id/OIP.tU_3IENu_tkFM8v2XC_MQgHaEK?w=314&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'BSW',
+    color: '#8B1A4B',
+    ideology: 'Sosyalist' as Ideology,
+  },
+  {
+    id: 'de_lindner',
+    name: 'Christian Lindner',
+    url: 'https://thf.bing.com/th/id/OIP.t97fKXH73vpJGAMOigSoPwHaEK?w=333&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'FDP',
+    color: '#FFED00',
+    ideology: 'Liberal' as Ideology,
+  },
+  {
+    id: 'de_seidler',
+    name: 'Stefan Seidler',
+    url: 'https://thf.bing.com/th/id/OIP.ZMWMp-FO5VvshEQLlsaR0gHaEK?w=325&h=183&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3',
+    partyName: 'SSW',
+    color: '#003D8F',
+    ideology: 'Sosyal Demokrat' as Ideology,
+  }
+];
+
 const AVAILABLE_IDEOLOGIES: { value: Ideology; desc: string; focus: string }[] = [
   { value: 'Sosyal Demokrat', desc: 'Social justice, robust state support programs, labor wellness, and comprehensive civil rights.', focus: 'Provides bonus support within Labor and Youth factions.' },
   { value: 'Muhafazakar', desc: 'Cultural patriotism, public order, preservation of heritage, and localized tax alleviation.', focus: 'Provides bonus support within Traditionalist and Merchant factions.' },
@@ -150,7 +208,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
   const [leaderName, setLeaderName] = useState('');
   const [selectedIdeology, setSelectedIdeology] = useState<Ideology>('Sosyal Demokrat');
   const [selectedColor, setSelectedColor] = useState('#dc2626');
-  const [selectedPhoto, setSelectedPhoto] = useState('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&q=80');
+  const [selectedPhoto, setSelectedPhoto] = useState('');
   const [isPresetSelected, setIsPresetSelected] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
@@ -160,17 +218,19 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
     // Prevent selecting existing national rival parties as custom player party
     const lowerPartyName = partyName.trim().toLowerCase();
-    const forbiddenParties = [
+    const forbiddenParties = country.id === 'DE' ? [
+      'cdu', 'csu', 'afd', 'spd', 'grüne', 'gruene', 'linke', 'die linke', 'bsw', 'fdp', 'ssw'
+    ] : [
       'chp', 'akp', 'ak parti', 'yrp', 'yeniden refah', 'dem', 'dem parti', 'mhp',
       'zafer', 'zafer partisi', 'tip', 'tkp', 'saadet', 'saadet partisi', 'deva',
       'deva partisi', 'gelecek', 'gelecek partisi', 'vatan', 'vatan partisi'
     ];
 
-    if (country.id === 'TR' && !isPresetSelected && (
+    if ((country.id === 'TR' || country.id === 'DE') && !isPresetSelected && (
       forbiddenParties.includes(lowerPartyName) ||
       forbiddenParties.some(p => lowerPartyName.includes(p) && p.length > 2)
     )) {
-      setErrorModal('Bu parti rakip bir partidir! Lütfen kendi özel siyasi partinizi kurun (örneğin: Yeni Türkiye Hareketi, Seçim İttifakı vb.) veya yukarıdaki hazır gerçek lider şablonlarından birini seçin.');
+      setErrorModal('This party name is reserved for a national rival party! Please establish your own custom political party or choose one of the official leader templates above.');
       return;
     }
 
@@ -182,16 +242,16 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
       ideology: selectedIdeology,
       symbol: 'Flame', // Standard flame logo preassigned behind-the-scenes
       color: selectedColor,
-      influence: 55, // solid, balanced, high-fidelity ratings
-      budget: 1300000, 
-      members: 2700,
+      influence: 30, // solid, balanced, high-fidelity ratings
+      budget: 200000, 
+      members: 400,
       traits: {
         charisma: 5,
         eloquence: 5,
         organization: 5,
         strategy: 5,
       },
-      photo: selectedPhoto,
+      photo: ((country.id === 'TR' || country.id === 'DE') ? (isPresetSelected ? selectedPhoto : '') : selectedPhoto),
     };
 
     onCreateParty(newParty);
@@ -232,11 +292,11 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
           <div className="space-y-4">
             {/* National leader presets / Avatar Selector */}
-            {country.id === 'TR' ? (
+            {(country.id === 'TR' || country.id === 'DE') && (
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">GERÇEK LİDER PORTRELERİ VE KİMLİK ŞABLONLARI</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">OFFICIAL NATIONAL LEADER TEMPLATES</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {TURKEY_AVATARS.map((avatar) => {
+                  {(country.id === 'TR' ? TURKEY_AVATARS : GERMANY_AVATARS).map((avatar) => {
                     const isSelected = selectedPhoto === avatar.url;
                     return (
                       <button
@@ -257,7 +317,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                               : 'bg-indigo-50 border-indigo-200 text-slate-900 shadow'
                             : darkMode
                             ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-10 border'
+                            : 'bg-slate-55 border-slate-200 text-slate-600 hover:bg-slate-10 border'
                         }`}
                       >
                         <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-700/50 relative">
@@ -286,7 +346,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                     onClick={() => {
                       setLeaderName('');
                       setPartyName('');
-                      setSelectedPhoto('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&q=80');
+                      setSelectedPhoto('');
                       setIsPresetSelected(false);
                     }}
                     className={`p-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer min-h-[110px] ${
@@ -296,47 +356,17 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                           : 'bg-indigo-50 border-indigo-200 text-slate-900 shadow'
                         : darkMode
                         ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-10 border'
+                        : 'bg-slate-55 border-slate-200 text-slate-600 hover:bg-slate-10 border'
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full border border-dashed border-slate-500 flex items-center justify-center text-lg text-slate-500 select-none">
                       ?
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-bold">Özel Lider</span>
-                      <span className="text-[10px] text-slate-400 font-medium">Ben Tasarlayayım</span>
+                      <span className="text-xs font-bold">Custom Leader</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Design My Own</span>
                     </div>
                   </button>
-                </div>
-              </div>
-            ) : (
-              /* Global general avatars for non-Turkish countries */
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CHOOSE LEADER PORTRAIT AVATAR</label>
-                <div className="flex flex-wrap gap-2.5">
-                  {PLAYER_AVATARS.map((avatar) => {
-                    const isSelected = selectedPhoto === avatar.url;
-                    return (
-                      <button
-                        key={avatar.id}
-                        type="button"
-                        onClick={() => setSelectedPhoto(avatar.url)}
-                        className={`w-14 h-14 rounded-full overflow-hidden border transition-all cursor-pointer relative ${
-                          isSelected
-                            ? 'border-indigo-500 ring-4 ring-indigo-500/25 scale-105 shadow-md'
-                            : 'border-slate-705/50 opacity-70 hover:opacity-100'
-                        }`}
-                        title={avatar.label}
-                      >
-                        <img
-                          src={avatar.url}
-                          alt={avatar.label}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
             )}
@@ -483,7 +513,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
           }`}>
             <div className="flex justify-between items-center pb-2 border-b border-slate-500/10">
               <h4 className="font-bold text-sm uppercase tracking-wider flex items-center gap-1.5 text-rose-500">
-                <span>⚠</span> Uyarı / Warning
+                <span>⚠</span> Warning
               </h4>
             </div>
             <p className={`text-xs leading-relaxed py-1 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{errorModal}</p>
@@ -491,7 +521,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
               onClick={() => setErrorModal(null)}
               className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-550 text-white font-bold text-xs cursor-pointer mt-2 text-center"
             >
-              Tamam / Dismiss
+              Dismiss
             </button>
           </div>
         </div>

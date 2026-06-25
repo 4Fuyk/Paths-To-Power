@@ -35,6 +35,7 @@ export interface RivalParty {
   color: string;
   baseSupport: number; // Base election support %
   photo?: string;      // Photo URL
+  startingSeats?: number; // Pre-allocated Bundestag/TBMM seats
 }
 
 export interface Region {

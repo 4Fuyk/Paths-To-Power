@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Country, Party, Region } from '../types';
+import { playSound } from '../lib/sounds';
 import { 
   Vote, Award, Trophy, ArrowRight, HelpCircle, AlertTriangle, 
   Tv, BarChart2, CheckCircle2, ChevronRight, RefreshCw, XCircle 
@@ -78,7 +79,26 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
           // Proportional seat allocation for Hükümet Koalisyonu and Dar Bölge
           // Distribute seats proportional to support percentages in this region
           let allocated = 0;
-          const sortedSupports = Object.entries(regionSupports).sort((a,b) => (b[1] as number) - (a[1] as number));
+          let filteredSupports = Object.entries(regionSupports);
+          
+          if (country.id === 'DE') {
+            // German 5% threshold: Filter out BSW, FDP and player if support is under 5%
+            filteredSupports = filteredSupports.filter(([pId, val]) => {
+              if (pId === 'BSW' || pId === 'FDP') return false;
+              if (pId === party.id) {
+                return (val as number) >= 5.0;
+              }
+              return true;
+            });
+
+            // Re-normalize supports
+            const sumFiltered = filteredSupports.reduce((s, [, v]) => s + (v as number), 0);
+            if (sumFiltered > 0) {
+              filteredSupports = filteredSupports.map(([pId, val]) => [pId, ((val as number) / sumFiltered) * 100]);
+            }
+          }
+
+          const sortedSupports = filteredSupports.sort((a,b) => (b[1] as number) - (a[1] as number));
           
           sortedSupports.forEach(([pId, val]) => {
             const calculatedSeats = Math.floor(((val as number) / 100) * regionSeats);
@@ -119,6 +139,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
     } else {
       // Completed last region! Set results page
       setNewsTicker('Counting complete in all electoral districts! The Central Election Commission is preparing the official announcement.');
+      const victor = checkVictory();
+      playSound(victor ? 'win' : 'error');
       setStep('results');
     }
   }, [step, currentRegionIndex, country, userSpeed]);

@@ -57,7 +57,10 @@ const MAYOR_AVATARS: Record<string, string> = {
   'TR_siv': 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Adem_Uzun_%28cropped%29.jpg', // Adem Uzun
 };
 
-const getRegionIdFromNormalizedName = (normName: string): string => {
+const getRegionIdFromNormalizedName = (normName: string, countryId?: string): string => {
+  if (countryId === 'DE') {
+    return `DE_${normName}`;
+  }
   const coreMap: Record<string, string> = {
     'istanbul': 'TR_ist',
     'ankara': 'TR_ank',
@@ -79,6 +82,25 @@ const getRegionIdFromNormalizedName = (normName: string): string => {
   return coreMap[normName] || `TR_${normName}`;
 };
 
+const getPartyAcronym = (pName: string): string => {
+  if (!pName) return '';
+  const lower = pName.toLowerCase();
+  if (lower.startsWith('cdu')) return 'CDU';
+  if (lower.startsWith('afd')) return 'AFD';
+  if (lower.startsWith('spd')) return 'SPD';
+  if (lower.includes('grüne') || lower.includes('green')) return 'GRÜ';
+  if (lower.includes('linke')) return 'LIN';
+  if (lower.startsWith('bsw')) return 'BSW';
+  if (lower.startsWith('fdp')) return 'FDP';
+  if (lower.startsWith('ssw')) return 'SSW';
+  
+  // Default clean extraction
+  const clean = pName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words.map(w => w[0]).join('').slice(0, 3).toUpperCase();
+};
+
 const normalizeName = (str: string) => {
   if (!str) return '';
   return str
@@ -95,6 +117,49 @@ const normalizeName = (str: string) => {
     .replace(/ç/g, 'c')
     .replace(/[^a-z]/g, ''); // strip any spaces/dashes for mapping purposes
 };
+
+const getFeatureName = (feature: any): string => {
+  if (!feature || !feature.properties) return '';
+  return feature.properties.NAME_1 || feature.properties.name || feature.properties.NAME || '';
+};
+
+const TURKEY_PLATE_CODES: Record<string, string> = {
+  'adana': '01', 'adiyaman': '02', 'afyonkarahisar': '03', 'afyon': '03', 'agri': '04',
+  'amasya': '05', 'ankara': '06', 'antalya': '07', 'artvin': '08', 'aydin': '09',
+  'balikesir': '10', 'bilecik': '11', 'bingol': '12', 'bitlis': '13', 'bolu': '14',
+  'burdur': '15', 'bursa': '16', 'canakkale': '17', 'cankiri': '18', 'corum': '19',
+  'denizli': '20', 'diyarbakir': '21', 'edirne': '22', 'elazig': '23', 'erzincan': '24',
+  'erzurum': '25', 'eskisehir': '26', 'gaziantep': '27', 'giresun': '28', 'gumushane': '29',
+  'hakkari': '30', 'hatay': '31', 'isparta': '32', 'mersin': '33', 'icel': '33',
+  'istanbul': '34', 'izmir': '35', 'kars': '36', 'kastamonu': '37', 'kayseri': '38',
+  'kirklareli': '39', 'kirsehir': '40', 'kocaeli': '41', 'konya': '42', 'kutahya': '43',
+  'malatya': '44', 'manisa': '45', 'kahramanmaras': '46', 'mardin': '47', 'mugla': '48',
+  'mus': '49', 'nevsehir': '50', 'nigde': '51', 'ordu': '52', 'rize': '53',
+  'sakarya': '54', 'samsun': '55', 'siirt': '56', 'sinop': '57', 'sivas': '58',
+  'tekirdag': '59', 'tokat': '60', 'trabzon': '61', 'tunceli': '62', 'sanliurfa': '63',
+  'usak': '64', 'van': '65', 'yozgat': '66', 'zonguldak': '67', 'aksaray': '68',
+  'bayburt': '69', 'karaman': '70', 'kirikkale': '71', 'batman': '72', 'sirnak': '73',
+  'bartin': '74', 'ardahan': '75', 'igdir': '76', 'yalova': '77', 'karabuk': '78',
+  'kilis': '79', 'osmaniye': '80', 'duzce': '81'
+};
+
+const getPlateCodeForRegion = (region: any): string => {
+  if (!region) return '06';
+  const normName = normalizeName(region.name);
+  let cityCode = TURKEY_PLATE_CODES[normName] || '';
+  if (!cityCode) {
+    const numericId = parseInt(region.id.replace(/\D/g, ''), 10);
+    if (!isNaN(numericId) && numericId >= 1 && numericId <= 81) {
+      cityCode = String(numericId).padStart(2, '0');
+    } else {
+      cityCode = '06';
+    }
+  }
+  return String(cityCode).padStart(2, '0');
+};
+
+let cachedAllDistrictsGeoJson: any = null;
+let allDistrictsGeoJsonPromise: Promise<any> | null = null;
 
 export const CampaignView: React.FC<CampaignViewProps> = ({
   country,
@@ -118,6 +183,10 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
   const provinceCentersRef = React.useRef<Record<string, { lat: number; lng: number }>>({});
   const selectedRegionBoundsRef = React.useRef<L.LatLngBounds | null>(null);
   const lastSelectedRegionIdRef = React.useRef<string | null>(null);
+  const lastFetchedCityCodeRef = React.useRef<string | null>(null);
+
+  const regionLabel = country.id === 'DE' ? 'State' : 'Province';
+  const regionsLabel = country.id === 'DE' ? 'States' : 'Provinces';
 
   const getProvinceBoundsEstimate = (regName: string, center: { lat: number; lng: number }) => {
     const norm = regName.toLowerCase()
@@ -761,7 +830,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     if (geoJsonData && geoJsonData.features) {
       feat = geoJsonData.features.find((f: any) => {
         if (!f || !f.properties) return false;
-        return normalizeName(f.properties.name) === normalizedName;
+        return normalizeName(getFeatureName(f)) === normalizedName;
       });
     }
 
@@ -1303,37 +1372,66 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     tryFetchProvinces();
   }, [country.id]);
 
+  // Fetch online Germany GeoJSON on component load
+  useEffect(() => {
+    if (country.id !== 'DE') return;
+    
+    const germanyUrl = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json';
+
+    const tryFetchGermany = async () => {
+      try {
+        const res = await fetch(germanyUrl);
+        if (res.ok) {
+          const data = await res.json();
+          setGeoJsonData(data);
+          return;
+        }
+      } catch (err) {
+        console.warn(`Fetch Germany map from ${germanyUrl} failed:`, err);
+      }
+      console.warn('Germany GeoJSON fetch failed. Falling back to point-markers.');
+    };
+
+    tryFetchGermany();
+  }, [country.id]);
+
   // Fetch online Turkey Districts GeoJSON on-demand or background
   useEffect(() => {
     if (country.id !== 'TR' || districtGeoJsonData || loadingDistrictGeoJson) return;
-    setLoadingDistrictGeoJson(true);
-    
-    const districtUrls = [
-      'https://cdn.jsdelivr.net/gh/skrk/turkey-geojson@master/admin2-simplified.json',
-      'https://cdn.jsdelivr.net/gh/skrk/turkey-geojson@master/admin2.json',
-      'https://raw.githubusercontent.com/skrk/turkey-geojson/master/admin2-simplified.json',
-      'https://raw.githubusercontent.com/skrk/turkey-geojson/master/admin2.json'
-    ];
 
-    const tryFetchDistricts = async () => {
-      for (const url of districtUrls) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            setDistrictGeoJsonData(data);
-            setLoadingDistrictGeoJson(false);
-            return;
+    setLoadingDistrictGeoJson(true);
+
+    const loadDistricts = async () => {
+      try {
+        let allData = cachedAllDistrictsGeoJson;
+        if (!allData) {
+          if (!allDistrictsGeoJsonPromise) {
+            allDistrictsGeoJsonPromise = (async () => {
+              const res = await fetch('https://cdn.jsdelivr.net/gh/ttezer/turkiye-harita-verisi@master/dist/geojson/districts.geojson');
+              if (!res.ok) {
+                throw new Error(`Failed to fetch districts geojson: status ${res.status}`);
+              }
+              const data = await res.json();
+              cachedAllDistrictsGeoJson = data;
+              return data;
+            })();
           }
-        } catch (err) {
-          console.warn(`Fetch district map from ${url} failed:`, err);
+          allData = await allDistrictsGeoJsonPromise;
         }
+
+        if (allData && allData.features) {
+          setDistrictGeoJsonData(allData);
+          setLoadingDistrictGeoJson(false);
+        } else {
+          throw new Error('Districts GeoJSON features are undefined');
+        }
+      } catch (err) {
+        console.warn(`All district GeoJSON fetch attempts failed. Using fallback subdivision.`, err);
+        setLoadingDistrictGeoJson(false);
       }
-      setLoadingDistrictGeoJson(false);
-      console.warn('All district GeoJSON fetch attempts failed. Using fallback subdivision.');
     };
 
-    tryFetchDistricts();
+    loadDistricts();
   }, [country.id, districtGeoJsonData, loadingDistrictGeoJson]);
 
   // Sync selectedRegion if the country object changes underneath
@@ -1344,6 +1442,15 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     }
   }, [country, selectedRegion.id]);
 
+  // Reset selected region/district when country changes
+  useEffect(() => {
+    if (country.regions && country.regions.length > 0) {
+      setSelectedRegion(country.regions[0]);
+    }
+    setSelectedDistrict(null);
+    setActiveViewLevel('province');
+  }, [country.id]);
+
   // Leaflet refs for Turkey GIS Map
   const turkeyMapRef = React.useRef<HTMLDivElement>(null);
   const turkeyMapInstanceRef = React.useRef<L.Map | null>(null);
@@ -1351,6 +1458,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
   const turkeyMarkersRef = React.useRef<L.CircleMarker[]>([]);
   const turkeyGeoJsonLayerRef = React.useRef<L.Layer | null>(null);
   const provinceOverlayLayerRef = React.useRef<L.Layer | null>(null);
+  const lastCountryIdRef = React.useRef<string | null>(null);
 
   // Cleanup on component unmount or when leaving Turkey
   const cleanupTurkeyMap = () => {
@@ -1408,18 +1516,20 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     }
   }, [darkMode]);
 
-  // Main Turkey Leaflet map builder and sync
+  // Main Turkey/Germany Leaflet map builder and sync
   useEffect(() => {
-    if (country.id !== 'TR' || !turkeyMapRef.current) {
+    if ((country.id !== 'TR' && country.id !== 'DE') || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
     }
 
     if (!turkeyMapInstanceRef.current) {
+      const initialCenter: [number, number] = country.id === 'DE' ? [51.1657, 10.4515] : [38.9637, 35.2433];
+      const initialZoom = country.id === 'DE' ? 6 : 6;
       const map = L.map(turkeyMapRef.current, {
-        center: [38.9637, 35.2433],
-        zoom: 6,
-        minZoom: 5,
+        center: initialCenter,
+        zoom: initialZoom,
+        minZoom: 4,
         maxZoom: 18,
         zoomControl: false,
         attributionControl: false,
@@ -1439,6 +1549,16 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     }
 
     const map = turkeyMapInstanceRef.current;
+
+    // Pan and zoom to correct country coordinates on switch
+    if (lastCountryIdRef.current !== country.id) {
+      lastCountryIdRef.current = country.id;
+      if (country.id === 'DE') {
+        map.setView([51.1657, 10.4515], 6);
+      } else {
+        map.setView([38.9637, 35.2433], 6);
+      }
+    }
 
     // Clear old layers/markers robustly
     try {
@@ -1484,18 +1604,20 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           districtGeoJsonData.features.forEach((feat: any) => {
             if (!feat || !feat.properties) return;
             
-            // Resolve province name and district name using standard/flexible GADM attributes
-            const rawProvName = feat.properties.NAME_1 || feat.properties.name_1 || feat.properties.province || feat.properties.PROVINCE || feat.properties.NAME_0 || '';
-            const rawDistName = feat.properties.NAME_2 || feat.properties.name_2 || feat.properties.district || feat.properties.DISTRICT || feat.properties.name || feat.properties.NAME || '';
-            
-            if (!rawProvName) return;
-            
-            const normProvName = normalizeName(String(rawProvName));
-            const regionId = getRegionIdFromNormalizedName(normProvName);
-            if (!regionId) return;
-            
-            const reg = country.regions.find(r => r.id === regionId);
+            const plateFromFeature = String(feat.properties.parent_id || feat.properties.id || '').match(/TR-[PD]-(\d+)/)?.[1];
+            if (!plateFromFeature) return;
+
+            const reg = country.regions.find(r => getPlateCodeForRegion(r) === plateFromFeature);
             if (!reg) return;
+            
+            // Prioritize district-specific properties to avoid matching province name
+            const rawDistName = feat.properties.NAME_2 ||
+              feat.properties.ilce_adi ||
+              feat.properties.ILCE_ADI ||
+              feat.properties.district ||
+              feat.properties.name ||
+              feat.properties.NAME ||
+              '';
             
             let center = provinceCentersRef.current[reg.id] || { lat: 38.9637, lng: 35.2433 };
             const fallback = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
@@ -1540,7 +1662,13 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                 supports: matchedD.supports,
                 winnerParty: matchedD.winnerParty,
                 mayorName: matchedD.mayorName,
-                center: [matchedD.lat, matchedD.lng]
+                center: [matchedD.lat, matchedD.lng],
+                // Mirror properties to fulfill the user's fallback pattern
+                name: matchedD.name,
+                NAME_2: matchedD.name,
+                ilce_adi: matchedD.name,
+                ILCE_ADI: matchedD.name,
+                district: matchedD.name
               }
             });
           });
@@ -1554,12 +1682,13 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           const districtFeatures: any[] = [];
           geoJsonData.features.forEach((feat: any) => {
             if (!feat || !feat.properties) return;
-            const normName = normalizeName(feat.properties.name);
-            const regionId = getRegionIdFromNormalizedName(normName);
+            const normName = normalizeName(getFeatureName(feat));
+            const regionId = getRegionIdFromNormalizedName(normName, country.id);
             if (regionId) {
               const reg = country.regions.find(r => r.id === regionId);
               if (reg) {
-                let center = provinceCentersRef.current[reg.id] || { lat: 38.9637, lng: 35.2433 };
+                const defaultCenter = country.id === 'DE' ? { lat: 51.1657, lng: 10.4515 } : { lat: 38.9637, lng: 35.2433 };
+                let center = provinceCentersRef.current[reg.id] || defaultCenter;
                 const fallback = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
                 if (fallback) center = { lat: fallback.lat, lng: fallback.lng };
                 const dList = getDeterministicDistricts(reg, center);
@@ -1588,24 +1717,34 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             const isMe = dWinner === party.id;
             const col = isMe ? party.color : getRivalColor(dWinner);
             
-            const isParentSelected = selectedRegion && selectedRegion.id === feature.properties.provinceId;
+            const selectedProvincePlateCode = getPlateCodeForRegion(selectedRegion);
+            const plateFromFeature = String(feature.properties.parent_id || feature.properties.id || '').match(/TR-[PD]-(\d+)/)?.[1];
+            const isSelectedProvince = plateFromFeature === selectedProvincePlateCode;
+            
             const isThisDistrictSelected = selectedDistrict && 
               selectedDistrict.name === feature.properties.districtName &&
               selectedDistrict.provinceId === feature.properties.provinceId;
             
+            if (isThisDistrictSelected) {
+              return {
+                fillColor: col,
+                fillOpacity: 0.95,
+                color: darkMode ? '#ffffff' : '#0f172a',
+                opacity: 0.95,
+                weight: 2.5
+              };
+            }
+
             return {
-              fillColor: col,
-              fillOpacity: isThisDistrictSelected ? 0.95 : (isParentSelected ? 0.85 : 0.65),
-              color: isThisDistrictSelected 
-                ? (darkMode ? '#ffffff' : '#0f172a') 
-                : col,
-              opacity: isThisDistrictSelected ? 0.95 : (isParentSelected ? 0.85 : 0.65),
-              weight: isThisDistrictSelected ? 2.5 : (isParentSelected ? 0.8 : 0.5),
+              fillColor: isSelectedProvince ? col : '#888',
+              fillOpacity: isSelectedProvince ? 0.75 : 0.15,
+              color: isSelectedProvince ? '#fff' : '#666',
+              weight: isSelectedProvince ? 1.2 : 0.4,
             };
           }
 
-          const normName = normalizeName(feature.properties.name);
-          const regionId = getRegionIdFromNormalizedName(normName);
+          const normName = normalizeName(getFeatureName(feature));
+          const regionId = getRegionIdFromNormalizedName(normName, country.id);
           
           if (regionId) {
             const reg = country.regions.find(r => r.id === regionId);
@@ -1647,28 +1786,46 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           if (!feature || !feature.properties) return;
 
           if (feature.properties.isDistrict) {
-            // Click handler for district polygon
-            layer.on('click', () => {
+            const props = feature.properties || {};
+            const districtName =
+              props.name ||
+              props.NAME_2 ||
+              props.ilce_adi ||
+              props.ILCE_ADI ||
+              props.district ||
+              props.districtName ||
+              'Unknown';
+
+            // Log GeoJSON feature properties once as requested
+            if (!(window as any).hasLoggedDistrictProps) {
+              (window as any).hasLoggedDistrictProps = true;
+              console.log('district props sample:', props);
+            }
+
+            const onDistrictClick = (dName: string, feat: any) => {
               try {
                 map.closeTooltip();
               } catch (e) {}
-              const parentReg = country.regions.find(r => r.id === feature.properties.provinceId);
+              const parentReg = country.regions.find(r => r.id === feat.properties.provinceId);
               if (parentReg) {
                 setSelectedRegion(parentReg);
                 const dData = {
-                  name: feature.properties.districtName,
-                  population: feature.properties.population,
-                  supports: feature.properties.supports,
-                  winnerParty: feature.properties.winnerParty,
-                  mayorName: feature.properties.mayorName,
-                  lat: feature.properties.center[0],
-                  lng: feature.properties.center[1],
-                  provinceId: feature.properties.provinceId
+                  name: dName,
+                  population: feat.properties.population,
+                  supports: feat.properties.supports,
+                  winnerParty: feat.properties.winnerParty,
+                  mayorName: feat.properties.mayorName,
+                  lat: feat.properties.center ? feat.properties.center[0] : 39,
+                  lng: feat.properties.center ? feat.properties.center[1] : 35,
+                  provinceId: feat.properties.provinceId
                 };
                 setSelectedDistrict(dData);
                 setActiveViewLevel('district');
               }
-            });
+            };
+
+            // Click handler for district polygon
+            layer.on('click', () => onDistrictClick(districtName, feature));
 
             // Mouseover highlights
             layer.on('mouseover', () => {
@@ -1687,22 +1844,35 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             });
 
             layer.on('mouseout', () => {
-              const isThisDistrictSelected = selectedDistrict && 
-                selectedDistrict.name === feature.properties.districtName &&
-                selectedDistrict.provinceId === feature.properties.provinceId;
-              const isParentSelected = selectedRegion && selectedRegion.id === feature.properties.provinceId;
               const dWinner = feature.properties.winnerParty;
-              const col = dWinner === party.id ? party.color : getRivalColor(dWinner);
+              const isMe = dWinner === party.id;
+              const col = isMe ? party.color : getRivalColor(dWinner);
+
+              const selectedProvincePlateCode = getPlateCodeForRegion(selectedRegion);
+              const plateFromFeature = String(feature.properties.parent_id || feature.properties.id || '').match(/TR-[PD]-(\d+)/)?.[1];
+              const isSelectedProvince = plateFromFeature === selectedProvincePlateCode;
+
+              const isThisDistrictSelected = selectedDistrict && 
+                selectedDistrict.name === districtName &&
+                selectedDistrict.provinceId === feature.properties.provinceId;
               
-              (layer as any).setStyle({
-                fillColor: col,
-                fillOpacity: isThisDistrictSelected ? 0.95 : (isParentSelected ? 0.85 : 0.65),
-                color: isThisDistrictSelected 
-                  ? (darkMode ? '#ffffff' : '#0f172a') 
-                  : col,
-                opacity: isThisDistrictSelected ? 0.95 : (isParentSelected ? 0.85 : 0.65),
-                weight: isThisDistrictSelected ? 2.5 : (isParentSelected ? 0.8 : 0.5),
-              });
+              if (isThisDistrictSelected) {
+                (layer as any).setStyle({
+                  fillColor: col,
+                  fillOpacity: 0.95,
+                  color: darkMode ? '#ffffff' : '#0f172a',
+                  opacity: 0.95,
+                  weight: 2.5
+                });
+              } else {
+                (layer as any).setStyle({
+                  fillColor: isSelectedProvince ? col : '#888',
+                  fillOpacity: isSelectedProvince ? 0.75 : 0.15,
+                  color: isSelectedProvince ? '#fff' : '#666',
+                  opacity: isSelectedProvince ? 0.75 : 0.15,
+                  weight: isSelectedProvince ? 1.2 : 0.4
+                });
+              }
             });
 
             // Tooltips
@@ -1720,8 +1890,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
             layer.bindTooltip(`
               <div class="p-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
-                <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${feature.properties.districtName}</strong>
-                <div class="text-[10px] text-slate-400">Province: <strong class="text-slate-300">${feature.properties.provinceName}</strong></div>
+                <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${districtName}</strong>
+                <div class="text-[10px] text-slate-400">${regionLabel}: <strong class="text-slate-300">${feature.properties.provinceName}</strong></div>
                 <div class="text-[10px] text-slate-400">Local Mayor: <strong class="text-slate-300">${feature.properties.mayorName || 'N/A'}</strong></div>
                 <div class="text-[10px] text-slate-400 font-mono">Population: <strong class="text-slate-300">${feature.properties.population.toLocaleString()}</strong></div>
                 <div class="mt-1 pt-1 border-t border-slate-800/40">${supportHtmlList}</div>
@@ -1736,8 +1906,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             return;
           }
 
-          const normName = normalizeName(feature.properties.name);
-          const regionId = getRegionIdFromNormalizedName(normName);
+          const normName = normalizeName(getFeatureName(feature));
+          const regionId = getRegionIdFromNormalizedName(normName, country.id);
           if (!regionId) return;
 
           const reg = country.regions.find(r => r.id === regionId);
@@ -1840,20 +2010,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
       turkeyGeoJsonLayerRef.current = geoLayer;
 
-      if (activeViewLevel === 'district') {
-        const overlay = L.geoJSON(geoJsonData, {
-          style: {
-            fill: false,
-            fillOpacity: 0,
-            color: darkMode ? '#cbd5e1' : '#1e293b',
-            weight: 2.2,
-            opacity: 0.95,
-            interactive: false
-          },
-          interactive: false
-        }).addTo(map);
-        provinceOverlayLayerRef.current = overlay;
-      }
+      // In DISTRICTS mode we hide the province outlines layer entirely — only the district layer is drawn
+      provinceOverlayLayerRef.current = null;
     } else {
       // Fallback: Render point check markers if geoJsonData hasn't finished loading over network yet
       TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.forEach((prov) => {
@@ -1950,7 +2108,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
   }, [country, selectedRegion, darkMode, geoJsonData, districtGeoJsonData, activeViewLevel, selectedDistrict]);
 
-  const currency = country.id === 'TR' ? '₺' : '$';
+  const currency = country.id === 'TR' ? '₺' : country.id === 'DE' ? '€' : '$';
 
   const handleLaunchDistrictCampaign = (type: 'townhall' | 'flyers') => {
     if (!selectedDistrict) return;
@@ -2267,16 +2425,16 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
       `}</style>
-      {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY) */}
-      {country.id === 'TR' && (
+      {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY OR GERMANY) */}
+      {(country.id === 'TR' || country.id === 'DE') && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div>
-            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP (2024 BASE)</span>
-            <h3 className="text-xl font-bold tracking-tight">Turkey Municipal Control GIS Map</h3>
+            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP ({country.id === 'DE' ? '2025' : '2024'} BASE)</span>
+            <h3 className="text-xl font-bold tracking-tight">{country.name} Municipal Control GIS Map</h3>
             <p className="text-xs text-slate-400 mt-1">
-              Click on a province directly on the geographic Leaflet map to select it. The province colors represent municipal control, and its real-time polls appear instantly in the right-hand panel.
+              Click on a {country.id === 'DE' ? 'state' : 'province'} directly on the geographic Leaflet map to select it. The {country.id === 'DE' ? 'state' : 'province'} colors represent municipal control, and its real-time polls appear instantly in the right-hand panel.
             </p>
           </div>
 
@@ -2328,7 +2486,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                       : 'text-slate-300 hover:text-slate-100 bg-slate-800/40 hover:bg-slate-800'
                   }`}
                 >
-                  Provinces
+                  {regionsLabel}
                 </button>
                 
                 {/* Districts Mode Button */}
@@ -2405,7 +2563,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                       }}
                       className="flex-1 text-center py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-indigo-600 text-white font-extrabold shadow"
                     >
-                      Province View
+                      {regionLabel} View
                     </button>
                     <button
                       onClick={() => {
@@ -2437,7 +2595,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                         let leaderPhoto = '';
                         if (isMe) {
                           leaderName = party.leader;
-                          leaderPhoto = party.photo || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80';
+                          leaderPhoto = country.id === 'DE' ? '' : (party.photo || '');
                         } else {
                           const rival = country.rivals.find(r => r.id === pid);
                           if (rival) {
@@ -2474,7 +2632,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                                     className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white uppercase text-xs border shadow-sm shrink-0"
                                     style={{ backgroundColor: pColor, borderColor: pColor }}
                                   >
-                                    {leaderName.charAt(0)}
+                                    {getPartyAcronym(pName)}
                                   </div>
                                 )}
                               </div>
@@ -2515,7 +2673,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                       }}
                       className="text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-2 py-1 rounded-lg transition-all"
                     >
-                      Province View ⬅️
+                      {regionLabel} View ⬅️
                     </button>
                   </div>
 
@@ -2757,7 +2915,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                       let leaderPhoto = '';
                       if (isPlayer) {
                         leaderName = party.leader;
-                        leaderPhoto = party.photo || '';
+                        leaderPhoto = country.id === 'DE' ? '' : (party.photo || '');
                       } else {
                         const rival = country.rivals.find(r => r.id === pid);
                         if (rival) {
@@ -2778,7 +2936,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                                 className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white uppercase text-sm border-2 shadow-sm"
                                 style={{ backgroundColor: color, borderColor: color }}
                               >
-                                {leaderName.charAt(0)}
+                                {getPartyAcronym(isPlayer ? party.name : rName)}
                               </div>
                             ) : (
                               <img 

@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Country, Party, Delegate, SpeechChoice } from '../types';
-import { DELEGATE_NAMES_POOL } from '../constants/countries';
+import { generateName } from '../constants/countries';
+import { playSound } from '../lib/sounds';
 import { 
   Users, Award, Gift, Megaphone, ShieldAlert, CheckCircle, 
   Sparkles, Coffee, Key, BarChart3, TrendingUp, Radio 
@@ -66,7 +67,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
     ];
 
     const initialDelegates = Array.from({ length: 6 }).map((_, i) => {
-      const name = DELEGATE_NAMES_POOL[i % DELEGATE_NAMES_POOL.length];
+      const name = generateName(country.id);
       const city = country.regions[i % country.regions.length]?.name || 'HQ';
       const faction = factions[i % factions.length];
       // Charisma of player boosts delegate starting loyalty
@@ -115,6 +116,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
   ];
 
   const handleTriggerCongressSpeech = () => {
+    playSound('click');
     setActiveSpeechIndex(0);
     setCongressSpeechStatus(null);
   };
@@ -139,6 +141,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
     onSpendTurn();
 
     // Show report
+    playSound('win');
     setCongressSpeechStatus(`Your historic speech was received with great applause. Party unity strengthened! Obtained +8 Political Influence.`);
   };
 
@@ -146,6 +149,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
   const handleHostDinner = () => {
     const cost = 50000;
     if (party.budget < cost) {
+      playSound('error');
       showAlert('Insufficient Budget', 'You need at least ' + cost.toLocaleString() + ' ' + currency + ' to host a unity dinner.', 'warning');
       return;
     }
@@ -161,6 +165,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
     setDelegates(updated);
     onUpdateParty({ ...party, budget: party.budget - cost });
     onSpendTurn();
+    playSound('success');
     showAlert('Unity Dinner Hosted', 'Bond strengthened with Traditionalist and Centrist delegates (+16% Loyalty).', 'success');
   };
 
@@ -168,6 +173,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
   const handleEmpowerYouth = () => {
     const cost = 30000;
     if (party.budget < cost) {
+      playSound('error');
       showAlert('Insufficient Budget', 'You need at least ' + cost.toLocaleString() + ' ' + currency + ' for youth grants.', 'warning');
       return;
     }
@@ -183,6 +189,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
     setDelegates(updated);
     onUpdateParty({ ...party, budget: party.budget - cost });
     onSpendTurn();
+    playSound('success');
     showAlert('Youth Grants Sent', 'Technological grants sent to Youth Front. Reformist delegate loyalty skyrocketed (+22% Loyalty).', 'success');
   };
 
@@ -190,6 +197,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
   const handleBackroomDeals = () => {
     const cost = 22;
     if (party.influence < cost) {
+      playSound('error');
       showAlert('Insufficient Political Influence', 'You need at least ' + cost + ' influence points to handle backroom agreements.', 'warning');
       return;
     }
@@ -209,6 +217,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
     setDelegates(updated);
     onUpdateParty({ ...party, influence: party.influence - cost });
     onSpendTurn();
+    playSound('success');
     showAlert('Backroom Deal Secured', `Reached deep agreement with dissatisfied delegate ${sorted[0].name}. Appointed them to internal committees. Loyalty set to 85%.`, 'success');
   };
 
@@ -217,6 +226,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
 
   const handleBuyUpgrade = (upgradeId: string, cost: number, tName: string) => {
     if (party.budget < cost) {
+      playSound('error');
       showAlert('Insufficient Budget', 'You need at least ' + cost.toLocaleString() + ' ' + currency + ' for charter upgrade.', 'warning');
       return;
     }
@@ -240,6 +250,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
 
     onUpdateParty(updatedParty);
     setPurchasedUpgrades([...purchasedUpgrades, upgradeId]);
+    playSound('success');
     showAlert('Charter Approved', `"${tName}" reform approved! Leadership stats permanently upgraded.`, 'success');
   };
 

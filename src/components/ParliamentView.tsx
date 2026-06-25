@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Country, Party, Bill, VoterGroup } from '../types';
+import { playSound } from '../lib/sounds';
 import { 
   Landmark, AlertCircle, CheckCircle2, XCircle, 
   ChevronRight, Vote, Sparkles, Coins, RefreshCw 
@@ -47,13 +48,25 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   const averagePlayerSupport = country.regions.reduce((acc, r) => acc + (r.supports[party.id] || 0), 0) / countRegions;
 
   // Parliament Seats Distribution based on current global support averages
-  const playerSeatsCount = Math.round((averagePlayerSupport / 100) * country.seats);
+  let playerSeatsCount = Math.round((averagePlayerSupport / 100) * country.seats);
+  if (country.id === 'DE') {
+    if (averagePlayerSupport < 5.0) {
+      playerSeatsCount = 0;
+    }
+  } else if (averagePlayerSupport <= 2.2) {
+    playerSeatsCount = 0;
+  }
   let remainingSeats = country.seats - playerSeatsCount;
 
-  // Allocate seats among rivals based on their base supports
-  const totalRivalBase = country.rivals.reduce((acc, r) => acc + r.baseSupport, 0);
+  // Allocate seats among rivals based on startingSeats if defined, otherwise baseSupport
+  const hasStartingSeats = country.rivals.some(r => r.startingSeats !== undefined);
+  const totalRivalBase = country.rivals.reduce((acc, r) => {
+    return acc + (hasStartingSeats ? (r.startingSeats || 0) : r.baseSupport);
+  }, 0);
+
   const rivalsSeatsData = country.rivals.map((rival) => {
-    const share = rival.baseSupport / totalRivalBase;
+    const rivalWeight = hasStartingSeats ? (rival.startingSeats || 0) : rival.baseSupport;
+    const share = totalRivalBase > 0 ? rivalWeight / totalRivalBase : 0;
     const seats = Math.round(share * remainingSeats);
     return { ...rival, seats };
   });
@@ -61,40 +74,65 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   // Calculate seat rows to render a stunning semi-circle representation of parliament/meclis
   const generateParliamentArch = () => {
     const points: { x: number; y: number; color: string }[] = [];
-    const rows = 5;
-    const baseRadius = 60;
-    const rowStep = 18;
 
     // Distribute seats proportionally
+    const allPartiesSeats = [
+      { color: party.color, seats: playerSeatsCount },
+      ...rivalsSeatsData.map(r => ({ color: r.color, seats: r.seats }))
+    ];
+
+    // Align seats count with total country seats
+    const totalSeatsAllocated = allPartiesSeats.reduce((acc, p) => acc + p.seats, 0);
+    if (totalSeatsAllocated < country.seats) {
+      allPartiesSeats[0].seats += (country.seats - totalSeatsAllocated);
+    } else if (totalSeatsAllocated > country.seats) {
+      let diff = totalSeatsAllocated - country.seats;
+      for (let p of allPartiesSeats) {
+        if (p.seats >= diff) {
+          p.seats -= diff;
+          break;
+        } else {
+          diff -= p.seats;
+          p.seats = 0;
+        }
+      }
+    }
+
     const seatsList: string[] = [];
-    // Inject player seats
-    for (let i = 0; i < playerSeatsCount; i++) seatsList.push(party.color);
-    // Inject rival seats
-    rivalsSeatsData.forEach((r) => {
-      for (let i = 0; i < r.seats; i++) seatsList.push(r.color);
+    allPartiesSeats.forEach((p) => {
+      for (let i = 0; i < p.seats; i++) {
+        seatsList.push(p.color);
+      }
     });
 
-    // Make sure we have exactly country.seats amount
-    while (seatsList.length < country.seats) seatsList.push('#64748b');
+    const totalSeats = country.seats;
+    const isLarge = totalSeats > 200;
+    const dotSpacing = isLarge ? 5.2 : 10;
+    const dynamicRowStep = isLarge ? 7.5 : 16;
+    const dynamicBaseRadius = isLarge ? 35 : 60;
 
     let seatIndex = 0;
-    for (let r = 0; r < rows; r++) {
-      const radius = baseRadius + r * rowStep;
-      // Seats per row increases as radius increases
-      const seatsInRow = Math.round((radius * Math.PI) / 10);
+    let r = 0;
+
+    while (seatIndex < totalSeats) {
+      const radius = dynamicBaseRadius + r * dynamicRowStep;
+      const arcLength = radius * Math.PI;
+      const seatsInRow = Math.max(8, Math.round(arcLength / dotSpacing));
       const angleStep = Math.PI / (seatsInRow - 1);
 
-      for (let s = 0; s < seatsInRow && seatIndex < country.seats; s++) {
+      for (let s = 0; s < seatsInRow && seatIndex < totalSeats; s++) {
         const angle = Math.PI - s * angleStep;
         const x = radius * Math.cos(angle);
         const y = radius * Math.sin(angle);
         points.push({
           x: x + 150, // Center offset
-          y: 140 - y, // Invert and lower
-          color: seatsList[seatIndex]
+          y: 155 - y, // Invert and lower slightly
+          color: seatsList[seatIndex] || '#64748b'
         });
         seatIndex++;
       }
+      r++;
+      if (r > 40) break; // Safety cutoff
     }
     return points;
   };
@@ -187,6 +225,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   const finalizeVoteResult = (passed: boolean, rating: number) => {
     // Determine new status
     const resultStatus = passed ? 'Passed' : 'Rejected';
+    playSound(passed ? 'success' : 'error');
 
     // Apply outcomes dynamically if PASSED
     let updatedCountry = { ...country };
