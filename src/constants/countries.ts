@@ -305,6 +305,124 @@ export const getGermanyRegions = (): Region[] => {
 };
 
 
+const US_STATES_SPEC = [
+  { name: 'Alabama', seats: 9, winner: 'REP', governor: 'Kay Ivey' },
+  { name: 'Alaska', seats: 3, winner: 'REP', governor: 'Mike Dunleavy' },
+  { name: 'Arizona', seats: 11, winner: 'DEM_US', governor: 'Katie Hobbs' },
+  { name: 'Arkansas', seats: 6, winner: 'REP', governor: 'Sarah Huckabee Sanders' },
+  { name: 'California', seats: 54, winner: 'DEM_US', governor: 'Gavin Newsom' },
+  { name: 'Colorado', seats: 10, winner: 'DEM_US', governor: 'Jared Polis' },
+  { name: 'Connecticut', seats: 7, winner: 'DEM_US', governor: 'Ned Lamont' },
+  { name: 'Delaware', seats: 3, winner: 'DEM_US', governor: 'Matt Meyer' },
+  { name: 'District of Columbia', seats: 3, winner: 'DEM_US', governor: 'Muriel Bowser' },
+  { name: 'Florida', seats: 30, winner: 'REP', governor: 'Ron DeSantis' },
+  { name: 'Georgia', seats: 16, winner: 'REP', governor: 'Brian Kemp' },
+  { name: 'Hawaii', seats: 4, winner: 'DEM_US', governor: 'Josh Green' },
+  { name: 'Idaho', seats: 4, winner: 'REP', governor: 'Brad Little' },
+  { name: 'Illinois', seats: 19, winner: 'DEM_US', governor: 'J. B. Pritzker' },
+  { name: 'Indiana', seats: 11, winner: 'REP', governor: 'Mike Braun' },
+  { name: 'Iowa', seats: 6, winner: 'REP', governor: 'Kim Reynolds' },
+  { name: 'Kansas', seats: 6, winner: 'DEM_US', governor: 'Laura Kelly' },
+  { name: 'Kentucky', seats: 8, winner: 'DEM_US', governor: 'Andy Beshear' },
+  { name: 'Louisiana', seats: 8, winner: 'REP', governor: 'Jeff Landry' },
+  { name: 'Maine', seats: 4, winner: 'DEM_US', governor: 'Janet Mills' },
+  { name: 'Maryland', seats: 10, winner: 'DEM_US', governor: 'Wes Moore' },
+  { name: 'Massachusetts', seats: 11, winner: 'DEM_US', governor: 'Maura Healey' },
+  { name: 'Michigan', seats: 15, winner: 'DEM_US', governor: 'Gretchen Whitmer' },
+  { name: 'Minnesota', seats: 10, winner: 'DEM_US', governor: 'Tim Walz' },
+  { name: 'Mississippi', seats: 6, winner: 'REP', governor: 'Tate Reeves' },
+  { name: 'Missouri', seats: 10, winner: 'REP', governor: 'Mike Parson' },
+  { name: 'Montana', seats: 4, winner: 'REP', governor: 'Greg Gianforte' },
+  { name: 'Nebraska', seats: 5, winner: 'REP', governor: 'Jim Pillen' },
+  { name: 'Nevada', seats: 6, winner: 'REP', governor: 'Joe Lombardo' },
+  { name: 'New Hampshire', seats: 4, winner: 'REP', governor: 'Chris Sununu' },
+  { name: 'New Jersey', seats: 14, winner: 'DEM_US', governor: 'Phil Murphy' },
+  { name: 'New Mexico', seats: 5, winner: 'DEM_US', governor: 'Michelle Lujan Grisham' },
+  { name: 'New York', seats: 28, winner: 'DEM_US', governor: 'Kathy Hochul' },
+  { name: 'North Carolina', seats: 16, winner: 'DEM_US', governor: 'Roy Cooper' },
+  { name: 'North Dakota', seats: 3, winner: 'REP', governor: 'Kelly Armstrong' },
+  { name: 'Ohio', seats: 17, winner: 'REP', governor: 'Mike DeWine' },
+  { name: 'Oklahoma', seats: 7, winner: 'REP', governor: 'Kevin Stitt' },
+  { name: 'Oregon', seats: 8, winner: 'DEM_US', governor: 'Tina Kotek' },
+  { name: 'Pennsylvania', seats: 19, winner: 'DEM_US', governor: 'Josh Shapiro' },
+  { name: 'Rhode Island', seats: 4, winner: 'DEM_US', governor: 'Dan McKee' },
+  { name: 'South Carolina', seats: 9, winner: 'REP', governor: 'Henry McMaster' },
+  { name: 'South Dakota', seats: 3, winner: 'REP', governor: 'Kristi Noem' },
+  { name: 'Tennessee', seats: 11, winner: 'REP', governor: 'Bill Lee' },
+  { name: 'Texas', seats: 40, winner: 'REP', governor: 'Greg Abbott' },
+  { name: 'Utah', seats: 6, winner: 'REP', governor: 'Spencer Cox' },
+  { name: 'Vermont', seats: 3, winner: 'REP', governor: 'Phil Scott' },
+  { name: 'Virginia', seats: 13, winner: 'REP', governor: 'Glenn Youngkin' },
+  { name: 'Washington', seats: 12, winner: 'DEM_US', governor: 'Jay Inslee' },
+  { name: 'West Virginia', seats: 4, winner: 'REP', governor: 'Jim Justice' },
+  { name: 'Wisconsin', seats: 10, winner: 'DEM_US', governor: 'Tony Evers' },
+  { name: 'Wyoming', seats: 3, winner: 'REP', governor: 'Mark Gordon' }
+];
+
+export const getUSRegions = (): Region[] => {
+  return US_STATES_SPEC.map((spec) => {
+    const base: Record<string, number> = {
+      REP: 40,
+      DEM_US: 40,
+      LP: 6,
+      GP: 4
+    };
+
+    if (spec.winner === 'REP') {
+      base.REP = 50 + Math.floor(Math.random() * 8);
+      base.DEM_US = 35 + Math.floor(Math.random() * 5);
+      base.LP = 5 + Math.floor(Math.random() * 3);
+      base.GP = 2 + Math.floor(Math.random() * 2);
+    } else {
+      base.DEM_US = 50 + Math.floor(Math.random() * 8);
+      base.REP = 35 + Math.floor(Math.random() * 5);
+      base.GP = 5 + Math.floor(Math.random() * 3);
+      base.LP = 2 + Math.floor(Math.random() * 2);
+    }
+
+    const total = Object.values(base).reduce((s, v) => s + v, 0);
+    const scale = 100 / total;
+    const supports: Record<string, number> = {};
+    Object.entries(base).forEach(([pId, val]) => {
+      supports[pId] = parseFloat((val * scale).toFixed(2));
+    });
+
+    const workers = 15 + Math.floor(Math.random() * 15);
+    const youth = 15 + Math.floor(Math.random() * 15);
+    const nationalists = 10 + Math.floor(Math.random() * 15);
+    const liberals = 15 + Math.floor(Math.random() * 10);
+    const traditionalists = 10 + Math.floor(Math.random() * 15);
+    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+
+    const voterDistribution = {
+      'İşçiler': workers,
+      'Gençler': youth,
+      'Milliyetçiler': nationalists,
+      'Liberaller': liberals,
+      'Gelenekçiler': traditionalists,
+      'Esnaflar': Math.max(2, shopkeepers),
+    };
+
+    const normalized = spec.name.toLowerCase()
+      .replace(/[^a-z]/g, '');
+
+    const id = `US_${normalized}`;
+
+    return {
+      id,
+      name: spec.name,
+      seats: spec.seats,
+      voterDistribution,
+      supports,
+      infrastructure: 4 + Math.floor(Math.random() * 2),
+      campaignLevel: 0,
+      ownerPartyId: spec.winner,
+      mayorName: spec.governor
+    };
+  });
+};
+
+
 // Helper to generate a baseline distribution of voters for a region
 const makeVoterGroup = (
   workers: number,
@@ -395,6 +513,114 @@ const createBills = (countryId: string): Bill[] => [
       'Milliyetçiler': 0,
       'Gelenekçiler': -3,
     }
+  },
+  {
+    id: `${countryId}_bill_5`,
+    title: 'Ulaşım ve Altyapı Yatırımları Fonu',
+    description: 'Yüksek hızlı tren hatları ve otoyol projelerine bütçe ayırarak lojistik gücü artıracak altyapı fonu.',
+    category: 'Ekonomi',
+    status: 'Bekliyor',
+    budgetCost: 600000,
+    influenceMod: 12,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': 10,
+      'Gençler': 3,
+      'Esnaflar': 8,
+      'Liberaller': 2,
+      'Milliyetçiler': 6,
+      'Gelenekçiler': 4,
+    }
+  },
+  {
+    id: `${countryId}_bill_6`,
+    title: 'Yapay Zeka ve Yüksek Teknoloji Teşvik Yasası',
+    description: 'Yazılım, yapay zeka ve mikroçip geliştiren yerli girişimcilere hibe ve vergi kolaylığı sağlama paketi.',
+    category: 'Sağlık / Eğitim',
+    status: 'Bekliyor',
+    budgetCost: 350000,
+    influenceMod: 20,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': 0,
+      'Gençler': 15,
+      'Esnaflar': 4,
+      'Liberaller': 12,
+      'Milliyetçiler': 5,
+      'Gelenekçiler': -4,
+    }
+  },
+  {
+    id: `${countryId}_bill_7`,
+    title: 'Temiz Su Kaynakları ve Orman Koruma Kanunu',
+    description: 'Su havzalarını güvenceye alan, su kirliliği yaratan sanayiye ağır cezalar getiren ekolojik kanun.',
+    category: 'Sağlık / Eğitim',
+    status: 'Bekliyor',
+    budgetCost: 180000,
+    influenceMod: 10,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': 2,
+      'Gençler': 10,
+      'Esnaflar': -2,
+      'Liberaller': 5,
+      'Milliyetçiler': 4,
+      'Gelenekçiler': 2,
+    }
+  },
+  {
+    id: `${countryId}_bill_8`,
+    title: 'Sınır Güvenliği ve Göç Denetimi Yasası',
+    description: 'Sınır karakollarının teknolojik donanımını artırmayı ve yasa dışı göçü engellemek için bütçe ayırmayı hedefleyen yasa.',
+    category: 'Güvenlik',
+    status: 'Bekliyor',
+    budgetCost: 400000,
+    influenceMod: 22,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': 3,
+      'Gençler': -3,
+      'Esnaflar': 6,
+      'Liberaller': -8,
+      'Milliyetçiler': 18,
+      'Gelenekçiler': 12,
+    }
+  },
+  {
+    id: `${countryId}_bill_9`,
+    title: 'Sağlık Hizmetleri Modernizasyon Reformu',
+    description: 'Şehir hastanelerinin teçhizatını artıran, hekim kadrolarını ve tıbbi hammadde stoklarını güçlendiren büyük reform.',
+    category: 'Sağlık / Eğitim',
+    status: 'Bekliyor',
+    budgetCost: 550000,
+    influenceMod: 15,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': 8,
+      'Gençler': 6,
+      'Esnaflar': 4,
+      'Liberaller': -1,
+      'Milliyetçiler': 5,
+      'Gelenekçiler': 8,
+    }
+  },
+  {
+    id: `${countryId}_bill_10`,
+    title: 'Yerel Esnaf ve KOBİ Koruma Vergi Yasası',
+    description: 'Yıllık cirosu belirli limitlerin altındaki esnaf ve küçük işletmelere vergi muafiyeti getiren ekonomik yardım.',
+    category: 'Ekonomi',
+    status: 'Bekliyor',
+    budgetCost: 200000,
+    influenceMod: 18,
+    yesVotesPercentage: 0,
+    voterImpacts: {
+      'İşçiler': -2,
+      'Gençler': 4,
+      'Esnaflar': 16,
+      'Liberaller': 8,
+      'Milliyetçiler': 6,
+      'Gelenekçiler': 8,
+    }
   }
 ];
 
@@ -439,16 +665,12 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     population: '333 Milyon',
     primaryColor: '#2563eb', // Tailwind blue-600
     rivals: [
-      { id: 'US_rival_1', name: 'Cumhuriyetçi Kanat', leader: 'Eleanor Sterling', ideology: 'Muhafazakar', symbol: 'ShieldCheck', color: '#dc2626', baseSupport: 44 },
-      { id: 'US_rival_2', name: 'Demokratik Uyanış', leader: 'Julian Vance', ideology: 'Sosyal Demokrat', symbol: 'Globe', color: '#2563eb', baseSupport: 42 },
-      { id: 'US_rival_3', name: 'Özgürlükçü İttifak', leader: 'Garry Moss', ideology: 'Liberal', symbol: 'Bird', color: '#eab308', baseSupport: 6 },
+      { id: 'REP', name: 'Cumhuriyetçi Parti', leader: 'Donald Trump', ideology: 'Muhafazakar', symbol: 'ShieldCheck', color: '#dc2626', baseSupport: 46, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Donald_Trump_official_portrait.jpg/250px-Donald_Trump_official_portrait.jpg' },
+      { id: 'DEM_US', name: 'Demokrat Parti', leader: 'Kamala Harris', ideology: 'Sosyal Demokrat', symbol: 'Globe', color: '#2563eb', baseSupport: 45, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg/250px-Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg' },
+      { id: 'LP', name: 'Özgürlükçü Parti (Libertarian)', leader: 'Chase Oliver', ideology: 'Liberal', symbol: 'Bird', color: '#eab308', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Chase_Oliver_August_2023.jpg/250px-Chase_Oliver_August_2023.jpg' },
+      { id: 'GP', name: 'Yeşiller Partisi (Green)', leader: 'Jill Stein', ideology: 'Ekolojist', symbol: 'Leaf', color: '#16a34a', baseSupport: 3, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Jill_Stein_at_the_2024_National_Convention_cropped.jpg/250px-Jill_Stein_at_the_2024_National_Convention_cropped.jpg' },
     ],
-    regions: [
-      { id: 'US_reg_1', name: 'Doğu Yakası (Northeast)', seats: 120, voterDistribution: makeVoterGroup(12, 28, 6, 24, 14, 16), supports: {}, infrastructure: 5, campaignLevel: 0 },
-      { id: 'US_reg_2', name: 'Pasifik Yakası (West Coast)', seats: 110, voterDistribution: makeVoterGroup(10, 32, 5, 23, 10, 20), supports: {}, infrastructure: 5, campaignLevel: 0 },
-      { id: 'US_reg_3', name: 'Endüstriyel Merkez (Midwest)', seats: 140, voterDistribution: makeVoterGroup(34, 15, 18, 10, 15, 8), supports: {}, infrastructure: 3, campaignLevel: 0 },
-      { id: 'US_reg_4', name: 'Güney Eyaletleri (The South)', seats: 168, voterDistribution: makeVoterGroup(18, 12, 26, 12, 24, 8), supports: {}, infrastructure: 3, campaignLevel: 0 },
-    ],
+    regions: getUSRegions(),
     bills: createBills('US'),
     campaignTurns: 53,
     electionCycleYears: 4,

@@ -24,6 +24,7 @@ export interface Party {
     strategy: number;      // Strateji
   };
   photo?: string;    // Leader photo URL
+  startAsGovernment?: boolean; // Skip campaign, start directly as ruling government
 }
 
 export interface RivalParty {

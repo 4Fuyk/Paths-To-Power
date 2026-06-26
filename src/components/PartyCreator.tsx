@@ -180,6 +180,41 @@ const GERMANY_AVATARS = [
   }
 ];
 
+const US_AVATARS = [
+  {
+    id: 'us_trump',
+    name: 'Donald Trump',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Donald_Trump_official_portrait.jpg/250px-Donald_Trump_official_portrait.jpg',
+    partyName: 'Cumhuriyetçi Parti',
+    color: '#dc2626',
+    ideology: 'Muhafazakar' as Ideology,
+  },
+  {
+    id: 'us_harris',
+    name: 'Kamala Harris',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg/250px-Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg',
+    partyName: 'Demokrat Parti',
+    color: '#2563eb',
+    ideology: 'Sosyal Demokrat' as Ideology,
+  },
+  {
+    id: 'us_oliver',
+    name: 'Chase Oliver',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Chase_Oliver_August_2023.jpg/250px-Chase_Oliver_August_2023.jpg',
+    partyName: 'Özgürlükçü Parti (Libertarian)',
+    color: '#eab308',
+    ideology: 'Liberal' as Ideology,
+  },
+  {
+    id: 'us_stein',
+    name: 'Jill Stein',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Jill_Stein_at_the_2024_National_Convention_cropped.jpg/250px-Jill_Stein_at_the_2024_National_Convention_cropped.jpg',
+    partyName: 'Yeşiller Partisi (Green)',
+    color: '#16a34a',
+    ideology: 'Ekolojist' as Ideology,
+  }
+];
+
 const AVAILABLE_IDEOLOGIES: { value: Ideology; desc: string; focus: string }[] = [
   { value: 'Sosyal Demokrat', desc: 'Social justice, robust state support programs, labor wellness, and comprehensive civil rights.', focus: 'Provides bonus support within Labor and Youth factions.' },
   { value: 'Muhafazakar', desc: 'Cultural patriotism, public order, preservation of heritage, and localized tax alleviation.', focus: 'Provides bonus support within Traditionalist and Merchant factions.' },
@@ -211,6 +246,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
   const [selectedPhoto, setSelectedPhoto] = useState('');
   const [isPresetSelected, setIsPresetSelected] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [startAsGovernment, setStartAsGovernment] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,20 +254,42 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
     // Prevent selecting existing national rival parties as custom player party
     const lowerPartyName = partyName.trim().toLowerCase();
+    const lowerLeaderName = leaderName.trim().toLowerCase();
     const forbiddenParties = country.id === 'DE' ? [
       'cdu', 'csu', 'afd', 'spd', 'grüne', 'gruene', 'linke', 'die linke', 'bsw', 'fdp', 'ssw'
+    ] : country.id === 'US' ? [
+      'republican', 'democrat', 'libertarian', 'green', 'cumhuriyetçi', 'cumhuriyetci', 'demokrat', 'özgürlükçü', 'ozgurlukcu', 'yeşiller', 'yesiller', 'rep', 'dem_us', 'lp', 'gp'
     ] : [
       'chp', 'akp', 'ak parti', 'yrp', 'yeniden refah', 'dem', 'dem parti', 'mhp',
       'zafer', 'zafer partisi', 'tip', 'tkp', 'saadet', 'saadet partisi', 'deva',
       'deva partisi', 'gelecek', 'gelecek partisi', 'vatan', 'vatan partisi'
     ];
 
-    if ((country.id === 'TR' || country.id === 'DE') && !isPresetSelected && (
+    if ((country.id === 'TR' || country.id === 'DE' || country.id === 'US') && !isPresetSelected && (
       forbiddenParties.includes(lowerPartyName) ||
       forbiddenParties.some(p => lowerPartyName.includes(p) && p.length > 2)
     )) {
       setErrorModal('This party name is reserved for a national rival party! Please establish your own custom political party or choose one of the official leader templates above.');
       return;
+    }
+
+    // Auto set to government mode if the selected/created party matches the ruling incumbent parties:
+    // USA: Donald Trump / Cumhuriyetçi Parti / Republican
+    // Turkey: Recep Tayyip Erdoğan / AKP / AK Parti
+    // Germany: Friedrich Merz / CDU
+    let finalStartAsGovernment = startAsGovernment;
+    if (country.id === 'US') {
+      if (lowerLeaderName.includes('trump') || lowerPartyName.includes('cumhuriyet') || lowerPartyName.includes('republic') || lowerPartyName.includes('gop')) {
+        finalStartAsGovernment = true;
+      }
+    } else if (country.id === 'TR') {
+      if (lowerLeaderName.includes('erdogan') || lowerPartyName.includes('akp') || lowerPartyName.includes('ak parti') || lowerPartyName.includes('adalet ve kalkinma')) {
+        finalStartAsGovernment = true;
+      }
+    } else if (country.id === 'DE') {
+      if (lowerLeaderName.includes('merz') || lowerPartyName.includes('cdu') || lowerPartyName.includes('christlich dem')) {
+        finalStartAsGovernment = true;
+      }
     }
 
     // Attributes are automatically preset to solid campaign values
@@ -251,7 +309,8 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
         organization: 5,
         strategy: 5,
       },
-      photo: ((country.id === 'TR' || country.id === 'DE') ? (isPresetSelected ? selectedPhoto : '') : selectedPhoto),
+      photo: ((country.id === 'TR' || country.id === 'DE' || country.id === 'US') ? (isPresetSelected ? selectedPhoto : '') : selectedPhoto),
+      startAsGovernment: finalStartAsGovernment,
     };
 
     onCreateParty(newParty);
@@ -292,11 +351,11 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
           <div className="space-y-4">
             {/* National leader presets / Avatar Selector */}
-            {(country.id === 'TR' || country.id === 'DE') && (
+            {(country.id === 'TR' || country.id === 'DE' || country.id === 'US') && (
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">OFFICIAL NATIONAL LEADER TEMPLATES</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {(country.id === 'TR' ? TURKEY_AVATARS : GERMANY_AVATARS).map((avatar) => {
+                  {(country.id === 'TR' ? TURKEY_AVATARS : country.id === 'DE' ? GERMANY_AVATARS : US_AVATARS).map((avatar) => {
                     const isSelected = selectedPhoto === avatar.url;
                     return (
                       <button
@@ -309,6 +368,9 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                           setSelectedIdeology(avatar.ideology);
                           setSelectedPhoto(avatar.url);
                           setIsPresetSelected(true);
+                          
+                          // By default, presets do not auto-force direct governance start. Player runs campaign/congress as requested!
+                          setStartAsGovernment(false);
                         }}
                         className={`p-2 rounded-2xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
                           isSelected
@@ -492,6 +554,54 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
               </div>
             </div>
 
+            {/* Gameplay Mode Selection Toggle */}
+            <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-indigo-950/20 border-indigo-950/40' : 'bg-indigo-50/40 border-indigo-100'}`}>
+              <label className="block text-xs font-bold uppercase tracking-wider text-indigo-400 mb-2">GAMEPLAY STARTING MODE</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStartAsGovernment(false)}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 cursor-pointer ${
+                    !startAsGovernment
+                      ? darkMode
+                        ? 'bg-indigo-900/40 border-indigo-500 text-white shadow-sm'
+                        : 'bg-white border-indigo-300 text-indigo-950 shadow-sm'
+                      : darkMode
+                        ? 'bg-slate-950/40 border-slate-900 text-slate-400 hover:text-slate-300'
+                        : 'bg-slate-50 border-slate-200 text-slate-550 hover:text-slate-700'
+                  }`}
+                >
+                  <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5">
+                    📣 Campaign Mode
+                  </span>
+                  <span className="text-[10px] opacity-80 leading-normal mt-0.5">
+                    Start in opposition. Build grassroots support across states and win the general election to earn power.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStartAsGovernment(true)}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 cursor-pointer ${
+                    startAsGovernment
+                      ? darkMode
+                        ? 'bg-indigo-900/40 border-indigo-500 text-white shadow-sm'
+                        : 'bg-white border-indigo-300 text-indigo-950 shadow-sm'
+                      : darkMode
+                        ? 'bg-slate-950/40 border-slate-900 text-slate-400 hover:text-slate-300'
+                        : 'bg-slate-50 border-slate-200 text-slate-550 hover:text-slate-700'
+                  }`}
+                >
+                  <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5">
+                    🏛 Governance Mode
+                  </span>
+                  <span className="text-[10px] opacity-80 leading-normal mt-0.5">
+                    Skip the campaign. Start immediately as the sitting, ruling government with full access to Cabinet, Diplomacy, and Parliament.
+                  </span>
+                </button>
+              </div>
+            </div>
+
             {/* Launch button */}
             <div className="pt-4">
               <button
@@ -499,7 +609,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                 type="submit"
                 className="w-full py-4 rounded-2xl font-bold transition-all shadow-lg text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-650 to-indigo-550 text-white cursor-pointer hover:scale-[1.015] hover:shadow-indigo-600/25"
               >
-                <Award className="w-5 h-5 animate-pulse" /> Establish Party & Launch Campaign!
+                <Award className="w-5 h-5 animate-pulse" /> {startAsGovernment ? 'Form State Government & Start Ruling!' : 'Establish Party & Launch Campaign!'}
               </button>
             </div>
           </div>

@@ -35,6 +35,33 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [casusBelli, setCasusBelli] = useState<Record<string, boolean>>({});
+  const [fundedRebels, setFundedRebels] = useState<Record<string, boolean>>({});
+
+  const handleFundRebels = (targetId: string) => {
+    const cost = 80000;
+    if (treasury < cost) {
+      playSound('error');
+      setErrorMessage(`Insufficient National Budget! Funding local rebel groups requires paying ₺/$/€ ${cost.toLocaleString()} covert operations cost.`);
+      return;
+    }
+    
+    onUpdateTreasury(treasury - cost);
+    setFundedRebels(prev => ({ ...prev, [targetId]: true }));
+    setCasusBelli(prev => ({ ...prev, [targetId]: true }));
+    
+    const currentRelation = diplomaticRelations[targetId];
+    if (currentRelation) {
+      const updated = {
+        ...diplomaticRelations,
+        [targetId]: { ...currentRelation, opinion: Math.max(0, currentRelation.opinion - 35) }
+      };
+      onUpdateRelations(updated);
+    }
+    
+    playSound('success');
+    setSuccessMessage(`Covert rebel funding approved! Local unrest successfully increased in ${getCountryName(targetId)}, dropping their stability and opinion by 35, and fabricating a 100% valid Casus Belli!`);
+    setErrorMessage(null);
+  };
 
   // Available Bloc memberships
   const [activeBlocs, setActiveBlocs] = useState<{ economic: boolean; military: boolean; diplomatic: boolean }>({
@@ -401,8 +428,20 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                               Sanction
                             </button>
                             <button
+                              onClick={() => handleHostileAction(id, 'Embargo')}
+                              className="px-2.5 py-1.5 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
+                            >
+                              Embargo
+                            </button>
+                            <button
+                              onClick={() => handleFundRebels(id)}
+                              className="px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
+                            >
+                              Fund Rebellion
+                            </button>
+                            <button
                               onClick={() => handleHostileAction(id, 'Declare War')}
-                              className="px-2.5 py-1.5 bg-red-650 hover:bg-red-600 text-white rounded-xl font-bold text-xs cursor-pointer flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-red-650 hover:bg-red-600 text-white rounded-xl font-bold text-xs cursor-pointer flex items-center gap-1 hover:scale-[1.02] transition-transform"
                             >
                               <Swords className="w-3.5 h-3.5" /> War
                             </button>

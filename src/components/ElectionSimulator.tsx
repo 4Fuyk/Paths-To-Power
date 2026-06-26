@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Country, Party, Region } from '../types';
+import { Country, Party, Region, Coalition } from '../types';
 import { playSound } from '../lib/sounds';
 import { 
   Vote, Award, Trophy, ArrowRight, HelpCircle, AlertTriangle, 
@@ -16,6 +16,7 @@ interface ElectionSimulatorProps {
   party: Party;
   onElectionFinished: (success: boolean, finalSeats?: Record<string, number>) => void;
   darkMode: boolean;
+  coalitions?: Coalition[];
 }
 
 export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
@@ -23,6 +24,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   party,
   onElectionFinished,
   darkMode,
+  coalitions = [],
 }) => {
   const [currentRegionIndex, setCurrentRegionIndex] = useState(0);
   const [countedRegions, setCountedRegions] = useState<string[]>([]);
@@ -30,6 +32,36 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [newsTicker, setNewsTicker] = useState<string>('Polls closed, counting phase begins...');
   const [step, setStep] = useState<'intro' | 'counting' | 'results'>('intro');
   const [userSpeed, setUserSpeed] = useState<number>(2000); // ms per region
+
+  // Coalition Negotiation States
+  const [selectedCoalitionParties, setSelectedCoalitionParties] = useState<string[]>([]);
+  const [coalitionNegotiated, setCoalitionNegotiated] = useState<boolean>(false);
+  const [coalitionSuccess, setCoalitionSuccess] = useState<boolean | null>(null);
+  const [coalitionMessage, setCoalitionMessage] = useState<string>('');
+
+  const getAgreementChance = (rivalId: string) => {
+    const rival = country.rivals.find(r => r.id === rivalId);
+    if (!rival) return 50;
+    
+    const pIdeo = party.ideology;
+    const rIdeo = rival.ideology;
+    if (pIdeo === rIdeo) return 95;
+    
+    // Moderate alliances
+    if (pIdeo === 'Sosyal Demokrat' && rIdeo === 'Sosyalist') return 85;
+    if (pIdeo === 'Sosyal Demokrat' && rIdeo === 'Ekolojist') return 90;
+    if (pIdeo === 'Muhafazakar' && rIdeo === 'Milliyetçi') return 85;
+    if (pIdeo === 'Liberal' && rIdeo === 'Muhafazakar') return 65;
+    if (pIdeo === 'Liberal' && rIdeo === 'Sosyal Demokrat') return 70;
+    if (pIdeo === 'Sosyalist' && rIdeo === 'Ekolojist') return 80;
+    
+    // High-friction alliances
+    if (pIdeo === 'Sosyalist' && rIdeo === 'Muhafazakar') return 15;
+    if (pIdeo === 'Milliyetçi' && rIdeo === 'Sosyalist') return 10;
+    if (pIdeo === 'Sosyal Demokrat' && rIdeo === 'Milliyetçi') return 30;
+    
+    return 50; // default
+  };
 
   // Pre-calculate rival party names and metadata
   const getPartyName = (id: string) => {
@@ -165,10 +197,82 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
     return `GLOBAL PRESS: Results declared in ${region.name} of ${country.name}. ${party.name} wins ${playerSeats} parliamentary seats.`;
   };
 
+  // Find player's winning coalition if any
+  const getWinningCoalition = () => {
+    if (!coalitions || coalitions.length === 0) return null;
+    return coalitions.find(coal => {
+      const hasPlayer = coal.parties.includes(party.name);
+      if (!hasPlayer) return false;
+
+      const combinedSeats = coal.parties.reduce((sum, partyName) => {
+        if (partyName === party.name) {
+          return sum + (seatsWon[party.id] || 0);
+        }
+        const rival = country.rivals.find(r => r.name === partyName);
+        if (rival) {
+          return sum + (seatsWon[rival.id] || 0);
+        }
+        return sum;
+      }, 0);
+
+      // Check if this coalition has an absolute majority of seats in parliament
+      if (combinedSeats > country.seats / 2) {
+        return true;
+      }
+
+      // Or check if this coalition's combined seats are higher than any single party outside of this coalition
+      let isLargestBloc = true;
+      
+      // Check other individual parties
+      const playerPartyId = party.id;
+      if (seatsWon[playerPartyId] && !coal.parties.includes(party.name)) {
+        if ((seatsWon[playerPartyId] || 0) >= combinedSeats) {
+          isLargestBloc = false;
+        }
+      }
+      country.rivals.forEach(r => {
+        if (!coal.parties.includes(r.name)) {
+          const rSeats = seatsWon[r.id] || 0;
+          if (rSeats >= combinedSeats) {
+            isLargestBloc = false;
+          }
+        }
+      });
+
+      // Also check other rival coalitions
+      coalitions.forEach(otherCoal => {
+        // If it is another coalition and doesn't contain the player
+        if (otherCoal.name !== coal.name && !otherCoal.parties.includes(party.name)) {
+          const otherCombined = otherCoal.parties.reduce((sum, pName) => {
+            if (pName === party.name) return sum + (seatsWon[party.id] || 0);
+            const r = country.rivals.find(riv => riv.name === pName);
+            return sum + (r ? (seatsWon[r.id] || 0) : 0);
+          }, 0);
+
+          if (otherCombined >= combinedSeats) {
+            isLargestBloc = false;
+          }
+        }
+      });
+
+      return isLargestBloc;
+    });
+  };
+
   // Determine Overall Victor Status
   const checkVictory = () => {
+    if (coalitionSuccess === true) {
+      return true;
+    }
+
     const playerTotalSeats = seatsWon[party.id] || 0;
     
+    // First check if there is a winning coalition
+    const winningCoal = getWinningCoalition();
+    if (winningCoal) {
+      return true;
+    }
+
     // Settle target thresholds base on model system
     if (country.system === 'Başkanlık Sistemi' || country.system === 'Presidential System') {
       // USA: Need > 270 out of 538 to win the Presidency
@@ -181,11 +285,19 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
           isLargestValue = false;
         }
       });
-      return isLargestValue && playerTotalSeats > 20; // Safe threshold of seats
+      const singlePartyWin = isLargestValue && playerTotalSeats > 20;
+      
+      return singlePartyWin;
     }
   };
 
-  const isVictor = checkVictory();
+  const isVictor = checkVictory() || coalitionSuccess === true;
+  const winningCoalition = getWinningCoalition() || (coalitionSuccess ? {
+    name: "Yeni Koalisyon Hükümeti",
+    parties: [party.name, ...selectedCoalitionParties.map(id => country.rivals.find(r => r.id === id)?.name || '')],
+    totalSeats: (seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0),
+    ideologyAvg: "Alliance"
+  } : null);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 lg:p-6 flex flex-col gap-6">
@@ -417,9 +529,22 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                       <Trophy className="w-12 h-12 text-yellow-500" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-amber-500">Historic Election Victory Achieved!</h3>
+                      <h3 className="text-2xl font-black text-amber-500">
+                        {winningCoalition ? 'Government Formed via Coalition!' : 'Historic Election Victory Achieved!'}
+                      </h3>
                       <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto mt-1.5 font-medium">
-                        Congratulations leader! You have won the election in {country.name} with {seatsWon[party.id] || 0} representative seats. The election commission has officially certified your historic victory!
+                        {winningCoalition ? (
+                          <span>
+                            Won as coalition with <strong>{winningCoalition.parties.filter(p => p !== party.name).join(', ')}</strong>! 
+                            Together, your alliance has commanded a total of <strong>{
+                              winningCoalition.parties.reduce((sum, pName) => sum + (pName === party.name ? (seatsWon[party.id] || 0) : (seatsWon[country.rivals.find(r => r.name === pName)?.id || ''] || 0)), 0)
+                            }</strong> seats, establishing a stable democratic majority!
+                          </span>
+                        ) : (
+                          <span>
+                            Congratulations leader! You have won the election in {country.name} with {seatsWon[party.id] || 0} representative seats. The election commission has officially certified your historic victory!
+                          </span>
+                        )}
                       </p>
                     </div>
 
@@ -450,30 +575,162 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-rose-400">Parliamentary Majority Unreached</h3>
-                      <p className="text-xs text-slate-450 leading-relaxed max-w-md mx-auto mt-1 font-medium">
-                        Unfortunately, with only {seatsWon[party.id] || 0} seats inside the parliament, you fell behind opponent coalitions. Please reform your party traits/charter and try again in {country.name}.
+                      <p className="text-xs text-slate-400 leading-relaxed max-w-md mx-auto mt-1 font-medium">
+                        Unfortunately, with only {seatsWon[party.id] || 0} seats inside the parliament, you did not win a single-party majority or become the largest party.
                       </p>
                     </div>
 
-                    <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-8 text-xs font-mono w-full max-w-sm justify-center">
+                    <div className="p-3.5 bg-slate-950 border border-slate-850 rounded-xl flex items-center gap-8 text-xs font-mono w-full max-w-sm justify-center">
                       <div>
                         <div className="text-slate-450">REQUIRED SEATS</div>
-                        <div className="text-sm font-bold text-rose-400">Majority Goal</div>
+                        <div className="text-sm font-bold text-rose-450">Majority Goal</div>
                       </div>
-                      <div className="border-l border-slate-800 h-8"></div>
+                      <div className="border-l border-slate-850 h-8"></div>
                       <div>
                         <div className="text-slate-450">YOUR SEATS</div>
-                        <div className="text-md font-bold text-slate-300">{seatsWon[party.id] || 0} Seats</div>
+                        <div className="text-md font-bold text-slate-300">{seatsWon[party.id] || 0} / {country.seats}</div>
                       </div>
                     </div>
 
-                    <button
-                      id="save-fail-return-btn"
-                      onClick={() => onElectionFinished(false)}
-                      className="px-6 py-2.5 rounded-xl font-bold text-xs bg-slate-500/10 border border-slate-500/15 text-slate-300 hover:bg-slate-500/20 transition-all cursor-pointer mt-2"
-                    >
-                      Return to Dashboard & Evolve Leadership
-                    </button>
+                    {country.system !== 'Başkanlık Sistemi' && country.system !== 'Presidential System' ? (
+                      /* HUNG PARLIAMENT / COALITION CONFLICT INTERACTIVE VIEW */
+                      <div className={`p-5 rounded-2xl border text-left flex flex-col gap-4 w-full mt-2 ${
+                        darkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <div>
+                          <span className="text-[9px] tracking-widest font-mono text-indigo-400 font-bold uppercase block">HUNG PARLIAMENTARY CHAMBER</span>
+                          <h4 className="text-sm font-bold text-slate-200 mt-1">Negotiate Coalition Government</h4>
+                          <p className="text-xs text-slate-400 mt-1 leading-normal">
+                            No single party has achieved an absolute majority ({Math.ceil(country.seats / 2)} seats). Choose other parties below to form a majority coalition government with you!
+                          </p>
+                        </div>
+
+                        {/* List of other parties */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                          {country.rivals.map((rival) => {
+                            const seats = seatsWon[rival.id] || 0;
+                            const isSelected = selectedCoalitionParties.includes(rival.id);
+                            const chance = getAgreementChance(rival.id);
+                            
+                            return (
+                              <button
+                                key={rival.id}
+                                type="button"
+                                onClick={() => {
+                                  if (coalitionSuccess) return;
+                                  if (isSelected) {
+                                    setSelectedCoalitionParties(selectedCoalitionParties.filter(id => id !== rival.id));
+                                  } else {
+                                    setSelectedCoalitionParties([...selectedCoalitionParties, rival.id]);
+                                  }
+                                  setCoalitionNegotiated(false);
+                                  setCoalitionSuccess(null);
+                                }}
+                                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 relative cursor-pointer ${
+                                  isSelected
+                                    ? 'border-indigo-500 bg-indigo-500/10'
+                                    : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="text-xs font-bold flex items-center gap-1.5" style={{ color: rival.color }}>
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: rival.color }}></span>
+                                    {rival.name}
+                                  </span>
+                                  <span className="text-xs font-mono font-bold text-slate-300">{seats} Seats</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1 border-t border-slate-800/60 pt-1.5 w-full">
+                                  <span>Ideology: <strong className="text-slate-300">{rival.ideology}</strong></span>
+                                  <span className="font-mono">Sync Chance: <strong className={chance >= 70 ? 'text-emerald-400' : chance >= 40 ? 'text-amber-400' : 'text-rose-400'}>{chance}%</strong></span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Coalition Summary stats bar */}
+                        <div className="p-3 bg-slate-950 border border-slate-850 rounded-xl flex flex-wrap justify-between items-center text-xs gap-3">
+                          <div>
+                            <span className="text-slate-400">Combined Coalition Seats: </span>
+                            <strong className="text-sm font-black text-indigo-400">
+                              { (seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0) } / {country.seats}
+                            </strong>
+                            <span className="text-[10px] text-slate-500 ml-1">({Math.ceil(country.seats / 2)} required)</span>
+                          </div>
+
+                          {/* Proposal trigger */}
+                          {((seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0)) > country.seats / 2 ? (
+                            <button
+                              type="button"
+                              disabled={coalitionSuccess === true}
+                              onClick={() => {
+                                playSound('click');
+                                // Roll chance
+                                const avgChance = selectedCoalitionParties.reduce((sum, id) => sum + getAgreementChance(id), 0) / selectedCoalitionParties.length;
+                                const roll = Math.random() * 100;
+                                setCoalitionNegotiated(true);
+                                if (roll <= avgChance) {
+                                  setCoalitionSuccess(true);
+                                  setCoalitionMessage(`Success! The partner parties have accepted the coalition agreement. Together, you form a stable majority government in ${country.name}!`);
+                                  playSound('success');
+                                } else {
+                                  setCoalitionSuccess(false);
+                                  setCoalitionMessage(`Negotiation failed. The ideological friction was too high or negotiations broke down on cabinet seats. Try a different partner party!`);
+                                  playSound('error');
+                                }
+                              }}
+                              className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-550 transition-all cursor-pointer shadow-md shadow-indigo-600/10"
+                            >
+                              Propose Coalition Government
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-rose-450 font-bold">Select partners to reach a majority</span>
+                          )}
+                        </div>
+
+                        {/* Negotiation feedback */}
+                        {coalitionNegotiated && (
+                          <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                            coalitionSuccess
+                              ? 'bg-emerald-950/20 border-emerald-850 text-emerald-400'
+                              : 'bg-rose-950/20 border-rose-850 text-rose-450'
+                          }`}>
+                            <strong className="block mb-0.5">{coalitionSuccess ? '✓ Protocol Signed' : '✗ Protocol Rejected'}</strong>
+                            {coalitionMessage}
+                          </div>
+                        )}
+
+                        {/* Other Rival AI-to-AI coalitions running in parliament */}
+                        <div className="border-t border-slate-800 pt-3 mt-1">
+                          <span className="text-[9px] tracking-widest font-mono text-slate-500 font-bold uppercase block">Rival AI-to-AI Coalition Attempts</span>
+                          <div className="flex flex-col gap-2 mt-2">
+                            <div className="p-2 bg-slate-900/40 border border-slate-800 rounded-lg flex justify-between items-center text-[11px]">
+                              <span className="text-slate-400 font-medium">🛡️ Conservative-Nationalist Alliance</span>
+                              <span className="font-mono text-slate-300">
+                                {country.rivals.filter(r => r.ideology === 'Muhafazakar' || r.ideology === 'Milliyetçi').reduce((sum, r) => sum + (seatsWon[r.id] || 0), 0)} Seats
+                              </span>
+                            </div>
+                            <div className="p-2 bg-slate-900/40 border border-slate-800 rounded-lg flex justify-between items-center text-[11px]">
+                              <span className="text-slate-400 font-medium">🌿 Social-Green Progressive Front</span>
+                              <span className="font-mono text-slate-300">
+                                {country.rivals.filter(r => r.ideology === 'Sosyal Demokrat' || r.ideology === 'Ekolojist' || r.ideology === 'Sosyalist').reduce((sum, r) => sum + (seatsWon[r.id] || 0), 0)} Seats
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Standard failure action return */}
+                    {(!coalitionSuccess) && (
+                      <button
+                        id="save-fail-return-btn"
+                        onClick={() => onElectionFinished(false)}
+                        className="px-6 py-2.5 rounded-xl font-bold text-xs bg-slate-500/10 border border-slate-500/15 text-slate-300 hover:bg-slate-500/20 transition-all cursor-pointer mt-4"
+                      >
+                        Return to Dashboard & Evolve Leadership
+                      </button>
+                    )}
                   </>
                 )}
               </div>

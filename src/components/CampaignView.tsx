@@ -58,6 +58,13 @@ const MAYOR_AVATARS: Record<string, string> = {
 };
 
 const getRegionIdFromNormalizedName = (normName: string, countryId?: string): string => {
+  if (countryId === 'US') {
+    const cleanName = normName.toLowerCase().replace(/[^a-z]/g, '');
+    if (cleanName === 'washingtondc' || cleanName === 'districtofcolumbia' || cleanName === 'dc') {
+      return 'US_districtofcolumbia';
+    }
+    return `US_${cleanName}`;
+  }
   if (countryId === 'DE') {
     return `DE_${normName}`;
   }
@@ -185,8 +192,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
   const lastSelectedRegionIdRef = React.useRef<string | null>(null);
   const lastFetchedCityCodeRef = React.useRef<string | null>(null);
 
-  const regionLabel = country.id === 'DE' ? 'State' : 'Province';
-  const regionsLabel = country.id === 'DE' ? 'States' : 'Provinces';
+  const regionLabel = country.id === 'DE' ? 'State' : country.id === 'US' ? 'Region' : 'Province';
+  const regionsLabel = country.id === 'DE' ? 'States' : country.id === 'US' ? 'Regions' : 'Provinces';
 
   const getProvinceBoundsEstimate = (regName: string, center: { lat: number; lng: number }) => {
     const norm = regName.toLowerCase()
@@ -1395,6 +1402,29 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     tryFetchGermany();
   }, [country.id]);
 
+  // Fetch online USA GeoJSON on component load
+  useEffect(() => {
+    if (country.id !== 'US') return;
+    
+    const usUrl = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
+
+    const tryFetchUS = async () => {
+      try {
+        const res = await fetch(usUrl);
+        if (res.ok) {
+          const data = await res.json();
+          setGeoJsonData(data);
+          return;
+        }
+      } catch (err) {
+        console.warn(`Fetch USA map from ${usUrl} failed:`, err);
+      }
+      console.warn('USA GeoJSON fetch failed. Falling back to point-markers.');
+    };
+
+    tryFetchUS();
+  }, [country.id]);
+
   // Fetch online Turkey Districts GeoJSON on-demand or background
   useEffect(() => {
     if (country.id !== 'TR' || districtGeoJsonData || loadingDistrictGeoJson) return;
@@ -1518,18 +1548,18 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
   // Main Turkey/Germany Leaflet map builder and sync
   useEffect(() => {
-    if ((country.id !== 'TR' && country.id !== 'DE') || !turkeyMapRef.current) {
+    if ((country.id !== 'TR' && country.id !== 'DE' && country.id !== 'US') || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
     }
 
     if (!turkeyMapInstanceRef.current) {
-      const initialCenter: [number, number] = country.id === 'DE' ? [51.1657, 10.4515] : [38.9637, 35.2433];
-      const initialZoom = country.id === 'DE' ? 6 : 6;
+      const initialCenter: [number, number] = country.id === 'DE' ? [51.1657, 10.4515] : country.id === 'US' ? [37.0902, -95.7129] : [38.9637, 35.2433];
+      const initialZoom = country.id === 'DE' ? 6 : country.id === 'US' ? 4 : 6;
       const map = L.map(turkeyMapRef.current, {
         center: initialCenter,
         zoom: initialZoom,
-        minZoom: 4,
+        minZoom: 2,
         maxZoom: 18,
         zoomControl: false,
         attributionControl: false,
@@ -1555,6 +1585,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
       lastCountryIdRef.current = country.id;
       if (country.id === 'DE') {
         map.setView([51.1657, 10.4515], 6);
+      } else if (country.id === 'US') {
+        map.setView([37.0902, -95.7129], 4);
       } else {
         map.setView([38.9637, 35.2433], 6);
       }
@@ -1687,7 +1719,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             if (regionId) {
               const reg = country.regions.find(r => r.id === regionId);
               if (reg) {
-                const defaultCenter = country.id === 'DE' ? { lat: 51.1657, lng: 10.4515 } : { lat: 38.9637, lng: 35.2433 };
+                const defaultCenter = country.id === 'DE' ? { lat: 51.1657, lng: 10.4515 } : country.id === 'US' ? { lat: 37.0902, lng: -95.7129 } : { lat: 38.9637, lng: 35.2433 };
                 let center = provinceCentersRef.current[reg.id] || defaultCenter;
                 const fallback = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
                 if (fallback) center = { lat: fallback.lat, lng: fallback.lng };
@@ -1729,7 +1761,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               return {
                 fillColor: col,
                 fillOpacity: 0.95,
-                color: darkMode ? '#ffffff' : '#0f172a',
+                color: '#ffffff',
                 opacity: 0.95,
                 weight: 2.5
               };
@@ -1738,7 +1770,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             return {
               fillColor: isSelectedProvince ? col : '#888',
               fillOpacity: isSelectedProvince ? 0.75 : 0.15,
-              color: isSelectedProvince ? '#fff' : '#666',
+              color: '#ffffff',
               weight: isSelectedProvince ? 1.2 : 0.4,
             };
           }
@@ -1768,7 +1800,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               return {
                 fillColor: col,
                 fillOpacity: isSelected ? 0.95 : 0.82,
-                color: isSelected ? (darkMode ? '#ffffff' : '#000000') : (darkMode ? '#0f172a' : '#f8fafc'),
+                color: '#ffffff',
                 weight: isSelected ? 3.8 : 1.5,
               };
             }
@@ -1778,7 +1810,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           return {
             fillColor: darkMode ? '#111827' : '#f3f4f6',
             fillOpacity: 0.5,
-            color: darkMode ? '#1f2937' : '#e5e7eb',
+            color: '#ffffff',
             weight: 1.0,
           };
         },
@@ -1833,7 +1865,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                 (layer as any).setStyle({
                   fillOpacity: 0.95,
                   weight: 3.2,
-                  color: darkMode ? '#ffffff' : '#000000'
+                  color: '#ffffff'
                 });
                 if ((layer as any).bringToFront) {
                   try {
@@ -1860,7 +1892,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                 (layer as any).setStyle({
                   fillColor: col,
                   fillOpacity: 0.95,
-                  color: darkMode ? '#ffffff' : '#0f172a',
+                  color: '#ffffff',
                   opacity: 0.95,
                   weight: 2.5
                 });
@@ -1868,7 +1900,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                 (layer as any).setStyle({
                   fillColor: isSelectedProvince ? col : '#888',
                   fillOpacity: isSelectedProvince ? 0.75 : 0.15,
-                  color: isSelectedProvince ? '#fff' : '#666',
+                  color: '#ffffff',
                   opacity: isSelectedProvince ? 0.75 : 0.15,
                   weight: isSelectedProvince ? 1.2 : 0.4
                 });
@@ -1892,7 +1924,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               <div class="p-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
                 <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${districtName}</strong>
                 <div class="text-[10px] text-slate-400">${regionLabel}: <strong class="text-slate-300">${feature.properties.provinceName}</strong></div>
-                <div class="text-[10px] text-slate-400">Local Mayor: <strong class="text-slate-300">${feature.properties.mayorName || 'N/A'}</strong></div>
+                <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-300">${feature.properties.mayorName || 'N/A'}</strong></div>
                 <div class="text-[10px] text-slate-400 font-mono">Population: <strong class="text-slate-300">${feature.properties.population.toLocaleString()}</strong></div>
                 <div class="mt-1 pt-1 border-t border-slate-800/40">${supportHtmlList}</div>
               </div>
@@ -1951,7 +1983,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               (layer as any).setStyle({
                 fillOpacity: 0.95,
                 weight: 3.2,
-                color: darkMode ? '#ffffff' : '#000000'
+                color: '#ffffff'
               });
               if ((layer as any).bringToFront) {
                 try {
@@ -1966,7 +1998,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               const liveSelected = selectedRegion && selectedRegion.id === regionId;
               (layer as any).setStyle({
                 fillOpacity: liveSelected ? 0.95 : 0.82,
-                color: liveSelected ? (darkMode ? '#ffffff' : '#000000') : (darkMode ? '#0f172a' : '#f8fafc'),
+                color: '#ffffff',
                 weight: liveSelected ? 3.8 : 1.5
               });
               if (liveSelected && (layer as any).bringToFront) {
@@ -1994,7 +2026,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           layer.bindTooltip(`
             <div class="p-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
               <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-              <div class="text-[10px] text-slate-400">Mayor: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
+              <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
               <div class="mt-1 pt-1 border-t border-slate-800/40">
                 ${rivalHtmlList}
               </div>
@@ -2068,7 +2100,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         marker.bindTooltip(`
           <div class="p-1 px-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
             <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-            <div class="text-[10px] text-slate-400">Mayor: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
+            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
             <div class="mt-1 pt-1 border-t border-slate-800/40">
               ${rivalHtmlList}
             </div>
@@ -2425,16 +2457,18 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
       `}</style>
-      {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY OR GERMANY) */}
-      {(country.id === 'TR' || country.id === 'DE') && (
+      {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY, GERMANY, OR USA) */}
+      {(country.id === 'TR' || country.id === 'DE' || country.id === 'US') && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div>
-            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP ({country.id === 'DE' ? '2025' : '2024'} BASE)</span>
-            <h3 className="text-xl font-bold tracking-tight">{country.name} Municipal Control GIS Map</h3>
+            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP ({country.id === 'DE' ? '2025' : country.id === 'US' ? '2024' : '2024'} BASE)</span>
+            <h3 className="text-xl font-bold tracking-tight">
+              {country.id === 'US' ? `${country.name} Presidential & State Control GIS Map` : country.id === 'DE' ? `${country.name} Federal State Control GIS Map` : `${country.name} Municipal Control GIS Map`}
+            </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Click on a {country.id === 'DE' ? 'state' : 'province'} directly on the geographic Leaflet map to select it. The {country.id === 'DE' ? 'state' : 'province'} colors represent municipal control, and its real-time polls appear instantly in the right-hand panel.
+              Click on a {country.id === 'DE' ? 'state' : country.id === 'US' ? 'state' : 'province'} directly on the geographic Leaflet map to select it. The {country.id === 'DE' ? 'state' : country.id === 'US' ? 'state' : 'province'} colors represent leading candidate control, and its real-time polls appear instantly in the right-hand panel.
             </p>
           </div>
 
@@ -2546,7 +2580,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                       <span className="text-xl">📍</span>
                       <div>
                         <h4 className="font-bold text-sm tracking-tight leading-tight">{selectedRegion.name}</h4>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">MUNICIPAL STATISTICS</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {country.id === 'US' ? 'PRESIDENTIAL POLLING' : country.id === 'DE' ? 'STATE ELECTION STATISTICS' : 'MUNICIPAL STATISTICS'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-[10px] bg-slate-500/10 text-slate-400 px-2.5 py-0.5 rounded-full font-mono font-bold">
@@ -2721,7 +2757,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                             <strong className="text-slate-100">{selectedDistrict.population.toLocaleString()}</strong>
                           </div>
                           <div className="flex justify-between text-[10px] leading-none text-slate-400">
-                            <span>Mayor:</span>
+                            <span>{country.id === 'US' ? 'Governor:' : country.id === 'DE' ? 'Minister-President:' : 'Mayor:'}</span>
                             <strong className="text-slate-100">{selectedDistrict.mayorName}</strong>
                           </div>
                         </div>

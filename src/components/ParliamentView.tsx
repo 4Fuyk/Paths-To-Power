@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Country, Party, Bill, VoterGroup, Coalition } from '../types';
+import { Country, Party, Bill, VoterGroup, Coalition, RivalParty } from '../types';
 import { playSound } from '../lib/sounds';
 import { 
   Landmark, AlertCircle, CheckCircle2, XCircle, 
@@ -35,6 +35,9 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   const [votingScoreboard, setVotingScoreboard] = useState<{ yes: number; no: number; current: number } | null>(null);
   const [lobbyAlert, setLobbyAlert] = useState<{ title: string; message: string } | null>(null);
   const [showCoalitionModal, setShowCoalitionModal] = useState<boolean>(false);
+  const [selectedPartner, setSelectedPartner] = useState<RivalParty | null>(null);
+  const [offeredMinistries, setOfferedMinistries] = useState<string[]>([]);
+  const [clashFactor, setClashFactor] = useState<number>(0);
 
   // Helper to determine currency symbol based on country ID
   const getCurrency = (countryId: string) => {
@@ -76,27 +79,119 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
     return { ...rival, seats };
   });
 
-  const handleProposeCoalition = (partnerName: string) => {
+  const handleSelectPartner = (partnerName: string) => {
     const partner = country.rivals.find(r => r.name === partnerName);
     if (!partner) return;
+    
+    // Generate a fixed random relations factor for this proposal session (-15% to +15%)
+    const randomFactor = Math.floor(Math.random() * 31) - 15;
+    setClashFactor(randomFactor);
+    setSelectedPartner(partner);
+    setOfferedMinistries([]);
+    playSound('click');
+  };
+
+  const handleConfirmCoalitionProposal = () => {
+    if (!selectedPartner) return;
+    const partner = selectedPartner;
 
     // Reject coalition if they are polar opposites
     const isOpposite = (party.ideology.includes("Socialist") && partner.ideology.includes("Nationalist")) ||
                        (party.ideology.includes("Nationalist") && partner.ideology.includes("Socialist")) ||
                        (party.ideology.includes("Left") && partner.ideology.includes("Right")) ||
-                       (party.ideology.includes("Right") && partner.ideology.includes("Left"));
+                       (party.ideology.includes("Right") && partner.ideology.includes("Left")) ||
+                       (party.ideology.includes("Marxist") && partner.ideology.includes("Nationalist")) ||
+                       (party.ideology.includes("Nationalist") && partner.ideology.includes("Marxist")) ||
+                       (party.ideology.includes("Marxist") && partner.ideology.includes("Conservative")) ||
+                       (party.ideology.includes("Conservative") && partner.ideology.includes("Marxist")) ||
+                       (party.ideology.includes("Socialist") && partner.ideology.includes("Conservative")) ||
+                       (party.ideology.includes("Conservative") && partner.ideology.includes("Socialist"));
 
     if (isOpposite) {
       playSound('error');
       setLobbyAlert({
         title: 'COALITION REJECTED',
-        message: `"${partner.name}" (${partner.ideology}) has rejected the coalition proposal from "${party.name}" (${party.ideology}) due to severe ideological incompatibility.`
+        message: `"${partner.name}" (${partner.ideology}) has rejected the coalition proposal from "${party.name}" (${party.ideology}) due to severe ideological incompatibility. Their executive committee stated: "Our core principles are irreconcilable. A coalition is impossible."`
       });
-    } else {
-      playSound('success');
-      const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
-      const combinedSeats = playerSeatsCount + partnerSeats;
+      setSelectedPartner(null);
+      setShowCoalitionModal(false);
+      return;
+    }
 
+    const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
+    const leverage = partnerSeats / (playerSeatsCount || 1);
+
+    // Calculate acceptance probability
+    let baseChance = 30;
+
+    // Ideology alignment
+    const isSameIdeologyGroup = 
+      (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
+      (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
+      (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
+      (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
+      (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
+      (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"));
+
+    if (isSameIdeologyGroup) {
+      baseChance += 30;
+    } else {
+      baseChance += 10;
+    }
+
+    // Ministry points
+    // Heavy: finance, foreign, interior -> +25% each
+    // Medium: education -> +15%
+    // Light: culture -> +8%
+    let ministryScore = 0;
+    let heavyCount = 0;
+    if (offeredMinistries.includes('finance')) { ministryScore += 25; heavyCount++; }
+    if (offeredMinistries.includes('foreign')) { ministryScore += 25; heavyCount++; }
+    if (offeredMinistries.includes('interior')) { ministryScore += 25; heavyCount++; }
+    if (offeredMinistries.includes('education')) { ministryScore += 15; }
+    if (offeredMinistries.includes('culture')) { ministryScore += 8; }
+
+    // Leverage rules
+    let leveragePenalty = 0;
+    if (leverage > 2.0) {
+      // Much bigger
+      leveragePenalty = 45;
+      if (heavyCount < 2) {
+        // Must have at least 2 heavy ministries
+        playSound('error');
+        setLobbyAlert({
+          title: 'COALITION REJECTED',
+          message: `"${partner.name}" has rejected your terms. Their leadership remarked: "Your tiny faction expects us to enter government without offering at least two major portfolios (Finance, Foreign Affairs, or Interior). This is disrespectful of our parliamentary weight."`
+        });
+        setSelectedPartner(null);
+        setShowCoalitionModal(false);
+        return;
+      }
+    } else if (leverage > 1.2) {
+      // Larger
+      leveragePenalty = 20;
+      if (heavyCount < 1) {
+        playSound('error');
+        setLobbyAlert({
+          title: 'COALITION REJECTED',
+          message: `"${partner.name}" has rejected your offer. They require at least one Heavy portfolio (Finance, Foreign Affairs, or Interior) to consider a coalition partnership.`
+        });
+        setSelectedPartner(null);
+        setShowCoalitionModal(false);
+        return;
+      }
+    } else if (leverage < 0.6) {
+      // You are much larger
+      baseChance += 15;
+    }
+
+    const finalProbability = Math.min(95, Math.max(5, baseChance + ministryScore - leveragePenalty + clashFactor));
+    const randomRoll = Math.floor(Math.random() * 101);
+
+    if (randomRoll <= finalProbability) {
+      // Accepted!
+      playSound('success');
+      const combinedSeats = playerSeatsCount + partnerSeats;
       const newCoalition: Coalition = {
         name: `Grand ${party.name.substring(0, 5)}-${partner.name.substring(0, 5)} Pact`,
         parties: [party.name, partner.name],
@@ -107,12 +202,30 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
       if (onUpdateCoalitions) {
         onUpdateCoalitions([...coalitions, newCoalition]);
       }
-      setShowCoalitionModal(false);
       setLobbyAlert({
-        title: 'ALLIANCE FORMED',
-        message: `The new "${newCoalition.name}" coalition alliance has been formed successfully, commanding a total of ${newCoalition.totalSeats} parliamentary seats!`
+        title: 'COALITION FORMED SUCCESSFULLY',
+        message: `With an acceptance probability of ${finalProbability}%, "${partner.name}" has formally accepted your coalition cabinet proposal! The "${newCoalition.name}" coalition now controls ${newCoalition.totalSeats} seats.`
+      });
+    } else {
+      // Rejected by random probability
+      playSound('error');
+      let rejectionReason = "Insincere relations and policy disputes.";
+      if (clashFactor < -5) {
+        rejectionReason = "Past media clashes and tense relations made the trust deficit too wide.";
+      } else if (ministryScore < 20) {
+        rejectionReason = "The offered cabinet portfolios were deemed insufficient for their party base.";
+      } else {
+        rejectionReason = "Internal party divisions within their caucus prevented consensus.";
+      }
+
+      setLobbyAlert({
+        title: 'PROPOSAL REJECTED',
+        message: `With an acceptance probability of ${finalProbability}%, "${partner.name}" has rejected your coalition cabinet offer. Reason: ${rejectionReason}`
       });
     }
+
+    setSelectedPartner(null);
+    setShowCoalitionModal(false);
   };
 
   // Calculate seat rows to render a stunning semi-circle representation of parliament/meclis
@@ -677,46 +790,239 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
               <h3 className="text-sm font-black font-mono uppercase tracking-wide">Propose Coalition Alliance</h3>
               <button
                 type="button"
-                onClick={() => setShowCoalitionModal(false)}
+                onClick={() => {
+                  setShowCoalitionModal(false);
+                  setSelectedPartner(null);
+                }}
                 className="p-1 rounded hover:bg-slate-500/10 text-slate-450 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Forming a coalition increases your joint legislative power, improving the probability of passing heavy reforms. Select a compatible party to invite to the alliance:
-            </p>
+            {!selectedPartner ? (
+              <>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Forming a coalition increases your joint legislative power, improving the probability of passing heavy reforms. Select a compatible party to invite to the alliance:
+                </p>
 
-            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-              {country.rivals.map((rival) => {
-                const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
-                return (
-                  <div
-                    key={rival.id}
-                    className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rival.color }}></span>
-                        <span className="text-xs font-bold">{rival.name}</span>
+                <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                  {country.rivals.map((rival) => {
+                    const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
+                    return (
+                      <div
+                        key={rival.id}
+                        className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rival.color }}></span>
+                            <span className="text-xs font-bold">{rival.name}</span>
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                            {rival.ideology} • {partnerSeats} Seats
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPartner(rival.name)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 text-white text-[10px] font-bold uppercase cursor-pointer"
+                        >
+                          Invite
+                        </button>
                       </div>
-                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-                        {rival.ideology} • {partnerSeats} Seats
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4 animate-scale-up text-left">
+                {/* Selected Partner Intro */}
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedPartner.color }}></span>
+                      <strong className="text-xs font-bold uppercase">{selectedPartner.name}</strong>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">{selectedPartner.ideology}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-450 block font-mono">SEATS</span>
+                    <strong className="text-xs text-indigo-450">{rivalsSeatsData.find(r => r.id === selectedPartner.id)?.seats || 0} Seats</strong>
+                  </div>
+                </div>
+
+                {/* Portfolios Checkboxes */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                    Offer Cabinet Portfolios to Partner:
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    
+                    {/* Finance */}
+                    <label className="flex items-center gap-2.5 p-2 bg-slate-900/50 hover:bg-slate-900 border border-slate-850 rounded-xl cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={offeredMinistries.includes('finance')}
+                        onChange={(e) => {
+                          playSound('click');
+                          setOfferedMinistries(prev => 
+                            e.target.checked ? [...prev, 'finance'] : prev.filter(m => m !== 'finance')
+                          );
+                        }}
+                        className="rounded border-slate-750 text-indigo-500 focus:ring-0"
+                      />
+                      <div>
+                        <span className="font-extrabold text-[11px]">Finance Ministry</span>
+                        <span className="text-[9px] font-mono text-amber-500 block">Heavy Weight • +25% Acceptance</span>
+                      </div>
+                    </label>
+
+                    {/* Foreign Affairs */}
+                    <label className="flex items-center gap-2.5 p-2 bg-slate-900/50 hover:bg-slate-900 border border-slate-850 rounded-xl cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={offeredMinistries.includes('foreign')}
+                        onChange={(e) => {
+                          playSound('click');
+                          setOfferedMinistries(prev => 
+                            e.target.checked ? [...prev, 'foreign'] : prev.filter(m => m !== 'foreign')
+                          );
+                        }}
+                        className="rounded border-slate-750 text-indigo-500 focus:ring-0"
+                      />
+                      <div>
+                        <span className="font-extrabold text-[11px]">Ministry of Foreign Affairs</span>
+                        <span className="text-[9px] font-mono text-amber-500 block">Heavy Weight • +25% Acceptance</span>
+                      </div>
+                    </label>
+
+                    {/* Interior */}
+                    <label className="flex items-center gap-2.5 p-2 bg-slate-900/50 hover:bg-slate-900 border border-slate-850 rounded-xl cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={offeredMinistries.includes('interior')}
+                        onChange={(e) => {
+                          playSound('click');
+                          setOfferedMinistries(prev => 
+                            e.target.checked ? [...prev, 'interior'] : prev.filter(m => m !== 'interior')
+                          );
+                        }}
+                        className="rounded border-slate-750 text-indigo-500 focus:ring-0"
+                      />
+                      <div>
+                        <span className="font-extrabold text-[11px]">Interior Ministry</span>
+                        <span className="text-[9px] font-mono text-amber-500 block">Heavy Weight • +25% Acceptance</span>
+                      </div>
+                    </label>
+
+                    {/* Education */}
+                    <label className="flex items-center gap-2.5 p-2 bg-slate-900/50 hover:bg-slate-900 border border-slate-850 rounded-xl cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={offeredMinistries.includes('education')}
+                        onChange={(e) => {
+                          playSound('click');
+                          setOfferedMinistries(prev => 
+                            e.target.checked ? [...prev, 'education'] : prev.filter(m => m !== 'education')
+                          );
+                        }}
+                        className="rounded border-slate-750 text-indigo-500 focus:ring-0"
+                      />
+                      <div>
+                        <span className="font-extrabold text-[11px]">Ministry of Education</span>
+                        <span className="text-[9px] font-mono text-emerald-400 block">Medium Weight • +15% Acceptance</span>
+                      </div>
+                    </label>
+
+                    {/* Culture */}
+                    <label className="flex items-center gap-2.5 p-2 bg-slate-900/50 hover:bg-slate-900 border border-slate-850 rounded-xl cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={offeredMinistries.includes('culture')}
+                        onChange={(e) => {
+                          playSound('click');
+                          setOfferedMinistries(prev => 
+                            e.target.checked ? [...prev, 'culture'] : prev.filter(m => m !== 'culture')
+                          );
+                        }}
+                        className="rounded border-slate-750 text-indigo-500 focus:ring-0"
+                      />
+                      <div>
+                        <span className="font-extrabold text-[11px]">Ministry of Culture & Youth</span>
+                        <span className="text-[9px] font-mono text-emerald-400 block">Light Weight • +8% Acceptance</span>
+                      </div>
+                    </label>
+
+                  </div>
+                </div>
+
+                {/* Political Dynamics Summary */}
+                {(() => {
+                  const partnerSeats = rivalsSeatsData.find(r => r.id === selectedPartner.id)?.seats || 0;
+                  const ratio = partnerSeats / (playerSeatsCount || 1);
+                  const isClose = (party.ideology.includes("Social") && selectedPartner.ideology.includes("Social")) ||
+                                  (party.ideology.includes("Left") && selectedPartner.ideology.includes("Left")) ||
+                                  (party.ideology.includes("Conservative") && selectedPartner.ideology.includes("Conservative")) ||
+                                  (party.ideology.includes("Right") && selectedPartner.ideology.includes("Right")) ||
+                                  (party.ideology.includes("Liberal") && selectedPartner.ideology.includes("Liberal")) ||
+                                  (party.ideology.includes("Centrist") && selectedPartner.ideology.includes("Centrist"));
+                  
+                  let heavyCount = 0;
+                  if (offeredMinistries.includes('finance')) heavyCount++;
+                  if (offeredMinistries.includes('foreign')) heavyCount++;
+                  if (offeredMinistries.includes('interior')) heavyCount++;
+                  
+                  let mScore = 0;
+                  if (offeredMinistries.includes('finance')) mScore += 25;
+                  if (offeredMinistries.includes('foreign')) mScore += 25;
+                  if (offeredMinistries.includes('interior')) mScore += 25;
+                  if (offeredMinistries.includes('education')) mScore += 15;
+                  if (offeredMinistries.includes('culture')) mScore += 8;
+
+                  let levPenalty = 0;
+                  if (ratio > 2.0) levPenalty = 45;
+                  else if (ratio > 1.2) levPenalty = 20;
+                  else if (ratio < 0.6) levPenalty = -15;
+
+                  const finalChance = Math.min(95, Math.max(5, 30 + (isClose ? 30 : 10) + mScore - levPenalty + clashFactor));
+
+                  return (
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-850 text-[10px] space-y-1.5 text-slate-400">
+                      <span className="font-bold text-slate-300 block font-mono">🛡️ ALLIANCE DYNAMICS:</span>
+                      <div>• {ratio > 1.2 ? "⚠️ They hold significant seat leverage over your faction." : "✅ You hold the upper hand in seats distribution."}</div>
+                      <div>• {clashFactor < 0 ? `⚠️ Media Relations: Tense Clashes (${clashFactor}%)` : `✅ Media Relations: Friendly Dialogue (+${clashFactor}%)`}</div>
+                      <div className="pt-2 border-t border-slate-850 flex justify-between items-center text-xs">
+                        <span className="font-bold">Calculated Acceptance Chance:</span>
+                        <strong className="text-indigo-400 font-mono text-sm">{finalChance}%</strong>
                       </div>
                     </div>
+                  );
+                })()}
 
-                    <button
-                      type="button"
-                      onClick={() => handleProposeCoalition(rival.name)}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase cursor-pointer"
-                    >
-                      Invite
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                {/* Action Controls */}
+                <div className="flex gap-2.5 pt-3 border-t border-slate-500/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setSelectedPartner(null);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-900 font-bold text-xs text-slate-300 cursor-pointer text-center"
+                  >
+                    Back to List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmCoalitionProposal}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-650 hover:bg-indigo-600 font-bold text-xs text-white cursor-pointer text-center"
+                  >
+                    Send Offer ➔
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

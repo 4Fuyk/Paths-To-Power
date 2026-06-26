@@ -262,14 +262,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
           const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
           const fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
-          const color = isSelected ? scheme.selected : (isCompleted ? '#eab308' : scheme.completed);
+          const color = '#ffffff';
 
           return {
             fillColor: fillColor,
             fillOpacity: isSelected ? 0.95 : (isCompleted ? 0.90 : 0.82),
             color: color,
-            weight: isSelected ? 2.2 : 1.2,
-            opacity: isSelected ? 0.95 : 0.85
+            weight: isSelected ? 2.5 : 1.5,
+            opacity: isSelected ? 1.0 : 0.9
           };
         },
         onEachFeature: (feature, layer) => {
@@ -352,9 +352,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         const circlePr = L.circle(coords, {
           radius: radius,
-          color: isSelected ? scheme.selected : (isCompleted ? '#eab308' : scheme.completed),
+          color: '#ffffff',
           weight: isSelected ? 3.5 : 1.5,
-          opacity: 0.8,
+          opacity: 0.9,
           fillColor: isSelected ? scheme.selected : themeColor,
           fillOpacity: isSelected ? 0.85 : (isCompleted ? 0.7 : 0.55),
           interactive: true

@@ -121,18 +121,18 @@ export const POLITICIAN_CANDIDATES_POOL: Record<string, MinisterCandidate[]> = {
     { name: 'Bettina Stark-Watzinger', party: 'FDP', loyalty: 75, competence: 72, popularity: 50 }
   ],
   US: [
-    { name: 'Kamala Harris', party: 'Demokratik Uyanış', loyalty: 85, competence: 82, popularity: 80 },
-    { name: 'JD Vance', party: 'Cumhuriyetçi Kanat', loyalty: 90, competence: 84, popularity: 78 },
-    { name: 'Antony Blinken', party: 'Demokratik Uyanış', loyalty: 92, competence: 88, popularity: 72 },
-    { name: 'Janet Yellen', party: 'Demokratik Uyanış', loyalty: 88, competence: 94, popularity: 75 },
-    { name: 'Lloyd Austin', party: 'Demokratik Uyanış', loyalty: 94, competence: 90, popularity: 78 },
-    { name: 'Merrick Garland', party: 'Demokratik Uyanış', loyalty: 85, competence: 80, popularity: 60 },
-    { name: 'Pete Buttigieg', party: 'Demokratik Uyanış', loyalty: 80, competence: 86, popularity: 82 },
+    { name: 'Kamala Harris', party: 'Demokrat Parti', loyalty: 85, competence: 82, popularity: 80 },
+    { name: 'JD Vance', party: 'Cumhuriyetçi Parti', loyalty: 90, competence: 84, popularity: 78 },
+    { name: 'Antony Blinken', party: 'Demokrat Parti', loyalty: 92, competence: 88, popularity: 72 },
+    { name: 'Janet Yellen', party: 'Demokrat Parti', loyalty: 88, competence: 94, popularity: 75 },
+    { name: 'Lloyd Austin', party: 'Demokrat Parti', loyalty: 94, competence: 90, popularity: 78 },
+    { name: 'Merrick Garland', party: 'Demokrat Parti', loyalty: 85, competence: 80, popularity: 60 },
+    { name: 'Pete Buttigieg', party: 'Demokrat Parti', loyalty: 80, competence: 86, popularity: 82 },
     { name: 'Bernie Sanders', party: 'Independent', loyalty: 45, competence: 90, popularity: 92 },
-    { name: 'Elizabeth Warren', party: 'Demokratik Uyanış', loyalty: 65, competence: 91, popularity: 80 },
-    { name: 'Ted Cruz', party: 'Cumhuriyetçi Kanat', loyalty: 55, competence: 82, popularity: 70 },
-    { name: 'Marco Rubio', party: 'Cumhuriyetçi Kanat', loyalty: 65, competence: 84, popularity: 75 },
-    { name: 'Mike Pompeo', party: 'Cumhuriyetçi Kanat', loyalty: 75, competence: 86, popularity: 72 }
+    { name: 'Elizabeth Warren', party: 'Demokrat Parti', loyalty: 65, competence: 91, popularity: 80 },
+    { name: 'Ted Cruz', party: 'Cumhuriyetçi Parti', loyalty: 55, competence: 82, popularity: 70 },
+    { name: 'Marco Rubio', party: 'Cumhuriyetçi Parti', loyalty: 65, competence: 84, popularity: 75 },
+    { name: 'Mike Pompeo', party: 'Cumhuriyetçi Parti', loyalty: 75, competence: 86, popularity: 72 }
   ],
   GB: [
     { name: 'Angela Rayner', party: 'Ulusal İşçi Cephesi', loyalty: 82, competence: 80, popularity: 85 },

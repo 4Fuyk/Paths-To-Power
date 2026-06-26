@@ -37,6 +37,7 @@ export const CivicWatchdogView: React.FC<CivicWatchdogViewProps> = ({
     impact: string;
     badge: string;
   }[]>([]);
+  const [auditAlert, setAuditAlert] = useState<string | null>(null);
 
   useEffect(() => {
     // Dynamically calculate grades and descriptions based on freedomIndex & party-ban state
@@ -113,7 +114,7 @@ export const CivicWatchdogView: React.FC<CivicWatchdogViewProps> = ({
     publicApprovalImpact(3);
     onUpdateReputation(Math.min(100, internationalReputation + 5));
     playSound('success');
-    alert('Bilateral Appeal Broadcasted: Sponsoring full international observers to audits! Watchdog associations noted the cooperation.');
+    setAuditAlert('Bilateral Appeal Broadcasted: Sponsoring full international observers to audits! Watchdog associations noted the cooperation.');
   };
 
   return (
@@ -190,6 +191,41 @@ export const CivicWatchdogView: React.FC<CivicWatchdogViewProps> = ({
           );
         })}
       </div>
+
+      {auditAlert && (
+        <div className="fixed inset-0 z-[120] h-full w-full bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-3xl border p-6 flex flex-col gap-5 items-center text-center animate-scale-up ${
+            darkMode ? 'bg-slate-950 border-rose-500/30' : 'bg-white border-slate-200 shadow-2xl'
+          }`}>
+            <div className="p-4 rounded-full bg-rose-500/10 text-rose-500 animate-pulse">
+              <ShieldCheck className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className={`text-lg font-black uppercase tracking-wide ${
+                darkMode ? 'text-slate-100' : 'text-slate-900'
+              }`}>
+                Bilateral Transparency Broadcast
+              </h3>
+              <p className={`text-xs leading-relaxed ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                {auditAlert}
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                playSound('click');
+                setAuditAlert(null);
+              }}
+              className="w-full py-3.5 rounded-2xl bg-indigo-650 hover:bg-indigo-600 text-white font-extrabold text-xs shadow-lg cursor-pointer text-center uppercase tracking-wider"
+            >
+              Acknowledge & Sync NGO observers
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
