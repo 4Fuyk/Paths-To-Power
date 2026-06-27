@@ -14,6 +14,9 @@ interface FinanceViewProps {
   onUpdateCountry: (updatedCountry: Country) => void;
   onUpdateParty: (updatedParty: Party) => void;
   darkMode: boolean;
+  isRuling?: boolean;
+  treasury?: number;
+  onUpdateTreasury?: (updatedTreasury: number) => void;
 }
 
 export const FinanceView: React.FC<FinanceViewProps> = ({
@@ -22,6 +25,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   onUpdateCountry,
   onUpdateParty,
   darkMode,
+  isRuling = false,
+  treasury = 0,
+  onUpdateTreasury,
 }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,6 +48,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   const totalRegions = country.regions.length || 1;
   const playerAvgSupport = country.regions.reduce((acc, r) => acc + (r.supports[party.id] || 0), 0) / totalRegions;
   const playerSeatsCount = Math.round((playerAvgSupport / 100) * country.seats);
+
+  // Effective budget/reserve balance to display & modify
+  const isRulingActive = isRuling && onUpdateTreasury !== undefined;
+  const currentBalance = isRulingActive ? treasury : party.budget;
+
+  const updateBalance = (newVal: number) => {
+    if (isRulingActive) {
+      onUpdateTreasury(newVal);
+    } else {
+      onUpdateParty({
+        ...party,
+        budget: newVal
+      });
+    }
+  };
 
   const applyGeneralPopularityDrop = (dropAmount: number) => {
     const updatedRegions = country.regions.map(r => {
@@ -79,7 +100,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   // 1) Fundraising Drive
   const handleFundraisingDrive = () => {
     const fee = 15000;
-    if (party.budget < fee) {
+    if (currentBalance < fee) {
       playSound('error');
       setErrorMessage(`Insufficient Funds: You need at least ${currency}${fee.toLocaleString()} to kick off a fundraising drive.`);
       setSuccessMessage(null);
@@ -89,7 +110,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const reward = 45000;
     const isScandal = Math.random() < 0.25; // 25% scandal risk
 
-    let finalBudget = party.budget - fee + reward;
+    let finalBalance = currentBalance - fee + reward;
     let feedback = `Fundraising Drive completed! Collected a total of +${currency}${reward.toLocaleString()} in grassroots donations.`;
 
     if (isScandal) {
@@ -101,11 +122,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       playSound('success');
     }
 
-    onUpdateParty({
-      ...party,
-      budget: finalBudget
-    });
-
+    updateBalance(finalBalance);
     setSuccessMessage(feedback);
     setErrorMessage(null);
   };
@@ -125,10 +142,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     applyGeneralPopularityDrop(1); // Popularity falls by 1% due to voter agitation
     playSound('success');
 
-    onUpdateParty({
-      ...party,
-      budget: party.budget + reward,
-    });
+    updateBalance(currentBalance + reward);
 
     setSuccessMessage(`Membership Dues increased! Collected ${currency}${reward.toLocaleString()} from your ${party.members.toLocaleString()} members. Popularity nationwide dropped slightly (-1%) due to agitation.`);
     setErrorMessage(null);
@@ -140,10 +154,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     applyGeneralPopularityDrop(3); // General neutrality image drop of -3%
     playSound('success');
 
-    onUpdateParty({
-      ...party,
-      budget: party.budget + reward,
-    });
+    updateBalance(currentBalance + reward);
 
     setSuccessMessage(`Secured high-tier Corporate Sponsorship! Added +${currency}${reward.toLocaleString()} directly into the treasury. However, your independent neutrality image is damaged, decreasing nationwide popularity by -3%.`);
     setErrorMessage(null);
@@ -154,10 +165,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const reward = 60000;
     playSound('success');
 
-    onUpdateParty({
-      ...party,
-      budget: party.budget + reward,
-    });
+    updateBalance(currentBalance + reward);
 
     setSuccessMessage(`Sold secondary party facilities and logistics assets. Gained a flat +${currency}${reward.toLocaleString()} one-time treasury injection without popularity penalties.`);
     setErrorMessage(null);
@@ -174,18 +182,26 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <Coins className="w-8 h-8" />
           </div>
           <div>
-            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">TREASURY & LIQUID CAPITAL</span>
-            <h2 className="text-xl font-black tracking-tight mt-0.5">Campaign Financial Management</h2>
+            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">
+              {isRuling ? 'STATE TREASURY & RESERVES' : 'TREASURY & LIQUID CAPITAL'}
+            </span>
+            <h2 className="text-xl font-black tracking-tight mt-0.5">
+              {isRuling ? 'National Financial Governance' : 'Campaign Financial Management'}
+            </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Leverage grassroots drives, sell assets, or partner with corporate entities to fund your nationwide campaign trail.
+              {isRuling 
+                ? 'Manage national state resources, launch fundraising programs, secure bilateral sponsorships, or liquidate non-essential state assets.'
+                : 'Leverage grassroots drives, sell assets, or partner with corporate entities to fund your nationwide campaign trail.'}
             </p>
           </div>
         </div>
 
         <div className="flex flex-col items-end shrink-0">
-          <div className="text-sm font-mono text-slate-400 font-bold">TOTAL RESERVES</div>
+          <div className="text-sm font-mono text-slate-400 font-bold">
+            {isRuling ? 'STATE TREASURY' : 'PARTY RESERVES'}
+          </div>
           <div className="text-3xl font-black font-mono text-emerald-400 mt-1">
-            {currency}{party.budget.toLocaleString()}
+            {currency}{currentBalance.toLocaleString()}
           </div>
         </div>
       </div>

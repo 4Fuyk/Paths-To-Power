@@ -15,6 +15,7 @@ import { CongressView } from './components/CongressView';
 import { FinanceView } from './components/FinanceView';
 import { ElectionSimulator } from './components/ElectionSimulator';
 import { PartyCongressView } from './components/PartyCongressView';
+import { TacticalBattleView } from './components/TacticalBattleView';
 import { CabinetView } from './components/CabinetView';
 import { DiplomacyView } from './components/DiplomacyView';
 import { GovernanceView } from './components/GovernanceView';
@@ -55,6 +56,11 @@ export default function App() {
     onCancel?: () => void;
   } | null>(null);
   const [showElectionSuccessModal, setShowElectionSuccessModal] = useState<boolean>(false);
+  const [showPressConference, setShowPressConference] = useState<boolean>(false);
+  const [pressConferenceIndex, setPressConferenceIndex] = useState<number>(0);
+  const [pressTreasuryBonus, setPressTreasuryBonus] = useState<number>(0);
+  const [pressFreedomBonus, setPressFreedomBonus] = useState<number>(0);
+  const [pressReputationBonus, setPressReputationBonus] = useState<number>(0);
 
   // Sovereign Government and Diplomacy States
   const [isRuling, setIsRuling] = useState<boolean>(false);
@@ -174,46 +180,32 @@ export default function App() {
     };
 
     if (completedCountries.includes(country.id)) {
-      setConfirmModal({
-        title: "ENTER GOVERNANCE OR RELAUNCH CAMPAIGN?",
-        message: `You have already won the general election in ${country.name}! Do you want to rule as the Government (Governance Mode) or start a brand new Opposition campaign?`,
-        confirmText: "👑 ENTER GOVERNANCE",
-        cancelText: "📣 RELAUNCH CAMPAIGN",
-        onConfirm: () => {
-          setConfirmModal(null);
-          // Go straight to ruling dashboard
-          const preppedRegions = country.regions.map(r => {
-            const supports = { ...r.supports, player_party: 55 };
-            return { ...r, supports };
-          });
-          
-          // Define a mock player party
-          const mockParty = {
-            id: 'player_party',
-            name: 'Ruling Coalition Party',
-            leader: 'President of ' + country.name,
-            ideology: 'Sosyal Demokrat',
-            color: '#3b82f6',
-            budget: 500000,
-            members: 25000,
-            influence: 100,
-            photo: '',
-            traits: { charisma: 5, eloquence: 4, organization: 4, strategy: 5 }
-          };
-          
-          setSelectedCountry({ ...country, regions: preppedRegions });
-          setPlayerParty(mockParty);
-          setIsRuling(true);
-          setIsJuniorMember(false);
-          setCampaignTurn(1);
-          setDashboardTab('CABINET');
-          setActiveScreen('MAIN_DASHBOARD');
-        },
-        onCancel: () => {
-          setConfirmModal(null);
-          startCampaignFlow(country);
-        }
+      // Go straight to ruling dashboard automatically as requested
+      const preppedRegions = country.regions.map(r => {
+        const supports = { ...r.supports, player_party: 55 };
+        return { ...r, supports };
       });
+      
+      const mockParty = {
+        id: 'player_party',
+        name: 'Ruling Coalition Party',
+        leader: 'President of ' + country.name,
+        ideology: 'Sosyal Demokrat',
+        color: '#3b82f6',
+        budget: 500000,
+        members: 25000,
+        influence: 100,
+        photo: '',
+        traits: { charisma: 5, eloquence: 4, organization: 4, strategy: 5 }
+      };
+      
+      setSelectedCountry({ ...country, regions: preppedRegions });
+      setPlayerParty(mockParty);
+      setIsRuling(true);
+      setIsJuniorMember(false);
+      setCampaignTurn(1);
+      setDashboardTab('CABINET');
+      setActiveScreen('MAIN_DASHBOARD');
       return;
     }
 
@@ -454,38 +446,27 @@ export default function App() {
       // Trigger a dramatic Rebellion / Coup crisis!
       playSound('error');
       setCurrentEvent({
-        title: "🔥 ARMED POPULAR REBELLION & COUP D'ETAT!",
-        description: `CRITICAL ALERT! Due to severe political suppression, banning rival parties, or structural unrest, civil war risk has hit ${civilWarRisk}%! Armed rebel militias and fractions of the military have launched a violent coup to overthrow your administration. How do you respond?`,
+        title: "🔥 ASİLERİN AYAKLANMASI VE HÜKÜMET DARBESİ!",
+        description: `KRİTİK UYARI! Muhalif partilerin kapatılması, aşırı siyasi baskı veya toplumsal huzursuzluk nedeniyle isyan ve iç savaş riski %${civilWarRisk} seviyesine ulaştı! Silahlı isyancı hücreler başkentte Cumhurbaşkanlığı sarayına giden yolları kesti. Nasıl müdahale edeceksiniz?`,
         options: [
           {
-            text: "Order the Military to Suppress the Rebels (Costs 200,000, -25 Freedom, 50% chance of success)",
+            text: "Orduyu Görevlendir ve Asilerle Taktik Haritada Çatış! (Maliyet: 200.000 ₺, Özgürlük -25)",
             effect: () => {
               setTreasury(prev => Math.max(0, prev - 200000));
               setFreedomIndex(prev => Math.max(10, prev - 25));
-              
-              if (Math.random() < 0.50) {
-                // Suppressed successfully
-                setCivilWarRisk(25);
-                setWarningAlert("💥 BLOODY VICTORY: Your loyal military divisions brutally crushed the uprising. The streets are cleared, but international condemnation is absolute.");
-                setInternationalReputation(prev => Math.max(5, prev - 40));
-              } else {
-                // Overthrown!
-                setWarningAlert("💀 OVERTHROWN! The military and armed rebels breached the presidential palace. Your government has been deposed in a bloody coup. Returning to World Map.");
-                setActiveScreen('MAP');
-                setSelectedCountry(null);
-                setPlayerParty(null);
-                setIsRuling(false);
-              }
+              setActiveScreen('TACTICAL_BATTLE');
+              setCurrentEvent(null);
             }
           },
           {
-            text: "Flee the Country & Establish Government-in-Exile (Resigns, loses Country)",
+            text: "Ülkeden Kaç ve Sürgünde Hükümet Kur (İstifa et, Ülkeyi kaybet)",
             effect: () => {
-              setWarningAlert("✈️ ESCAPE: You successfully boarded a private jet to a foreign ally. Your administration has collapsed, and a transitional junta council has assumed power.");
+              setWarningAlert("✈️ KAÇIŞ: Özel bir uçakla dost bir ülkeye sığındınız. Yönetiminiz çöktü ve bir askeri geçiş konseyi kontrolü ele aldı.");
               setActiveScreen('MAP');
               setSelectedCountry(null);
               setPlayerParty(null);
               setIsRuling(false);
+              setCurrentEvent(null);
             }
           }
         ]
@@ -518,6 +499,39 @@ export default function App() {
     const netMonthlyChange = finalTaxRevenue - totalExpenses;
     const nextTreasury = Math.max(0, treasury + netMonthlyChange);
     setTreasury(nextTreasury);
+
+    // Fluctuating region supports dynamically so region owners shift as time goes on
+    const updatedRegions = selectedCountry.regions.map(r => {
+      const supports = { ...r.supports };
+      const partyIds = Object.keys(supports);
+      
+      const changes = partyIds.map(id => {
+        let change = (Math.random() * 6 - 3); // -3% to +3% random drift
+        if (id === playerParty.id) {
+          // Player's support drift is influenced by investor confidence & freedom index
+          const baseGovRating = (investorConfidence / 10) + (freedomIndex / 10) - (inflation * 1.5);
+          change += baseGovRating * 0.1;
+        }
+        return { id, change };
+      });
+
+      // Apply changes, bound between 1% and 100%
+      changes.forEach(c => {
+        supports[c.id] = Math.min(100, Math.max(1, Math.round((supports[c.id] || 0) + c.change)));
+      });
+
+      // Normalize supports to add up to 100%
+      const sum = Object.values(supports).reduce((acc: number, val) => acc + (val as number), 0) as number;
+      if (sum > 0) {
+        partyIds.forEach(id => {
+          supports[id] = Math.round(((supports[id] || 0) / sum) * 100);
+        });
+      }
+
+      return { ...r, supports };
+    });
+
+    setSelectedCountry({ ...selectedCountry, regions: updatedRegions });
 
     // 2. Economic & confidence indicators drift
     const taxConfidenceImpact = (taxRates.corporate > 35 ? -2 : 0) + (taxRates.income > 40 ? -2 : 0);
@@ -911,6 +925,11 @@ export default function App() {
       }
 
       setShowElectionSuccessModal(true);
+      setShowPressConference(true);
+      setPressConferenceIndex(0);
+      setPressTreasuryBonus(0);
+      setPressFreedomBonus(0);
+      setPressReputationBonus(0);
       return;
     }
 
@@ -923,14 +942,18 @@ export default function App() {
 
   const handleFormCabinet = () => {
     setIsRuling(true);
-    setTreasury(1000000);
-    setFreedomIndex(85);
+    setTreasury(1000000 + pressTreasuryBonus);
+    setFreedomIndex(Math.min(100, Math.max(10, 85 + pressFreedomBonus)));
     setBannedParties([]);
     setCivilWarRisk(0);
     setDashboardTab('CABINET');
     setActiveScreen('MAIN_DASHBOARD');
     setHasReshuffledPrompt(true);
     setShowElectionSuccessModal(false);
+    setShowPressConference(false);
+    if (pressReputationBonus !== 0) {
+      setInternationalReputation(prev => Math.min(100, Math.max(0, prev + pressReputationBonus)));
+    }
   };
 
   const handleReturnToMap = () => {
@@ -1618,6 +1641,9 @@ export default function App() {
                 onUpdateCountry={setSelectedCountry}
                 onUpdateParty={setPlayerParty}
                 darkMode={darkMode}
+                isRuling={isRuling}
+                treasury={treasury}
+                onUpdateTreasury={setTreasury}
               />
             )}
 
@@ -1728,6 +1754,28 @@ export default function App() {
               setActiveScreen('MAP');
             }}
             darkMode={darkMode}
+          />
+        )}
+
+        {/* CIVIL WAR TACTICAL BATTLE ENGAGEMENT */}
+        {activeScreen === 'TACTICAL_BATTLE' && selectedCountry && playerParty && (
+          <TacticalBattleView
+            country={selectedCountry}
+            party={playerParty}
+            darkMode={darkMode}
+            onBattleFinished={(success: boolean) => {
+              if (success) {
+                setCivilWarRisk(10);
+                setWarningAlert("💥 MUHTEŞEM ZAFER: Askeri birliklerimiz başkentteki tüm isyan hücrelerini temizledi. Devletin bölünmez bütünlüğü başarıyla korundu!");
+                setActiveScreen('MAIN_DASHBOARD');
+              } else {
+                setWarningAlert("💀 BOZGUN: Askeri birliklerimizin yenilmesinin ardından asiler cumhurbaşkanlığı sarayını bastı ve hükümeti devirdi. Yönetimi kaybettiniz.");
+                setActiveScreen('MAP');
+                setSelectedCountry(null);
+                setPlayerParty(null);
+                setIsRuling(false);
+              }
+            }}
           />
         )}
       </main>
@@ -1902,52 +1950,220 @@ export default function App() {
       {/* ELECTION VICTORY / GOVERNING SUCCESS MODAL */}
       {showElectionSuccessModal && selectedCountry && playerParty && (
         <div className="fixed inset-0 z-[120] h-full w-full bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className={`w-full max-w-lg rounded-3xl border p-8 flex flex-col gap-6 items-center text-center animate-scale-up ${
+          <div className={`w-full max-w-xl rounded-3xl border p-8 flex flex-col gap-6 items-center animate-scale-up ${
             darkMode ? 'bg-slate-950 border-emerald-500/30' : 'bg-white border-slate-200 shadow-2xl'
           }`}>
-            <div className="p-5 rounded-full bg-emerald-500/10 text-emerald-500 animate-pulse">
-              <Award className="w-14 h-14" />
-            </div>
+            
+            {showPressConference && pressConferenceIndex < 3 ? (
+              // Press Conference Steps
+              (() => {
+                const pressQuestions = [
+                  {
+                    reporter: "Ahmet Yılmaz (TRT Haber)",
+                    avatar: "🎤 TRT",
+                    color: "border-red-500 text-red-400 bg-red-500/15",
+                    question: `Sayın Başkan, seçim zaferinizin ardından ilk icraatınız ekonomik reformlar ve vergiler konusunda ne olacak? Halkımız rahatlayacak mı?`,
+                    options: [
+                      {
+                        text: "Zenginlerden yüksek vergi alıp halkı rahatlatacağız! (Popülist)",
+                        bonusDesc: "+100k Başlangıç Hazinesi, Demokrasi ve Özgürlük puanlarında artış",
+                        effect: () => {
+                          setPressTreasuryBonus(100000);
+                          setPressFreedomBonus(10);
+                        }
+                      },
+                      {
+                        text: "Devlet hazinesini hızla doldurmak için vergileri artıracağız! (Mali Odak)",
+                        bonusDesc: "+250k Başlangıç Hazinesi, Düşük Halk Özgürlüğü",
+                        effect: () => {
+                          setPressTreasuryBonus(250000);
+                          setPressFreedomBonus(-15);
+                        }
+                      },
+                      {
+                        text: "Dengeli bir bütçe ve serbest piyasa kurallarını koruyacağız. (Mevcut Durum)",
+                        bonusDesc: "Standart başlangıç bütçesi ve özgürlük puanları",
+                        effect: () => {
+                          setPressTreasuryBonus(0);
+                          setPressFreedomBonus(0);
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    reporter: "Sarah Jenkins (BBC World)",
+                    avatar: "🇬🇧 BBC",
+                    color: "border-blue-500 text-blue-400 bg-blue-500/15",
+                    question: `Sayın Başkan, yeni yönetim döneminizde basın özgürlüğü ve muhalif sesler konusundaki tavrınız ne olacak? Güçler birliği mi, tam hürriyet mi?`,
+                    options: [
+                      {
+                        text: "Demokrasiyi sonuna kadar savunacağız, tam bağımsız basın! (Özgürlükçü)",
+                        bonusDesc: "+25 Demokrasi/Özgürlük Endeksi, +15 Uluslararası İtibar",
+                        effect: () => {
+                          setPressFreedomBonus(prev => prev + 25);
+                          setPressReputationBonus(15);
+                        }
+                      },
+                      {
+                        text: "Ulusal güvenlik her şeyden önce gelir. Gerekirse kısıtlamalar uygulayacağız! (Otoriter)",
+                        bonusDesc: "-20 Demokrasi/Özgürlük Endeksi, Ordu ve Asayiş gücünde artış",
+                        effect: () => {
+                          setPressFreedomBonus(prev => prev - 20);
+                          setPressReputationBonus(-15);
+                        }
+                      },
+                      {
+                        text: "Anayasal çerçeveye ve yasalara tam bağlılığı sürdüreceğiz. (Demokratik)",
+                        bonusDesc: "+5 Demokrasi/Özgürlük Endeksi, Dengeli Durum",
+                        effect: () => {
+                          setPressFreedomBonus(prev => prev + 5);
+                          setPressReputationBonus(5);
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    reporter: "Halid bin Velid (Al Jazeera)",
+                    avatar: "🇶🇦 AJ",
+                    color: "border-amber-500 text-amber-400 bg-amber-500/15",
+                    question: `Yeni dönemde küresel diplomasi, sınır ötesi askeri operasyonlar ve komşu devletler hakkındaki stratejiniz nedir? Savaş ihtimali var mı?`,
+                    options: [
+                      {
+                        text: "Yurtta sulh, cihanda sulh! Diplomatik diyalog tek seçeneğimizdir. (Pasifist)",
+                        bonusDesc: "+20 Uluslararası İtibar, Komşularla Barışçıl Durum",
+                        effect: () => {
+                          setPressReputationBonus(prev => prev + 20);
+                        }
+                      },
+                      {
+                        text: "Bölgemizde tam liderlik! Gücümüzü ve milli duruşumuzu herkese ilan edeceğiz. (Milliyetçi)",
+                        bonusDesc: "-15 Uluslararası İtibar, Ekstra Askeri Hazırlık Puanı",
+                        effect: () => {
+                          setPressReputationBonus(prev => prev - 15);
+                          setPressTreasuryBonus(prev => prev + 50000);
+                        }
+                      },
+                      {
+                        text: "Kendi sınırlarımıza odaklanarak küresel çatışmalarda tarafsız kalacağız. (Yalıtılmışlık)",
+                        bonusDesc: "Dengeli uluslararası ilişkiler ve tarafsız dış politika",
+                        effect: () => {
+                          setPressReputationBonus(prev => prev + 5);
+                        }
+                      }
+                    ]
+                  }
+                ];
 
-            <div className="space-y-3">
-              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400">
-                Electoral Victory • Seçim Zaferi
-              </span>
-              <h3 className={`text-2xl font-black uppercase tracking-tight ${
-                darkMode ? 'text-slate-100' : 'text-slate-900'
-              }`}>
-                TEBRİKLER! {playerParty.name} SEÇİMİ KAZANDI!
-              </h3>
-              <p className={`text-sm leading-relaxed ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Genel seçimleri başarıyla tamamlayarak mecliste çoğunluğu elde ettiniz! Kabineyi kurup, bakanları atayarak, vergileri ayarlayıp diplomatik ve askeri kararlar almaya hemen başlamak ister misiniz?
-              </p>
-            </div>
+                const currentQ = pressQuestions[pressConferenceIndex];
 
-            <div className="w-full flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  playSound('click');
-                  handleFormCabinet();
-                }}
-                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg cursor-pointer text-center uppercase tracking-widest transition-all"
-              >
-                Kabineyi Kur & Yönetmeye Başla (Governing Phase)
-              </button>
+                return (
+                  <div className="w-full flex flex-col gap-5 text-left">
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-500/10">
+                      <h4 className="text-xs font-mono font-bold tracking-wider text-emerald-400 flex items-center gap-2 uppercase">
+                        <span className="animate-ping w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                        CANLI BASIN TOPLANTISI • LIVE PRESS CONFERENCE ({pressConferenceIndex + 1}/3)
+                      </h4>
+                      <span className="text-[10px] font-mono text-slate-500">PRESIDENTIAL DECREE</span>
+                    </div>
 
-              <button
-                onClick={() => {
-                  playSound('click');
-                  handleReturnToMap();
-                }}
-                className={`w-full py-3.5 rounded-2xl font-bold text-xs cursor-pointer text-center uppercase tracking-widest transition-all border ${
-                  darkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Dünya Haritasına Dön
-              </button>
-            </div>
+                    <div className="flex items-center gap-3 bg-slate-900/50 p-3 rounded-2xl border border-slate-800">
+                      <span className={`px-2.5 py-1 rounded-full font-mono font-bold text-xs border ${currentQ.color}`}>
+                        {currentQ.avatar}
+                      </span>
+                      <div>
+                        <span className="text-[11px] text-slate-400 font-mono font-bold">MUHABİR:</span>
+                        <div className="text-xs font-bold text-slate-200">{currentQ.reporter}</div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm font-semibold text-slate-250 italic leading-relaxed border-l-2 border-emerald-500/40 pl-3">
+                      "{currentQ.question}"
+                    </p>
+
+                    <div className="flex flex-col gap-2.5 mt-2">
+                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">CEVABINIZI SEÇİN • SELECT YOUR RESPONSE:</span>
+                      {currentQ.options.map((opt, oIdx) => (
+                        <button
+                          key={oIdx}
+                          onClick={() => {
+                            playSound('click');
+                            opt.effect();
+                            setPressConferenceIndex(prev => prev + 1);
+                          }}
+                          className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 hover:bg-slate-850 text-slate-200 text-left transition-all hover:scale-[1.01] cursor-pointer"
+                        >
+                          <div className="font-bold text-xs text-slate-100">{opt.text}</div>
+                          <div className="text-[10px] font-mono text-slate-400 mt-1 font-semibold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></span>
+                            {opt.bonusDesc}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              // Final Step: Choice to Rule or Return
+              <>
+                <div className="p-5 rounded-full bg-emerald-500/10 text-emerald-500 animate-pulse">
+                  <Award className="w-14 h-14" />
+                </div>
+
+                <div className="space-y-3 text-center">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400">
+                    Electoral Victory • Seçim Zaferi
+                  </span>
+                  <h3 className={`text-2xl font-black uppercase tracking-tight ${
+                    darkMode ? 'text-slate-100' : 'text-slate-900'
+                  }`}>
+                    TEBRİKLER! {playerParty.name} SEÇİMİ KAZANDI!
+                  </h3>
+                  <p className={`text-sm leading-relaxed ${
+                    darkMode ? 'text-slate-400' : 'text-slate-600'
+                  }`}>
+                    Basın toplantısını başarıyla tamamladınız! Seçim sonuçları resmileşti. Kabineyi kurup, bakanları atayarak diplomatik ve askeri kararlar almaya hemen başlamak ister misiniz?
+                  </p>
+
+                  <div className="p-3.5 bg-slate-900/60 border border-slate-850 rounded-2xl flex flex-wrap gap-4 items-center justify-center text-xs font-mono max-w-sm mx-auto">
+                    <div className="text-left">
+                      <div className="text-slate-450 text-[10px]">HAZİNE BONUSU</div>
+                      <div className="text-emerald-400 font-bold">+{pressTreasuryBonus.toLocaleString()} ₺</div>
+                    </div>
+                    <div className="border-l border-slate-800 h-6"></div>
+                    <div className="text-left">
+                      <div className="text-slate-450 text-[10px]">ÖZGÜRLÜK ENDEKSİ</div>
+                      <div className="text-cyan-400 font-bold">+{pressFreedomBonus} Pts</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      handleFormCabinet();
+                    }}
+                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg cursor-pointer text-center uppercase tracking-widest transition-all"
+                  >
+                    Kabineyi Kur & Yönetmeye Başla (Governing Phase)
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      handleReturnToMap();
+                    }}
+                    className={`w-full py-3.5 rounded-2xl font-bold text-xs cursor-pointer text-center uppercase tracking-widest transition-all border ${
+                      darkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Dünya Haritasına Dön
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}

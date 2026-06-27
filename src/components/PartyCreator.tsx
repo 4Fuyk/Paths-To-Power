@@ -192,7 +192,7 @@ const US_AVATARS = [
   {
     id: 'us_harris',
     name: 'Kamala Harris',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg/250px-Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg',
+    url: 'https://thfvnext.bing.com/th/id/OIP.iDEUHnU5PFy9zsOdzZL0VQHaEK?w=308&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3',
     partyName: 'Demokrat Parti',
     color: '#2563eb',
     ideology: 'Sosyal Demokrat' as Ideology,
@@ -200,7 +200,7 @@ const US_AVATARS = [
   {
     id: 'us_oliver',
     name: 'Chase Oliver',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Chase_Oliver_August_2023.jpg/250px-Chase_Oliver_August_2023.jpg',
+    url: 'https://thfvnext.bing.com/th/id/OIP.c_KBzJb73OaFQMUvfUuF0wHaE7?w=250&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3',
     partyName: 'Özgürlükçü Parti (Libertarian)',
     color: '#eab308',
     ideology: 'Liberal' as Ideology,
@@ -208,7 +208,7 @@ const US_AVATARS = [
   {
     id: 'us_stein',
     name: 'Jill Stein',
-    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Jill_Stein_at_the_2024_National_Convention_cropped.jpg/250px-Jill_Stein_at_the_2024_National_Convention_cropped.jpg',
+    url: 'https://thfvnext.bing.com/th/id/OIF.THHEKT1ezKNhsLglk3uxDQ?w=260&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3',
     partyName: 'Yeşiller Partisi (Green)',
     color: '#16a34a',
     ideology: 'Ekolojist' as Ideology,
