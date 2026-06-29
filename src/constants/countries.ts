@@ -146,7 +146,7 @@ export const getTurkeyRegions = (): Region[] => {
     const voterDistribution = {
       'İşçiler': workers,
       'Gençler': youth,
-      'Milliyetçiler': nationalists,
+      'Nationalistler': nationalists,
       'Liberaller': liberals,
       'Gelenekçiler': traditionalists,
       'Esnaflar': Math.max(2, shopkeepers),
@@ -272,7 +272,7 @@ export const getGermanyRegions = (): Region[] => {
     const voterDistribution = {
       'İşçiler': workers,
       'Gençler': youth,
-      'Milliyetçiler': nationalists,
+      'Nationalistler': nationalists,
       'Liberaller': liberals,
       'Gelenekçiler': traditionalists,
       'Esnaflar': Math.max(2, shopkeepers),
@@ -397,7 +397,7 @@ export const getUSRegions = (): Region[] => {
     const voterDistribution = {
       'İşçiler': workers,
       'Gençler': youth,
-      'Milliyetçiler': nationalists,
+      'Nationalistler': nationalists,
       'Liberaller': liberals,
       'Gelenekçiler': traditionalists,
       'Esnaflar': Math.max(2, shopkeepers),
@@ -434,7 +434,7 @@ const makeVoterGroup = (
 ): Record<VoterGroup, number> => ({
   'İşçiler': workers,
   'Gençler': youth,
-  'Milliyetçiler': nationalists,
+  'Nationalistler': nationalists,
   'Liberaller': liberals,
   'Gelenekçiler': traditionalists,
   'Esnaflar': shopkeepers,
@@ -456,7 +456,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 2,
       'Esnaflar': -4,
       'Liberaller': -5,
-      'Milliyetçiler': 2,
+      'Nationalistler': 2,
       'Gelenekçiler': 4,
     }
   },
@@ -474,7 +474,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 12,
       'Esnaflar': 2,
       'Liberaller': 10,
-      'Milliyetçiler': -4,
+      'Nationalistler': -4,
       'Gelenekçiler': -8,
     }
   },
@@ -492,7 +492,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': -2,
       'Esnaflar': 2,
       'Liberaller': -6,
-      'Milliyetçiler': 14,
+      'Nationalistler': 14,
       'Gelenekçiler': 8,
     }
   },
@@ -510,7 +510,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 9,
       'Esnaflar': 4,
       'Liberaller': 6,
-      'Milliyetçiler': 0,
+      'Nationalistler': 0,
       'Gelenekçiler': -3,
     }
   },
@@ -528,7 +528,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 3,
       'Esnaflar': 8,
       'Liberaller': 2,
-      'Milliyetçiler': 6,
+      'Nationalistler': 6,
       'Gelenekçiler': 4,
     }
   },
@@ -546,7 +546,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 15,
       'Esnaflar': 4,
       'Liberaller': 12,
-      'Milliyetçiler': 5,
+      'Nationalistler': 5,
       'Gelenekçiler': -4,
     }
   },
@@ -564,7 +564,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 10,
       'Esnaflar': -2,
       'Liberaller': 5,
-      'Milliyetçiler': 4,
+      'Nationalistler': 4,
       'Gelenekçiler': 2,
     }
   },
@@ -582,7 +582,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': -3,
       'Esnaflar': 6,
       'Liberaller': -8,
-      'Milliyetçiler': 18,
+      'Nationalistler': 18,
       'Gelenekçiler': 12,
     }
   },
@@ -600,7 +600,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 6,
       'Esnaflar': 4,
       'Liberaller': -1,
-      'Milliyetçiler': 5,
+      'Nationalistler': 5,
       'Gelenekçiler': 8,
     }
   },
@@ -618,7 +618,7 @@ const createBills = (countryId: string): Bill[] => [
       'Gençler': 4,
       'Esnaflar': 16,
       'Liberaller': 8,
-      'Milliyetçiler': 6,
+      'Nationalistler': 6,
       'Gelenekçiler': 8,
     }
   }
@@ -632,68 +632,70 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     flag: '🇹🇷',
     seats: 600,
     parliamentName: 'Grand National Assembly of Turkey (TBMM)',
-    system: 'Hükümet Koalisyonu',
+    system: 'Coalition Government',
     population: '85 Million',
     primaryColor: '#dc2626', // Turkish Red
     rivals: [
-      { id: 'CHP', name: 'CHP', leader: 'Özgür Özel', ideology: 'Sosyal Demokrat', symbol: 'Flame', color: '#e30613', baseSupport: 37, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
-      { id: 'AKP', name: 'AK Parti', leader: 'Recep Tayyip Erdoğan', ideology: 'Muhafazakar', symbol: 'Scale', color: '#ff9e1b', baseSupport: 35, photo: 'https://thf.bing.com/th/id/OIP.OSuQe5LJxNif6UcSy0D9YAHaE7?w=242&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'DEM', name: 'DEM Parti', leader: 'Tuncer Bakırhan', ideology: 'Sosyalist', symbol: 'Sparkles', color: '#8b5cf6', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.37I-MTcx4uo8vRif0r3DmgHaEO?w=278&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'MHP', name: 'MHP', leader: 'Devlet Bahçeli', ideology: 'Milliyetçi', symbol: 'ShieldAlert', color: '#991b1b', baseSupport: 7, photo: 'https://thf.bing.com/th/id/OIP.uKLHt8YQ5W_ghAlMr7TR7AHaEK?w=280&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'YRP', name: 'Yeniden Refah Partisi (YRP)', leader: 'Fatih Erbakan', ideology: 'Muhafazakar', symbol: 'Key', color: '#2563eb', baseSupport: 6, photo: 'https://thf.bing.com/th/id/OIP.jwt8F1waSse9KWS-sVyWKgHaEK?w=303&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'ZAFER', name: 'Zafer Partisi', leader: 'Ümit Özdağ', ideology: 'Milliyetçi', symbol: 'Anchor', color: '#c2410c', baseSupport: 4, photo: 'https://thf.bing.com/th/id/OIP.D6YUtsOdukEPYEv357621AHaEK?w=332&h=186&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'TIP', name: 'TİP', leader: 'Erkan Baş', ideology: 'Sosyalist', symbol: 'Heart', color: '#be123c', baseSupport: 2, photo: 'https://thf.bing.com/th/id/OIP.z4i5RbWcUnSCP01SVVXeNwHaE7?w=255&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'TKP', name: 'TKP', leader: 'Kemal Okuyan', ideology: 'Sosyalist', symbol: 'Compass', color: '#dc2626', baseSupport: 1, photo: 'https://tse4.mm.bing.net/th/id/OIP.SnPu5vlsLQCb_aLz9UxpwgHaEK?r=0&cb=thfc1falcon2&rs=1&pid=ImgDetMain&o=7&rm=3' },
-      { id: 'SAADET', name: 'Saadet Partisi', leader: 'Mahmut Arıkan', ideology: 'Muhafazakar', symbol: 'Award', color: '#1d4ed8', baseSupport: 1, photo: 'https://i.gazeteduvar.com.tr/2/1280/720/storage/files/images/2024/11/19/mahmud-w0bc_cover.jpg' },
+      { id: 'CHP', name: 'CHP', leader: 'Özgür Özel', ideology: 'Social Democrat', symbol: 'Flame', color: '#e30613', baseSupport: 37, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
+      { id: 'AKP', name: 'AK Parti', leader: 'Recep Tayyip Erdoğan', ideology: 'Conservative', symbol: 'Scale', color: '#ff9e1b', baseSupport: 35, photo: 'https://thf.bing.com/th/id/OIP.OSuQe5LJxNif6UcSy0D9YAHaE7?w=242&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'DEM', name: 'DEM Parti', leader: 'Tuncer Bakırhan', ideology: 'Socialist', symbol: 'Sparkles', color: '#8b5cf6', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.37I-MTcx4uo8vRif0r3DmgHaEO?w=278&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'MHP', name: 'MHP', leader: 'Devlet Bahçeli', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#991b1b', baseSupport: 7, photo: 'https://thf.bing.com/th/id/OIP.uKLHt8YQ5W_ghAlMr7TR7AHaEK?w=280&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'YRP', name: 'Yeniden Refah Partisi (YRP)', leader: 'Fatih Erbakan', ideology: 'Conservative', symbol: 'Key', color: '#2563eb', baseSupport: 6, photo: 'https://thf.bing.com/th/id/OIP.jwt8F1waSse9KWS-sVyWKgHaEK?w=303&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'ZAFER', name: 'Zafer Partisi', leader: 'Ümit Özdağ', ideology: 'Nationalist', symbol: 'Anchor', color: '#c2410c', baseSupport: 4, photo: 'https://thf.bing.com/th/id/OIP.D6YUtsOdukEPYEv357621AHaEK?w=332&h=186&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'TIP', name: 'TİP', leader: 'Erkan Baş', ideology: 'Socialist', symbol: 'Heart', color: '#be123c', baseSupport: 2, photo: 'https://thf.bing.com/th/id/OIP.z4i5RbWcUnSCP01SVVXeNwHaE7?w=255&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'TKP', name: 'TKP', leader: 'Kemal Okuyan', ideology: 'Socialist', symbol: 'Compass', color: '#dc2626', baseSupport: 1, photo: 'https://tse4.mm.bing.net/th/id/OIP.SnPu5vlsLQCb_aLz9UxpwgHaEK?r=0&cb=thfc1falcon2&rs=1&pid=ImgDetMain&o=7&rm=3' },
+      { id: 'SAADET', name: 'Saadet Partisi', leader: 'Mahmut Arıkan', ideology: 'Conservative', symbol: 'Award', color: '#1d4ed8', baseSupport: 1, photo: 'https://i.gazeteduvar.com.tr/2/1280/720/storage/files/images/2024/11/19/mahmud-w0bc_cover.jpg' },
       { id: 'DEVA', name: 'DEVA Partisi', leader: 'Ali Babacan', ideology: 'Liberal', symbol: 'Globe', color: '#06b6d4', baseSupport: 1, photo: 'https://thf.bing.com/th/id/OIP.NeK1Fpea9DEqrDm_IGfEjAHaEN?w=308&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'GELECEK', name: 'Gelecek Partisi', leader: 'Ahmet Davutoğlu', ideology: 'Muhafazakar', symbol: 'Leaf', color: '#16a34a', baseSupport: 1, photo: 'https://thf.bing.com/th/id/OIP.nYYgkEuIUEjy_QGs_Ha-agHaEK?w=289&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'VATAN', name: 'Vatan Partisi', leader: 'Doğu Perinçek', ideology: 'Milliyetçi', symbol: 'Star', color: '#b91c1c', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Do%C4%9Fu_Perin%C3%A7ek_in_Tasnim_News_Agency.jpg/250px-Do%C4%9Fu_Perin%C3%A7ek_in_Tasnim_News_Agency.jpg' },
+      { id: 'GELECEK', name: 'Gelecek Partisi', leader: 'Ahmet Davutoğlu', ideology: 'Conservative', symbol: 'Leaf', color: '#16a34a', baseSupport: 1, photo: 'https://thf.bing.com/th/id/OIP.nYYgkEuIUEjy_QGs_Ha-agHaEK?w=289&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'VATAN', name: 'Vatan Partisi', leader: 'Doğu Perinçek', ideology: 'Nationalist', symbol: 'Star', color: '#b91c1c', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Do%C4%9Fu_Perin%C3%A7ek_in_Tasnim_News_Agency.jpg/250px-Do%C4%9Fu_Perin%C3%A7ek_in_Tasnim_News_Agency.jpg' },
     ],
     regions: getTurkeyRegions(),
     bills: createBills('TR'),
     campaignTurns: 53,
     electionCycleYears: 5,
+    termLimit: 2,
   },
   {
     id: 'US',
-    name: 'Amerika Birleşik Devletleri',
-    description: 'İki partili sistemin ve federal eyaletlerin yönettiği, dünyanın en büyük ekonomik ve askeri gücü.',
+    name: 'United States of America',
+    description: 'The world\'s largest economic and military power, governed by a two-party system and federal states.',
     flag: '🇺🇸',
     seats: 538,
-    parliamentName: 'Kongre (Temsilciler Meclisi & Senato)',
-    system: 'Başkanlık Sistemi',
-    population: '333 Milyon',
+    parliamentName: 'Congress (House of Representatives & Senate)',
+    system: 'Presidential System',
+    population: '333 Million',
     primaryColor: '#2563eb', // Tailwind blue-600
     rivals: [
-      { id: 'REP', name: 'Cumhuriyetçi Parti', leader: 'Donald Trump', ideology: 'Muhafazakar', symbol: 'ShieldCheck', color: '#dc2626', baseSupport: 46, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Donald_Trump_official_portrait.jpg/250px-Donald_Trump_official_portrait.jpg' },
-      { id: 'DEM_US', name: 'Demokrat Parti', leader: 'Kamala Harris', ideology: 'Sosyal Demokrat', symbol: 'Globe', color: '#2563eb', baseSupport: 45, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg/250px-Kamala_Harris_Vice_Presidential_Portrait_-_crop.jpg' },
-      { id: 'LP', name: 'Özgürlükçü Parti (Libertarian)', leader: 'Chase Oliver', ideology: 'Liberal', symbol: 'Bird', color: '#eab308', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Chase_Oliver_August_2023.jpg/250px-Chase_Oliver_August_2023.jpg' },
-      { id: 'GP', name: 'Yeşiller Partisi (Green)', leader: 'Jill Stein', ideology: 'Ekolojist', symbol: 'Leaf', color: '#16a34a', baseSupport: 3, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Jill_Stein_at_the_2024_National_Convention_cropped.jpg/250px-Jill_Stein_at_the_2024_National_Convention_cropped.jpg' },
+      { id: 'REP', name: 'Republican Party', leader: 'Donald Trump', ideology: 'Conservative', symbol: 'ShieldCheck', color: '#dc2626', baseSupport: 46, photo: 'https://thfvnext.bing.com/th/id/OIP.aJ8W1Jp1-oYx6H22l-m_dAHaE7?w=260&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3' },
+      { id: 'DEM_US', name: 'Democratic Party', leader: 'Kamala Harris', ideology: 'Social Democrat', symbol: 'Globe', color: '#2563eb', baseSupport: 45, photo: 'https://thfvnext.bing.com/th/id/OIP.iDEUHnU5PFy9zsOdzZL0VQHaEK?w=308&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3' },
+      { id: 'LP', name: 'Libertarian Party', leader: 'Chase Oliver', ideology: 'Liberal', symbol: 'Bird', color: '#eab308', baseSupport: 6, photo: 'https://thfvnext.bing.com/th/id/OIP.c_KBzJb73OaFQMUvfUuF0wHaE7?w=250&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3' },
+      { id: 'GP', name: 'Green Party', leader: 'Jill Stein', ideology: 'Ecologist', symbol: 'Leaf', color: '#16a34a', baseSupport: 3, photo: 'https://thfvnext.bing.com/th/id/OIF.THHEKT1ezKNhsLglk3uxDQ?w=260&h=180&c=7&r=0&o=7&cb=thfvnextfalcon3&pid=1.7&rm=3' },
     ],
     regions: getUSRegions(),
     bills: createBills('US'),
     campaignTurns: 53,
     electionCycleYears: 4,
+    termLimit: 2,
   },
   {
     id: 'DE',
-    name: 'Almanya',
-    description: 'Avrupa Birliği\'nin ekonomik lokomotifi olan, koalisyon kültürünün hakim olduğu parlamenter dev.',
+    name: 'Germany',
+    description: 'The economic engine of the European Union, a parliamentary giant dominated by coalition culture.',
     flag: '🇩🇪',
     seats: 630,
-    parliamentName: 'Bundestag (Federal Meclis)',
-    system: 'Hükümet Koalisyonu',
-    population: '84 Milyon',
+    parliamentName: 'Bundestag',
+    system: 'Coalition Government',
+    population: '84 Million',
     primaryColor: '#1f2937', // Germany Slate
     rivals: [
-      { id: 'CDU', name: 'CDU/CSU (Union)', leader: 'Friedrich Merz', ideology: 'Muhafazakar', symbol: 'Building', color: '#000000', baseSupport: 28.5, startingSeats: 208, photo: 'https://thf.bing.com/th/id/OIP.C6IhExWdSFCEi8UMuMPLpgHaEs?w=265&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'AfD', name: 'AfD (Alternative für Deutschland)', leader: 'Alice Weidel', ideology: 'Milliyetçi', symbol: 'ShieldAlert', color: '#009EE0', baseSupport: 20.8, startingSeats: 152, photo: 'https://thf.bing.com/th/id/OIP.HMj4SiIh4c7KS6KMTvXSSAHaEu?w=236&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'SPD', name: 'SPD (Sozialdemokratische Partei)', leader: 'Lars Klingbeil', ideology: 'Sosyal Demokrat', symbol: 'Users', color: '#E3000F', baseSupport: 16.4, startingSeats: 120, photo: 'https://thf.bing.com/th/id/OIP.AtJS2ybczy_TBZrRMeiCJwHaE7?w=283&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'GRÜNE', name: 'GRÜNE (Bündnis 90/Die Grünen)', leader: 'Franziska Brantner', ideology: 'Ekolojist', symbol: 'Leaf', color: '#46962B', baseSupport: 11.6, startingSeats: 85, photo: 'https://thf.bing.com/th/id/OIP.IyG5NwjRofDj4_FbuGZNRQHaEK?w=322&h=181&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'LINKE', name: 'Die Linke', leader: 'Heidi Reichinnek / Jan van Aken', ideology: 'Sosyalist', symbol: 'Heart', color: '#BE3075', baseSupport: 8.8, startingSeats: 64, photo: 'https://thf.bing.com/th/id/OIP.d4VFRFsa1VBK8V33hKRESAHaEK?w=327&h=184&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'BSW', name: 'BSW (Bündnis Sahra Wagenknecht)', leader: 'Sahra Wagenknecht', ideology: 'Sosyalist', symbol: 'Sparkles', color: '#8B1A4B', baseSupport: 4.9, startingSeats: 0, photo: 'https://thf.bing.com/th/id/OIP.tU_3IENu_tkFM8v2XC_MQgHaEK?w=314&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'CDU', name: 'CDU/CSU (Union)', leader: 'Friedrich Merz', ideology: 'Conservative', symbol: 'Building', color: '#000000', baseSupport: 28.5, startingSeats: 208, photo: 'https://thf.bing.com/th/id/OIP.C6IhExWdSFCEi8UMuMPLpgHaEs?w=265&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'AfD', name: 'AfD (Alternative für Deutschland)', leader: 'Alice Weidel', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#009EE0', baseSupport: 20.8, startingSeats: 152, photo: 'https://thf.bing.com/th/id/OIP.HMj4SiIh4c7KS6KMTvXSSAHaEu?w=236&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'SPD', name: 'SPD (Sozialdemokratische Partei)', leader: 'Lars Klingbeil', ideology: 'Social Democrat', symbol: 'Users', color: '#E3000F', baseSupport: 16.4, startingSeats: 120, photo: 'https://thf.bing.com/th/id/OIP.AtJS2ybczy_TBZrRMeiCJwHaE7?w=283&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'GRÜNE', name: 'GRÜNE (Bündnis 90/Die Grünen)', leader: 'Franziska Brantner', ideology: 'Ecologist', symbol: 'Leaf', color: '#46962B', baseSupport: 11.6, startingSeats: 85, photo: 'https://thf.bing.com/th/id/OIP.IyG5NwjRofDj4_FbuGZNRQHaEK?w=322&h=181&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'LINKE', name: 'Die Linke', leader: 'Heidi Reichinnek / Jan van Aken', ideology: 'Socialist', symbol: 'Heart', color: '#BE3075', baseSupport: 8.8, startingSeats: 64, photo: 'https://thf.bing.com/th/id/OIP.d4VFRFsa1VBK8V33hKRESAHaEK?w=327&h=184&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'BSW', name: 'BSW (Bündnis Sahra Wagenknecht)', leader: 'Sahra Wagenknecht', ideology: 'Socialist', symbol: 'Sparkles', color: '#8B1A4B', baseSupport: 4.9, startingSeats: 0, photo: 'https://thf.bing.com/th/id/OIP.tU_3IENu_tkFM8v2XC_MQgHaEK?w=314&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'FDP', name: 'FDP (Freie Demokraten)', leader: 'Christian Lindner', ideology: 'Liberal', symbol: 'Zap', color: '#FFED00', baseSupport: 4.3, startingSeats: 0, photo: 'https://thf.bing.com/th/id/OIP.t97fKXH73vpJGAMOigSoPwHaEK?w=333&h=187&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'SSW', name: 'SSW (Südschleswigscher Wählerverband)', leader: 'Stefan Seidler', ideology: 'Sosyal Demokrat', symbol: 'Anchor', color: '#003D8F', baseSupport: 0.5, startingSeats: 1, photo: 'https://thf.bing.com/th/id/OIP.ZMWMp-FO5VvshEQLlsaR0gHaEK?w=325&h=183&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' }
+      { id: 'SSW', name: 'SSW (Südschleswigscher Wählerverband)', leader: 'Stefan Seidler', ideology: 'Social Democrat', symbol: 'Anchor', color: '#003D8F', baseSupport: 0.5, startingSeats: 1, photo: 'https://thf.bing.com/th/id/OIP.ZMWMp-FO5VvshEQLlsaR0gHaEK?w=325&h=183&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' }
     ],
     regions: getGermanyRegions(),
     bills: createBills('DE'),
@@ -702,244 +704,289 @@ export const PLAYABLE_COUNTRIES: Country[] = [
   },
   {
     id: 'GB',
-    name: 'Birleşik Krallık',
-    description: 'Dar bölge seçim sistemiyle (First-past-the-post) şekillenen, asırlık monarşik cumhuriyet geleneği.',
+    name: 'United Kingdom',
+    description: 'A centuries-old constitutional monarchy shaped by the first-past-the-post electoral system.',
     flag: '🇬🇧',
     seats: 650,
-    parliamentName: 'Chelsea & Westminster (Avam Kamarası)',
-    system: 'Dar Bölge Meclisi',
-    population: '67 Milyon',
+    parliamentName: 'House of Commons',
+    system: 'First-Past-The-Post',
+    population: '67 Million',
     primaryColor: '#7c3aed', // Tailwind violet-600
     rivals: [
-      { id: 'GB_rival_1', name: 'Muhafazakar Düzen Partisi', leader: 'Sir James Sterling', ideology: 'Muhafazakar', symbol: 'Building', color: '#0284c7', baseSupport: 36 },
-      { id: 'GB_rival_2', name: 'Ulusal İşçi Cephesi', leader: 'Rachel Brown', ideology: 'Sosyal Demokrat', symbol: 'Hammer', color: '#e11d48', baseSupport: 34 },
-      { id: 'GB_rival_3', name: 'Eko-Doğa Federasyonu', leader: 'Alistair Green', ideology: 'Ekolojist', symbol: 'Trees', color: '#15803d', baseSupport: 12 },
+      { id: 'LAB', name: 'Labour Party', leader: 'Keir Starmer', ideology: 'Social Democrat', symbol: 'Users', color: '#E4003B', baseSupport: 34, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Keir_Starmer_Official_Portrait_2024.jpg/250px-Keir_Starmer_Official_Portrait_2024.jpg' },
+      { id: 'CON', name: 'Conservative Party', leader: 'Kemi Badenoch', ideology: 'Conservative', symbol: 'TreeDeciduous', color: '#0087DC', baseSupport: 24, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Kemi_Badenoch_Official_Portrait_2023.jpg/250px-Kemi_Badenoch_Official_Portrait_2023.jpg' },
+      { id: 'REF', name: 'Reform UK', leader: 'Nigel Farage', ideology: 'Nationalist', symbol: 'Shield', color: '#12B6CF', baseSupport: 14, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Nigel_Farage_Official_Portrait_2024.jpg/250px-Nigel_Farage_Official_Portrait_2024.jpg' },
+      { id: 'LD', name: 'Liberal Democrats', leader: 'Ed Davey', ideology: 'Liberal', symbol: 'Bird', color: '#FAA61A', baseSupport: 12, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Ed_Davey_Official_Portrait.jpg/250px-Ed_Davey_Official_Portrait.jpg' },
+      { id: 'GRN', name: 'Green Party', leader: 'Carla Denyer', ideology: 'Ecologist', symbol: 'Leaf', color: '#02A95B', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Carla_Denyer_May_2024.jpg/250px-Carla_Denyer_May_2024.jpg' },
+      { id: 'SNP', name: 'SNP', leader: 'John Swinney', ideology: 'Social Democrat', symbol: 'Flag', color: '#FDF38E', baseSupport: 3, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/John_Swinney_Official_Portrait.jpg/250px-John_Swinney_Official_Portrait.jpg' }
     ],
     regions: [
-      { id: 'GB_reg_1', name: 'Büyük Londra Bölgesi', seats: 180, voterDistribution: makeVoterGroup(10, 35, 5, 25, 8, 17), supports: {}, infrastructure: 5, campaignLevel: 0 },
-      { id: 'GB_reg_2', name: 'İngiltere Kırsalı (Midlands)', seats: 220, voterDistribution: makeVoterGroup(20, 12, 22, 15, 21, 10), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'GB_reg_3', name: 'İskoçya Eyaleti', seats: 120, voterDistribution: makeVoterGroup(22, 28, 8, 18, 12, 12), supports: {}, infrastructure: 3, campaignLevel: 0 },
-      { id: 'GB_reg_4', name: 'Galler ve Kuzey İrlanda', seats: 130, voterDistribution: makeVoterGroup(25, 22, 12, 12, 15, 14), supports: {}, infrastructure: 3, campaignLevel: 0 },
+      { id: 'North East', name: 'North East', seats: 29, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'North West', name: 'North West', seats: 73, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'Yorkshire and The Humber', name: 'Yorkshire and The Humber', seats: 54, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'East Midlands', name: 'East Midlands', seats: 47, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'West Midlands', name: 'West Midlands', seats: 57, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'Eastern', name: 'Eastern', seats: 61, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CON' },
+      { id: 'London', name: 'London', seats: 75, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 5, campaignLevel: 0, ownerPartyId: 'LAB' },
+      { id: 'South East', name: 'South East', seats: 91, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 5, campaignLevel: 0, ownerPartyId: 'CON' },
+      { id: 'South West', name: 'South West', seats: 58, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LD' },
+      { id: 'Scotland', name: 'Scotland', seats: 57, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'SNP' },
+      { id: 'Wales', name: 'Wales', seats: 32, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'LAB' }
     ],
     bills: createBills('GB'),
     campaignTurns: 53,
     electionCycleYears: 5,
+    termLimit: 2,
   },
   {
     id: 'BR',
-    name: 'Brezilya',
-    description: 'Federal parlamentonun aşırı kutuplu rekabetinde, ormanların ve dev kentsel alanların yönetimi.',
+    name: 'Brazil',
+    description: 'A polarized federal republic dealing with immense urban and environmental challenges.',
     flag: '🇧🇷',
     seats: 513,
-    parliamentName: 'Ulusal Kongre',
-    system: 'Hükümet Koalisyonu',
-    population: '214 Milyon',
-    primaryColor: '#059669', // Tailwind emerald-600
+    parliamentName: 'Chamber of Deputies',
+    system: 'Presidential System',
+    population: '214 Million',
+    primaryColor: '#16a34a', // Tailwind green-600
     rivals: [
-      { id: 'BR_rival_1', name: 'Sosyal Özgürlük Birliği', leader: 'Carlos Silva', ideology: 'Sosyalist', symbol: 'Users', color: '#ef4444', baseSupport: 39 },
-      { id: 'BR_rival_2', name: 'Vatan Muhafızları', leader: 'General Roberto', ideology: 'Milliyetçi', symbol: 'Sword', color: '#16a34a', baseSupport: 35 },
-      { id: 'BR_rival_3', name: 'Merkez Kalkınma Partisi', leader: 'Isabela Santos', ideology: 'Liberal', symbol: 'ChevronUp', color: '#eab308', baseSupport: 14 },
+      { id: 'PT', name: 'Workers\' Party (PT)', leader: 'Lula da Silva', ideology: 'Socialist', symbol: 'Star', color: '#c21807', baseSupport: 29, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Lula_em_2023.jpg/250px-Lula_em_2023.jpg' },
+      { id: 'PL', name: 'Liberal Party (PL)', leader: 'Jair Bolsonaro', ideology: 'Conservative', symbol: 'Shield', color: '#22409A', baseSupport: 30, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Jair_Bolsonaro_2024.jpg/250px-Jair_Bolsonaro_2024.jpg' },
+      { id: 'UNIAO', name: 'União Brasil', leader: 'Antonio Rueda', ideology: 'Conservative', symbol: 'Users', color: '#0052A5', baseSupport: 15, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Antonio_Rueda_%28pol%C3%ADtico%29.jpg/250px-Antonio_Rueda_%28pol%C3%ADtico%29.jpg' },
+      { id: 'MDB', name: 'MDB', leader: 'Baleia Rossi', ideology: 'Liberal', symbol: 'Compass', color: '#00A859', baseSupport: 11, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Deputado_Baleia_Rossi_%28cropped%29.jpg/250px-Deputado_Baleia_Rossi_%28cropped%29.jpg' },
+      { id: 'PSD', name: 'PSD', leader: 'Gilberto Kassab', ideology: 'Social Democrat', symbol: 'Globe', color: '#FFA500', baseSupport: 10, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Gilberto_Kassab.jpg/250px-Gilberto_Kassab.jpg' },
+      { id: 'PP', name: 'Progressistas', leader: 'Ciro Nogueira', ideology: 'Conservative', symbol: 'Landmark', color: '#0057A0', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Ciro_Nogueira_%282021%29_%28cropped%29.jpg/250px-Ciro_Nogueira_%282021%29_%28cropped%29.jpg' }
     ],
     regions: [
-      { id: 'BR_reg_1', name: 'Güney ve Metropoller (São Paulo)', seats: 190, voterDistribution: makeVoterGroup(18, 25, 12, 20, 13, 12), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'BR_reg_2', name: 'Kuzey ve Amazon Havzası', seats: 120, voterDistribution: makeVoterGroup(34, 15, 5, 12, 22, 12), supports: {}, infrastructure: 1, campaignLevel: 0 },
-      { id: 'BR_reg_3', name: 'Kuzeydoğu Tarım Havzası', seats: 110, voterDistribution: makeVoterGroup(28, 18, 6, 14, 24, 10), supports: {}, infrastructure: 2, campaignLevel: 0 },
-      { id: 'BR_reg_4', name: 'Orta-Batı Federal Bölge', seats: 93, voterDistribution: makeVoterGroup(15, 14, 26, 15, 18, 12), supports: {}, infrastructure: 3, campaignLevel: 0 },
+      { id: 'Acre', name: 'Acre', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Alagoas', name: 'Alagoas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Amapá', name: 'Amapá', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Amazonas', name: 'Amazonas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Bahia', name: 'Bahia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Ceará', name: 'Ceará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Distrito Federal', name: 'Distrito Federal', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Espírito Santo', name: 'Espírito Santo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Goiás', name: 'Goiás', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Maranhão', name: 'Maranhão', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Mato Grosso', name: 'Mato Grosso', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Mato Grosso do Sul', name: 'Mato Grosso do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Minas Gerais', name: 'Minas Gerais', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Pará', name: 'Pará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Paraíba', name: 'Paraíba', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Paraná', name: 'Paraná', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Pernambuco', name: 'Pernambuco', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Piauí', name: 'Piauí', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio de Janeiro', name: 'Rio de Janeiro', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio Grande do Norte', name: 'Rio Grande do Norte', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio Grande do Sul', name: 'Rio Grande do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rondônia', name: 'Rondônia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Roraima', name: 'Roraima', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Santa Catarina', name: 'Santa Catarina', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'São Paulo', name: 'São Paulo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Sergipe', name: 'Sergipe', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Tocantins', name: 'Tocantins', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' }
     ],
     bills: createBills('BR'),
-    campaignTurns: 53,
+    campaignTurns: 48,
     electionCycleYears: 4,
-  },
-  {
+    termLimit: 2,
+  },  {
     id: 'JP',
-    name: 'Japonya',
-    description: 'Geleneklerine bağlı, teknolojiyi zirvede yaşayan ve yaşlanan bir nüfus yapısına sahip pasifik adalar grubu.',
+    name: 'Japan',
+    description: 'An aging but technologically advanced parliamentary system with strong single-party dominance.',
     flag: '🇯🇵',
     seats: 465,
-    parliamentName: 'Milli Diyet (Temsilciler Meclisi)',
-    system: 'Hükümet Koalisyonu',
-    population: '125 Milyon',
-    primaryColor: '#0284c7', // Tailwind sky-600
+    parliamentName: 'National Diet (House of Reps)',
+    system: 'Coalition Government',
+    population: '125 Million',
+    primaryColor: '#ef4444', // Tailwind red-500
     rivals: [
-      { id: 'JP_rival_1', name: 'Ata Yurdu Liberal Demokratlar', leader: 'Shinzo Sato', ideology: 'Muhafazakar', symbol: 'Building2', color: '#1e3a8a', baseSupport: 43 },
-      { id: 'JP_rival_2', name: 'Yıkım ve Yenilikçi İttifak', leader: 'Yuki Tanaka', ideology: 'Liberal', symbol: 'Cpu', color: '#ec4899', baseSupport: 25 },
-      { id: 'JP_rival_3', name: 'Yeşil Ada Kolektifi', leader: 'Hiroshi Sato', ideology: 'Ekolojist', symbol: 'Wind', color: '#059669', baseSupport: 18 },
+      { id: 'LDP', name: 'LDP', leader: 'Shigeru Ishiba', ideology: 'Conservative', symbol: 'Building', color: '#52B848', baseSupport: 26, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Ishiba_Shigeru.jpg/250px-Ishiba_Shigeru.jpg' },
+      { id: 'CDP', name: 'CDP', leader: 'Yoshihiko Noda', ideology: 'Social Democrat', symbol: 'Users', color: '#004098', baseSupport: 21, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Yoshihiko_Noda_2024.jpg/250px-Yoshihiko_Noda_2024.jpg' },
+      { id: 'KOMEITO', name: 'Komeito', leader: 'Keiichi Ishii', ideology: 'Conservative', symbol: 'Sun', color: '#EB6EA5', baseSupport: 10, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Keiichi_Ishii.jpg/250px-Keiichi_Ishii.jpg' },
+      { id: 'ISHIN', name: 'Ishin no Kai', leader: 'Nobuyuki Baba', ideology: 'Nationalist', symbol: 'Shield', color: '#B6D300', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Nobuyuki_Baba.jpg/250px-Nobuyuki_Baba.jpg' },
+      { id: 'DPFP', name: 'DPFP', leader: 'Yuichiro Tamaki', ideology: 'Liberal', symbol: 'Bird', color: '#F6B132', baseSupport: 7, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Yuichiro_Tamaki.jpg/250px-Yuichiro_Tamaki.jpg' },
+      { id: 'JCP', name: 'JCP', leader: 'Tomoko Tamura', ideology: 'Socialist', symbol: 'Star', color: '#DB001C', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Tomoko_Tamura.jpg/250px-Tomoko_Tamura.jpg' }
     ],
     regions: [
-      { id: 'JP_reg_1', name: 'Kanto (Tokyo Megakenti)', seats: 180, voterDistribution: makeVoterGroup(11, 38, 4, 25, 8, 14), supports: {}, infrastructure: 5, campaignLevel: 0 },
-      { id: 'JP_reg_2', name: 'Kansai ve Chubu (Osaka)', seats: 140, voterDistribution: makeVoterGroup(16, 20, 12, 20, 16, 16), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'JP_reg_3', name: 'Tohoku ve Hokkaido (Kuzey)', seats: 80, voterDistribution: makeVoterGroup(24, 12, 18, 10, 24, 12), supports: {}, infrastructure: 3, campaignLevel: 0 },
-      { id: 'JP_reg_4', name: 'Kyushu ve Shikoku (Güney)', seats: 65, voterDistribution: makeVoterGroup(20, 15, 20, 12, 22, 11), supports: {}, infrastructure: 3, campaignLevel: 0 },
+      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
     ],
     bills: createBills('JP'),
     campaignTurns: 53,
     electionCycleYears: 4,
-  },
-  {
+  },  {
     id: 'EG',
-    name: 'Mısır',
-    description: 'Köklü Akdeniz ve Nil medeniyeti, yoğun genç nüfum ve bölgesel kalkınma odaklı ticaret yolları.',
+    name: 'Egypt',
+    description: 'A deeply historic nation managing vast population growth and economic transitions along the Nile.',
     flag: '🇪🇬',
     seats: 596,
-    parliamentName: 'Halk Meclisi',
-    system: 'Hükümet Koalisyonu',
-    population: '110 Milyon',
-    primaryColor: '#d97706', // Tailwind amber-600
+    parliamentName: 'House of Representatives',
+    system: 'Presidential System',
+    population: '111 Million',
+    primaryColor: '#b91c1c', // Tailwind red-700
     rivals: [
-      { id: 'EG_rival_1', name: 'Ulusal Vatan Hareketi', leader: 'Mustafa El-Kadir', ideology: 'Muhafazakar', symbol: 'Pyramid', color: '#b45309', baseSupport: 38 },
-      { id: 'EG_rival_2', name: 'Sosyal Yardımlaşma Partisi', leader: 'Fatma Mansur', ideology: 'Sosyal Demokrat', symbol: 'HeartHandshake', color: '#f43f5e', baseSupport: 32 },
-      { id: 'EG_rival_3', name: 'Mavi Akdeniz Liberal İnisiyatifi', leader: 'Rami El-Masri', ideology: 'Liberal', symbol: 'Anchor', color: '#0369a1', baseSupport: 16 },
+      { id: 'NFP', name: 'Nation\'s Future', leader: 'Abdel Wahab', ideology: 'Conservative', symbol: 'Building', color: '#105B35', baseSupport: 53, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Abdel-Wahab_Abdel-Razeq.jpg/250px-Abdel-Wahab_Abdel-Razeq.jpg' },
+      { id: 'RPP', name: 'Republican People\'s', leader: 'Hazem Omar', ideology: 'Conservative', symbol: 'Users', color: '#1F2937', baseSupport: 8, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Hazem_Omar.jpg/250px-Hazem_Omar.jpg' },
+      { id: 'WAFD', name: 'New Wafd Party', leader: 'Abdel Sanad Yamama', ideology: 'Liberal', symbol: 'Landmark', color: '#008000', baseSupport: 4, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Dr._Abdel-Sanad_Yamama.jpg/250px-Dr._Abdel-Sanad_Yamama.jpg' },
+      { id: 'HDP', name: 'Homeland Defenders', leader: 'Galal Haridy', ideology: 'Nationalist', symbol: 'Shield', color: '#2563EB', baseSupport: 4, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Galal_Haridy.jpg/250px-Galal_Haridy.jpg' },
+      { id: 'MEP', name: 'Modern Egypt', leader: 'Nabil Deibis', ideology: 'Liberal', symbol: 'Briefcase', color: '#DC2626', baseSupport: 2, photo: 'https://thf.bing.com/th/id/OIP.TfX1K9wIok0lY246_n-uQwAAAA?w=197&h=196&c=7&r=0&o=7&pid=1.7' },
+      { id: 'ESDP', name: 'ESDP', leader: 'Farid Zahran', ideology: 'Social Democrat', symbol: 'Compass', color: '#F97316', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Farid_Zahran.jpg/250px-Farid_Zahran.jpg' }
     ],
     regions: [
-      { id: 'EG_reg_1', name: 'Kahire ve Nil Deltası', seats: 280, voterDistribution: makeVoterGroup(22, 28, 12, 18, 10, 10), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'EG_reg_2', name: 'İskenderiye ve Kuzey Kıyısı', seats: 120, voterDistribution: makeVoterGroup(18, 24, 10, 26, 12, 10), supports: {}, infrastructure: 4, campaignLevel: 0 },
-      { id: 'EG_reg_3', name: 'Yukarı Nil (Luksor & Asvan)', seats: 110, voterDistribution: makeVoterGroup(15, 12, 22, 8, 33, 10), supports: {}, infrastructure: 2, campaignLevel: 0 },
-      { id: 'EG_reg_4', name: 'Süveyş ve Sinai Bölgesi', seats: 86, voterDistribution: makeVoterGroup(26, 18, 18, 14, 14, 10), supports: {}, infrastructure: 3, campaignLevel: 0 },
+      { id: 'Al Iskandariyah', name: 'Al Iskandariyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Aswan', name: 'Aswan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Asyut', name: 'Asyut', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Buhayrah', name: 'Al Buhayrah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Bani Suwayf', name: 'Bani Suwayf', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Qahirah', name: 'Al Qahirah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Ad Daqahliyah', name: 'Ad Daqahliyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Dumyat', name: 'Dumyat', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Fayyum', name: 'Al Fayyum', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Gharbiyah', name: 'Al Gharbiyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Jizah', name: 'Al Jizah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Isma`iliyah', name: 'Al Isma`iliyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Kafr ash Shaykh', name: 'Kafr ash Shaykh', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Luxor', name: 'Luxor', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Matruh', name: 'Matruh', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Minya', name: 'Al Minya', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Minufiyah', name: 'Al Minufiyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Wadi at Jadid', name: 'Al Wadi at Jadid', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Shamal Sina\'', name: 'Shamal Sina\'', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Bur Sa`id', name: 'Bur Sa`id', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Qalyubiyah', name: 'Al Qalyubiyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Qina', name: 'Qina', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Al Bahr al Ahmar', name: 'Al Bahr al Ahmar', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Ash Sharqiyah', name: 'Ash Sharqiyah', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Suhaj', name: 'Suhaj', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Janub Sina\'', name: 'Janub Sina\'', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'As Suways', name: 'As Suways', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
     ],
     bills: createBills('EG'),
     campaignTurns: 53,
     electionCycleYears: 5,
+    termLimit: 2,
   }
 ];
 
-// List of available delegate names to generate on general congress (Kurultay)
-export const DELEGATE_NAMES_POOL = [
-  'Deniz Şahin', 'Berk Yılmaz', 'Sedef Kaya', 'Yiğit Özdemir', 'Aslı Doğan',
-  'Caner Yıldız', 'Gizem Şimşek', 'Uğur Çelik', 'Ecem Demir', 'Murat Arslan',
-  'Selin Öztürk', 'Emre Koç', 'Büşra Aydın', 'Taylan Bulut', 'Merve Polat',
-  'Oğuzhan Kıraç', 'Banu Çevik', 'Fatih Güler', 'Eda Yavuz', 'Serkan Aktaş'
-];
-
-export const NAMES_BY_COUNTRY: Record<string, { first: string[]; last: string[] }> = {
-  TR: { first: ['Berk','Ahmet','Mehmet','Ayşe','Zeynep','Mustafa','Emre','Elif','Deniz','Sedef','Yiğit','Aslı','Caner','Gizem','Uğur','Ecem','Murat','Selin','Büşra','Taylan','Merve','Oğuzhan','Banu','Fatih','Eda','Serkan'], last: ['Yılmaz','Demir','Kaya','Şahin','Çelik','Öztürk','Şimşek','Arslan','Koç','Aydın','Bulut','Polat','Kıraç','Çevik','Güler','Yavuz','Aktaş'] },
-  BR: { first: ['João','Carlos','Maria','Ana','Pedro','Lucas','Rafael','Isabela','Roberto','Fernanda','Gabriel','Camila'], last: ['Silva','Santos','Oliveira','Souza','Costa','Pereira','Rodrigues','Almeida','Nascimento','Lima'] },
-  US: { first: ['John','Michael','Sarah','Emily','David','Jessica','Eleanor','Julian','Garry','Robert','Mary','James'], last: ['Smith','Johnson','Williams','Brown','Jones','Miller','Sterling','Vance','Moss','Davis','Wilson'] },
-  DE: { first: ["Hans","Michael","Andreas","Thomas","Stefan","Klaus","Anna","Sabine","Julia","Katrin","Lukas","Maximilian"], last: ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Becker","Hoffmann","Schulz","Bauer","Richter"] },
-  FR: { first: ['Jean','Pierre','Marie','Sophie','Louis','Camille','François','Lucas','Chloé','Emma','Antoine','Léa'], last: ['Martin','Bernard','Dubois','Thomas','Robert','Richard','Petit','Durand','Leroy','Moreau'] },
-  GB: { first: ['James','Oliver','Emma','Charlotte','Harry','Alistair','Rachel','Thomas','William','Emily','George'], last: ['Smith','Jones','Taylor','Brown','Wilson','Sterling','Green','Davies','Evans','Thomas'] },
-  JP: { first: ['Hiroshi','Takashi','Yuki','Sakura','Kenji','Shinzo','Tanaka','Sato','Haruto','Mei','Yuto','Yua'], last: ['Sato','Suzuki','Takahashi','Tanaka','Watanabe','Ito','Nakamura','Kobayashi','Saito','Yamamoto'] },
-  EG: { first: ['Mustafa','Fatma','Rami','Ahmed','Mohamed','Ali','Youssef','Ibrahim','Aisha','Mariam','Omar'], last: ['El-Kadir','Mansur','El-Masri','Hassan','Ali','Sayed','Mahmoud','Khalil','Soliman','Salem'] }
-};
-
-export function generateName(countryCode: string): string {
-  const pool = NAMES_BY_COUNTRY[countryCode] ?? NAMES_BY_COUNTRY.US;
-  const f = pool.first[Math.floor(Math.random() * pool.first.length)];
-  const l = pool.last[Math.floor(Math.random() * pool.last.length)];
-  return `${f} ${l}`;
-}
-
-// Mock speech cards for campaigning
 export const SPEECH_CARDS_POOL: SpeechCard[] = [
   {
-    id: 'speech_1',
-    topic: 'Asgari Ücret ve Çalışma Hayatı',
-    question: 'Sanayi bölgelerinde işçi sendikaları asgari ücretin enflasyon oranının %15 üzerinde artırılmasını ve haftalık çalışma süresinin 40 saate düşürülmesini talep ediyor. Hükümete nasıl sesleneceksiniz?',
+    id: 'eco1',
+    topic: 'Economy',
+    question: 'How do you plan to tackle the rising inflation rates affecting daily goods?',
     choices: [
-      {
-        text: 'İşçilerin alın teri kutsaldır! Çalışma süresini düşürecek, maaşları katlayacağız!',
-        impactText: 'İşçiler ve Gençlerden tam destek aldınız. Ancak Liberal ve Esnaf çevreleri tepkili.',
-        voterImpacts: { 'İşçiler': 15, 'Gençler': 8, 'Liberaller': -10, 'Esnaflar': -8 },
-        budgetCost: 0,
-        influenceMod: 10
-      },
-      {
-        text: 'Serbest piyasa dengelerini korumalıyız. Asgari ücreti enflasyon sınırında tutup üretkenliği artıracak teşvikler vereceğiz.',
-        impactText: 'Liberaller ve Esnaflar memnun. Solcu/İşçi kesiminde hayal kırıklığı.',
-        voterImpacts: { 'Liberaller': 16, 'Esnaflar': 12, 'İşçiler': -8, 'Gençler': -4 },
-        budgetCost: 0,
-        influenceMod: 12
-      },
-      {
-        text: 'İşçi ve esnafımızı karşı karşıya getirmeyen ortak akıllı bir milli kalkınma planı açıklayacağız.',
-        impactText: 'Dengeli ve ılımlı bir yaklaşım. Milliyetçi ve Gelenekçi oylarda istikrarlı artış.',
-        voterImpacts: { 'Milliyetçiler': 8, 'Gelenekçiler': 6, 'İşçiler': 2, 'Liberaller': 2 },
-        budgetCost: 50000,
-        influenceMod: 5
-      }
+      { text: 'Increase subsidies for essential goods', impactText: 'Appeals to lower class, costs high budget', voterImpacts: { lowerClass: 5, upperClass: -2 }, budgetCost: 50000, influenceMod: 0 },
+      { text: 'Implement strict fiscal austerity measures', impactText: 'Appeals to upper class and conservatives, lowers overall influence', voterImpacts: { upperClass: 5, lowerClass: -5, conservatives: 3 }, budgetCost: 0, influenceMod: -10 },
+      { text: 'Focus on domestic production incentives', impactText: 'Balanced approach, moderate cost', voterImpacts: { lowerClass: 2, upperClass: 2 }, budgetCost: 20000, influenceMod: 5 }
     ]
   },
   {
-    id: 'speech_2',
-    topic: 'Eğitim Sistemi ve Teknoloji',
-    question: 'Eğitim müfredatında din dersi saatlerinin artırılmasını isteyen gruplarla, kodlama ve kuantum teknolojileri odaklı laik eğitim talep eden gençlik dernekleri tartışıyor. Duruşunuz nedir?',
+    id: 'sec1',
+    topic: 'National Security',
+    question: 'With increasing border tensions, what is your stance on military spending?',
     choices: [
-      {
-        text: 'Gelecek teknolojide! Müfredatı tamamen yapay zeka, fen ve özgür düşünce odağında dijitalleştireceğiz.',
-        impactText: 'Gençler ve Liberaller coştu. Muhafazakar/Gelenekçi kesimler sert tepki gösteriyor.',
-        voterImpacts: { 'Gençler': 18, 'Liberaller': 12, 'Gelenekçiler': -15, 'Milliyetçiler': -5 },
-        budgetCost: 150000,
-        influenceMod: 15
-      },
-      {
-        text: 'Milli ve manevi değerlerimiz her şeyin önündedir. Köklü ahlak eğitimi ile teknolojiyi birleştiren bir müfredat kuracağız.',
-        impactText: 'Muhafazakar ve Gelenekçilerden tam not. Gençler ve seküler seçmenler mutsuz.',
-        voterImpacts: { 'Gelenekçiler': 16, 'Milliyetçiler': 10, 'Gençler': -12, 'Liberaller': -10 },
-        budgetCost: 80000,
-        influenceMod: 15
-      },
-      {
-        text: 'Bireysel gelişim özgürlüğünü korurken iki tarafın taleplerini de gözeten esnek, kulüp odaklı eğitim modeli geliştireceğiz.',
-        impactText: 'Her iki gruptan da ılımlı destek. Tarafsız bir duruş.',
-        voterImpacts: { 'Esnaflar': 6, 'Gençler': 4, 'Liberaller': 2, 'Gelenekçiler': 1 },
-        budgetCost: 120000,
-        influenceMod: 10
-      }
+      { text: 'Increase military budget significantly', impactText: 'Strongly appeals to nationalists and conservatives', voterImpacts: { nationalists: 6, conservatives: 4, liberals: -3 }, budgetCost: 60000, influenceMod: 10 },
+      { text: 'Maintain current budget, focus on efficiency', impactText: 'Appeals to moderates', voterImpacts: { liberals: 2, conservatives: -2 }, budgetCost: 0, influenceMod: 5 },
+      { text: 'Reduce military spending, fund social programs', impactText: 'Appeals to liberals and lower class', voterImpacts: { liberals: 5, lowerClass: 4, nationalists: -6 }, budgetCost: -20000, influenceMod: 0 }
     ]
   },
   {
-    id: 'speech_3',
-    topic: 'Göçmen Politikası ve Sınır Güvenliği',
-    question: 'Son dönemdeki düzensiz göç dalgası halk arasında ciddi güvenlik endişelerine yol açtı. Milliyetçi gruplar sınırların tamamen kapatılmasını istiyor. Çözümünüz nedir?',
+    id: 'soc1',
+    topic: 'Social Policy',
+    question: 'What is your vision for the future of our healthcare system?',
     choices: [
-      {
-        text: 'Sınırlarımız namusumuzdur! Sınır koruma bütçesini artıracak ve yasadışı göçü derhal sonlandıracağız.',
-        impactText: 'Milliyetçiler ve Gelenekçiler güçlü bir şekilde destekledi. Liberal seçmenler rahatsız.',
-        voterImpacts: { 'Milliyetçiler': 20, 'Gelenekçiler': 10, 'Liberaller': -12, 'Gençler': -4 },
-        budgetCost: 200000,
-        influenceMod: 20
-      },
-      {
-        text: 'İnsani krizlere göz yumamayız. Uluslararası entegrasyon yasaları ve kontrollü çalışma vizeleri ile göçü ekonomik zenginliğe çevireceğiz.',
-        impactText: 'Liberaller ve İşçilerin bir kısmı destekliyor. Milliyetçiler son derece öfkeli.',
-        voterImpacts: { 'Liberaller': 18, 'Gençler': 6, 'Milliyetçiler': -18, 'Gelenekçiler': -10 },
-        budgetCost: 100000,
-        influenceMod: 15
-      },
-      {
-        text: 'Kaçak göçe göz açtırmayacak, ancak meşru kalifiye iş gücünü seçerek ülke ekonomisine dahil edeceğiz. Güvenli geri dönüş planı da hazırlayacağız.',
-        impactText: 'Çok popüler bir orta yol. Hem milliyetçiler hem esnaflar bunu rasyonel buluyor.',
-        voterImpacts: { 'Milliyetçiler': 10, 'Esnaflar': 10, 'Liberaller': 4, 'İşçiler': 2 },
-        budgetCost: 150000,
-        influenceMod: 18
-      }
+      { text: 'Push for universal free healthcare', impactText: 'High cost, massive appeal to lower/middle class', voterImpacts: { lowerClass: 6, upperClass: -3, liberals: 4 }, budgetCost: 80000, influenceMod: 15 },
+      { text: 'Privatize aspects of the healthcare system', impactText: 'Appeals to upper class and conservatives, generates revenue', voterImpacts: { upperClass: 5, lowerClass: -5, conservatives: 3 }, budgetCost: -30000, influenceMod: -5 },
+      { text: 'Increase funding for rural clinics only', impactText: 'Moderate cost, appeals to middle class', voterImpacts: { middleClass: 4 }, budgetCost: 25000, influenceMod: 5 }
     ]
   },
   {
-    id: 'speech_4',
-    topic: 'İklim Değişikliği ve Ağır Sanayi',
-    question: 'Yeşil dönüşüm savunucuları kömür santrallerinin derhal kapatılmasını istiyor. Ancak sendikalar binlerce madencinin işsiz kalacağını söylüyor. Hangi taraftasınız?',
+    id: 'env1',
+    topic: 'Environment',
+    question: 'How will you balance industrial growth with environmental protection?',
     choices: [
-      {
-        text: 'Gezegenimizi kurtarmalıyız! Kömür santrallerini kapatıp tamamen yeşil ve temiz rüzgar/güneş enerjisine geçiyoruz.',
-        impactText: 'Ekoloji severler, Gençler ve Liberaller hayran kaldı. Sendikalar ve işçiler protesto ediyor.',
-        voterImpacts: { 'Liberaller': 14, 'Gençler': 20, 'İşçiler': -16, 'Esnaflar': -4 },
-        budgetCost: 300000,
-        influenceMod: 12
-      },
-      {
-        text: 'Önce her hanenin mutfağı ve istihdamı! Enerji bağımsızlığımızı ve işçimizin ekmeğini korumak için yerli kömür madenlerimizi tam destekleyeceğiz.',
-        impactText: 'İşçiler, Milliyetçiler ve Gelenekçiler ayakta alkışlıyor. Gençler hayal kırıklığı yaşıyor.',
-        voterImpacts: { 'İşçiler': 18, 'Milliyetçiler': 12, 'Gelenekçiler': 8, 'Gençler': -15 },
-        budgetCost: 150000,
-        influenceMod: 15
-      },
-      {
-        text: 'Adil Geçiş Planı! Madenleri kademeli kapatırken, her bir madencimize devlet garantili yeşil enerji teknisyeni eğitimi ve işi sağlayacağız.',
-        impactText: 'Müthiş bir vizyon. Bütün gruplar bu barışçıl ve adil çözüme ısındı.',
-        voterImpacts: { 'İşçiler': 10, 'Gençler': 12, 'Liberaller': 6, 'Esnaflar': 6 },
-        budgetCost: 250000,
-        influenceMod: 20
-      }
+      { text: 'Implement strict green energy regulations', impactText: 'Appeals to liberals, costs budget, angers conservatives', voterImpacts: { liberals: 5, conservatives: -4, upperClass: -2 }, budgetCost: 30000, influenceMod: 5 },
+      { text: 'Prioritize industrial output and jobs', impactText: 'Appeals to lower class and conservatives, angers liberals', voterImpacts: { lowerClass: 4, conservatives: 3, liberals: -5 }, budgetCost: 0, influenceMod: 5 },
+      { text: 'Subsidize clean technology research', impactText: 'High cost, balanced appeal', voterImpacts: { liberals: 3, middleClass: 2 }, budgetCost: 40000, influenceMod: 10 }
     ]
   }
 ];
+
+export const generateName = (countryId: string): string => {
+  const trFirst = ['Ahmet', 'Mehmet', 'Ayşe', 'Fatma', 'Mustafa', 'Ali', 'Zeynep', 'Hüseyin', 'Hatice', 'İbrahim'];
+  const trLast = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir'];
+  
+  const deFirst = ['Thomas', 'Michael', 'Andreas', 'Sabine', 'Martina', 'Susanne', 'Christian', 'Stefan', 'Maria', 'Peter'];
+  const deLast = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
+
+  const usFirst = ['James', 'John', 'Robert', 'Michael', 'William', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth'];
+  const usLast = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+
+  const brFirst = ['João', 'Maria', 'José', 'Ana', 'Antônio', 'Francisco', 'Carlos', 'Paulo', 'Pedro', 'Lucas'];
+  const brLast = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes'];
+
+  const jpFirst = ['Kenji', 'Hiroshi', 'Takashi', 'Minoru', 'Naoki', 'Yuki', 'Akira', 'Satoshi', 'Yumi', 'Megumi'];
+  const jpLast = ['Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato'];
+
+  const egFirst = ['Ahmed', 'Mohamed', 'Mahmoud', 'Mustafa', 'Youssef', 'Ibrahim', 'Ali', 'Omar', 'Amr', 'Hassan'];
+  const egLast = ['Hassan', 'Ali', 'Mohamed', 'Ibrahim', 'Mahmoud', 'Salem', 'Hussein', 'Mostafa', 'Abdel', 'Fatah'];
+
+  const gbFirst = ['Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Noah', 'Charlie', 'Muhammad', 'Thomas', 'Oscar'];
+  const gbLast = ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright'];
+
+  const sample = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+  if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
+  if (countryId === 'DE') return `${sample(deFirst)} ${sample(deLast)}`;
+  if (countryId === 'US') return `${sample(usFirst)} ${sample(usLast)}`;
+  if (countryId === 'BR') return `${sample(brFirst)} ${sample(brLast)}`;
+  if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
+  if (countryId === 'EG') return `${sample(egFirst)} ${sample(egLast)}`;
+  if (countryId === 'GB') return `${sample(gbFirst)} ${sample(gbLast)}`;
+
+  return `${sample(usFirst)} ${sample(usLast)}`;
+};

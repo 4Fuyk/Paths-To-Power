@@ -15,6 +15,7 @@ import L from 'leaflet';
 
 interface WorldMapProps {
   completedCountries: string[];
+  countryWinCounts: Record<string, number>;
   onSelectCountry: (country: Country) => void;
   darkMode: boolean;
 }
@@ -61,6 +62,7 @@ const countryRadii: Record<string, number> = {
 
 export const WorldMap: React.FC<WorldMapProps> = ({
   completedCountries,
+  countryWinCounts,
   onSelectCountry,
   darkMode,
 }) => {
@@ -572,7 +574,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
                 darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
               }`}
-              title="Yakınlaştır (+)"
+              title="Zoom In (+)"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
@@ -581,7 +583,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
                 darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
               }`}
-              title="Uzaklaştır (-)"
+              title="Zoom Out (-)"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
@@ -590,25 +592,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
                 darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
               }`}
-              title="Sıfırla (R)"
+              title="Reset (R)"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
 
             {/* Premium Minimal Control Key Guide */}
             <div className="hidden md:flex flex-col gap-0.5 px-2 py-1.5 bg-black/75 backdrop-blur-xs text-[8px] text-slate-300 font-mono tracking-wide rounded-lg border border-white/5 shadow-md mt-1 shrink-0 select-none">
-              <div className="font-extrabold text-indigo-400 mb-0.5 border-b border-white/5 pb-0.5 text-center">KLAVYE KILAVUZU</div>
-              <div className="flex justify-between gap-3"><span>Klavye Taşıma:</span><span className="font-bold text-yellow-400">W, A, S, D</span></div>
-              <div className="flex justify-between gap-3"><span>Ok Tuşları:</span><span className="font-bold text-yellow-400">↑, ↓, ←, →</span></div>
-              <div className="flex justify-between gap-3"><span>Ölçekleme:</span><span className="font-bold text-yellow-400">+, -</span></div>
-              <div className="flex justify-between gap-3"><span>Harita Reset:</span><span className="font-bold text-yellow-400">R</span></div>
+              <div className="font-extrabold text-indigo-400 mb-0.5 border-b border-white/5 pb-0.5 text-center">KEYBOARD GUIDE</div>
+              <div className="flex justify-between gap-3"><span>Keyboard Pan:</span><span className="font-bold text-yellow-400">W, A, S, D</span></div>
+              <div className="flex justify-between gap-3"><span>Arrow Keys:</span><span className="font-bold text-yellow-400">↑, ↓, ←, →</span></div>
+              <div className="flex justify-between gap-3"><span>Zoom:</span><span className="font-bold text-yellow-400">+, -</span></div>
+              <div className="flex justify-between gap-3"><span>Reset Map:</span><span className="font-bold text-yellow-400">R</span></div>
             </div>
           </div>
 
           {/* Scale Control HUD */}
           <div className="absolute bottom-4 left-4 z-30 pointer-events-none">
             <div className="flex items-center gap-1.5 px-3 py-1 bg-black/60 rounded text-[10px] text-slate-300 font-mono tracking-wide">
-              <span>REAL-TIME COĞRAFİ ÖLÇEK SİSTEMİ</span>
+              <span>REAL-TIME GEOGRAPHIC SCALE SYSTEM</span>
               <div className="h-1.5 border-l border-r border-b border-slate-300 w-12 ml-1"></div>
             </div>
           </div>
@@ -663,18 +665,31 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 </div>
               </div>
               
-              <button
-                id="play-country-btn"
-                onClick={() => onSelectCountry(selectedPreview)}
-                className={`py-3 px-6 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all self-start lg:self-center group ${
-                  completedCountries.includes(selectedPreview.id)
-                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shrink-0'
-                    : 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 shrink-0 hover:scale-[1.02]'
-                }`}
-              >
-                {completedCountries.includes(selectedPreview.id) ? 'Relaunch Campaign' : 'Govern & Start Election Campaign'} 
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+              {(() => {
+                const wins = countryWinCounts[selectedPreview.id] || 0;
+                
+                return (
+                  <div className="flex flex-col items-start lg:items-end gap-1">
+                    <button
+                      id="play-country-btn"
+                      onClick={() => onSelectCountry(selectedPreview)}
+                      className={`py-3 px-6 rounded-xl font-bold text-xs flex items-center gap-2 transition-all self-start lg:self-center group ${
+                        completedCountries.includes(selectedPreview.id)
+                          ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shrink-0 cursor-pointer'
+                          : 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 shrink-0 hover:scale-[1.02] cursor-pointer'
+                      }`}
+                    >
+                      {completedCountries.includes(selectedPreview.id) ? 'Relaunch Campaign' : 'Govern & Start Election Campaign'} 
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    {wins > 0 && (
+                      <span className={`text-[10px] font-mono text-amber-500`}>
+                        Terms Served: {wins}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 py-3.5 border-t border-slate-500/10">

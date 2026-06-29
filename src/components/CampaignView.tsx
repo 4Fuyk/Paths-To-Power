@@ -12,6 +12,7 @@ import {
   HelpCircle, BarChart3, ChevronRight, CheckCircle, Flame,
   ZoomIn, ZoomOut
 } from 'lucide-react';
+import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
 
 interface CampaignViewProps {
   country: Country;
@@ -57,37 +58,7 @@ const MAYOR_AVATARS: Record<string, string> = {
   'TR_siv': 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Adem_Uzun_%28cropped%29.jpg', // Adem Uzun
 };
 
-const getRegionIdFromNormalizedName = (normName: string, countryId?: string): string => {
-  if (countryId === 'US') {
-    const cleanName = normName.toLowerCase().replace(/[^a-z]/g, '');
-    if (cleanName === 'washingtondc' || cleanName === 'districtofcolumbia' || cleanName === 'dc') {
-      return 'US_districtofcolumbia';
-    }
-    return `US_${cleanName}`;
-  }
-  if (countryId === 'DE') {
-    return `DE_${normName}`;
-  }
-  const coreMap: Record<string, string> = {
-    'istanbul': 'TR_ist',
-    'ankara': 'TR_ank',
-    'izmir': 'TR_izm',
-    'bursa': 'TR_bur',
-    'antalya': 'TR_ant',
-    'adana': 'TR_ada',
-    'konya': 'TR_kon',
-    'gaziantep': 'TR_gaz',
-    'sanliurfa': 'TR_san',
-    'trabzon': 'TR_tra',
-    'diyarbakir': 'TR_diy',
-    'hatay': 'TR_hat',
-    'eskisehir': 'TR_esk',
-    'sivas': 'TR_siv',
-    'afyon': 'TR_afyonkarahisar',
-    'afyonkarahisar': 'TR_afyonkarahisar'
-  };
-  return coreMap[normName] || `TR_${normName}`;
-};
+
 
 const getPartyAcronym = (pName: string): string => {
   if (!pName) return '';
@@ -108,27 +79,7 @@ const getPartyAcronym = (pName: string): string => {
   return words.map(w => w[0]).join('').slice(0, 3).toUpperCase();
 };
 
-const normalizeName = (str: string) => {
-  if (!str) return '';
-  return str
-    .replace(/İ/g, 'i')
-    .replace(/ı/g, 'i')
-    .replace(/I/g, 'i')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u')
-    .replace(/ş/g, 's')
-    .replace(/ö/g, 'o')
-    .replace(/ç/g, 'c')
-    .replace(/[^a-z]/g, ''); // strip any spaces/dashes for mapping purposes
-};
 
-const getFeatureName = (feature: any): string => {
-  if (!feature || !feature.properties) return '';
-  return feature.properties.NAME_1 || feature.properties.name || feature.properties.NAME || '';
-};
 
 const TURKEY_PLATE_CODES: Record<string, string> = {
   'adana': '01', 'adiyaman': '02', 'afyonkarahisar': '03', 'afyon': '03', 'agri': '04',
@@ -513,9 +464,18 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     }
 
     if (!districtNames || districtNames.length === 0) {
-      const suffixes = ['dere', 'tepe', 'köy', 'ova', 'kent', 'hisar', 'başı', 'kale', 'pınar', 'yazı', 'geçit', 'bağ', 'yayla'];
-      const prefixes = ['Yeşil', 'Ak', 'Kara', 'Gök', 'Göz', 'Kızıl', 'Sarı', 'Yıldız', 'Kaya', 'Çamlı', 'Has', 'Ortak', 'Bağlar', 'Bayır'];
-      const generatedList: string[] = ['Merkez'];
+      const isUS = country.id === 'US';
+      const isDE = country.id === 'DE';
+      
+      const suffixes = isUS ? [' County', ' City', ' District', ' Valley', ' Springs', ' Falls', ' Ridge', ' Creek', ' Haven'] :
+                       isDE ? ['-Kreis', 'burg', 'dorf', 'stadt', 'berg', 'hausen', 'feld', 'wald', 'au'] :
+                       ['dere', 'tepe', 'köy', 'ova', 'kent', 'hisar', 'başı', 'kale', 'pınar', 'yazı', 'geçit', 'bağ', 'yayla'];
+      const prefixes = isUS ? ['New ', 'West ', 'East ', 'North ', 'South ', 'Oak ', 'Pine ', 'Cedar ', 'Lake ', 'River '] :
+                       isDE ? ['Alt', 'Neu', 'Groß', 'Klein', 'Ober', 'Unter', 'Schwarz', 'Weiß', 'Rot', 'Grün'] :
+                       ['Yeşil', 'Ak', 'Kara', 'Gök', 'Göz', 'Kızıl', 'Sarı', 'Yıldız', 'Kaya', 'Çamlı', 'Has', 'Ortak', 'Bağlar', 'Bayır'];
+      
+      const generatedList: string[] = isUS ? ['Capital District'] : isDE ? ['Zentrum'] : ['Merkez'];
+      
       for (let i = 0; i < Math.max(3, Math.min(reg.seats || 4, 8)); i++) {
         const s1 = seed + i * 43;
         const s2 = seed + i * 87;
@@ -1425,6 +1385,34 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     tryFetchUS();
   }, [country.id]);
 
+  // Fetch online GeoJSON for BR, JP, EG, GB on component load
+  useEffect(() => {
+    if (!['BR', 'JP', 'EG', 'GB'].includes(country.id)) return;
+    
+    let url = '';
+    if (country.id === 'BR') url = 'https://code.highcharts.com/mapdata/countries/br/br-all.geo.json';
+    else if (country.id === 'JP') url = 'https://code.highcharts.com/mapdata/countries/jp/jp-all.geo.json';
+    else if (country.id === 'EG') url = 'https://code.highcharts.com/mapdata/countries/eg/eg-all.geo.json';
+    else if (country.id === 'GB') url = 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json';
+
+    const tryFetch = async () => {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          // Highcharts 'name' is in properties.name
+          setGeoJsonData(data);
+          return;
+        }
+      } catch (err) {
+        console.warn(`Fetch ${country.id} map from ${url} failed:`, err);
+      }
+      console.warn(`${country.id} GeoJSON fetch failed. Falling back to point-markers.`);
+    };
+
+    tryFetch();
+  }, [country.id]);
+
   // Fetch online Turkey Districts GeoJSON on-demand or background
   useEffect(() => {
     if (country.id !== 'TR' || districtGeoJsonData || loadingDistrictGeoJson) return;
@@ -1520,7 +1508,10 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         map.off();
       } catch (e) {}
       try {
-        map.remove();
+        const container = map.getContainer() as any;
+        if (container && container._leaflet_id) {
+          map.remove();
+        }
       } catch (e) {}
       turkeyMapInstanceRef.current = null;
       turkeyTileLayerRef.current = null;
@@ -1548,14 +1539,21 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
   // Main Turkey/Germany Leaflet map builder and sync
   useEffect(() => {
-    if ((country.id !== 'TR' && country.id !== 'DE' && country.id !== 'US') || !turkeyMapRef.current) {
+    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB'];
+    if (!supportedCountries.includes(country.id) || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
     }
 
     if (!turkeyMapInstanceRef.current) {
-      const initialCenter: [number, number] = country.id === 'DE' ? [51.1657, 10.4515] : country.id === 'US' ? [37.0902, -95.7129] : [38.9637, 35.2433];
-      const initialZoom = country.id === 'DE' ? 6 : country.id === 'US' ? 4 : 6;
+      let initialCenter: [number, number] = [38.9637, 35.2433];
+      let initialZoom = 6;
+      if (country.id === 'DE') { initialCenter = [51.1657, 10.4515]; initialZoom = 6; }
+      else if (country.id === 'US') { initialCenter = [37.0902, -95.7129]; initialZoom = 4; }
+      else if (country.id === 'BR') { initialCenter = [-14.235, -51.9253]; initialZoom = 4; }
+      else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
+      else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
+      else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
       const map = L.map(turkeyMapRef.current, {
         center: initialCenter,
         zoom: initialZoom,
@@ -1776,11 +1774,14 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           }
 
           const normName = normalizeName(getFeatureName(feature));
-          const regionId = getRegionIdFromNormalizedName(normName, country.id);
+          let regionId = getRegionIdFromNormalizedName(normName, country.id);
+          let reg = country.regions.find(r => r.id === regionId);
+          if (!reg) {
+            reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
+            if (reg) regionId = reg.id;
+          }
           
-          if (regionId) {
-            const reg = country.regions.find(r => r.id === regionId);
-            if (reg) {
+          if (reg) {
               const isSelected = selectedRegion && selectedRegion.id === regionId;
               
               // Get leading party color
@@ -1804,7 +1805,6 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                 weight: isSelected ? 3.8 : 1.5,
               };
             }
-          }
 
           // Non-modeled provinces
           return {
@@ -1939,10 +1939,13 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           }
 
           const normName = normalizeName(getFeatureName(feature));
-          const regionId = getRegionIdFromNormalizedName(normName, country.id);
-          if (!regionId) return;
+          let regionId = getRegionIdFromNormalizedName(normName, country.id);
 
-          const reg = country.regions.find(r => r.id === regionId);
+          let reg = country.regions.find(r => r.id === regionId);
+          if (!reg) {
+            reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
+            if (reg) regionId = reg.id;
+          }
           if (!reg) return;
 
           // Save center coordinates dynamically

@@ -406,6 +406,11 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
           totalShift += (voterWeight / 100) * (rate as number) * stratMult;
         });
 
+        // Reduce impact significantly (50-70% nerf) and cap at +/- 5
+        totalShift = totalShift * 0.35;
+        if (totalShift > 5) totalShift = 5;
+        if (totalShift < -5) totalShift = -5;
+
         const targetSupport = Math.min(95, Math.max(1, currentSupport + totalShift));
         const diff = targetSupport - currentSupport;
 

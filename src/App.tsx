@@ -39,6 +39,10 @@ export default function App() {
     const saved = localStorage.getItem('completed_world_countries');
     return saved ? JSON.parse(saved) : [];
   });
+  const [countryWinCounts, setCountryWinCounts] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('country_win_counts');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const [activeScreen, setActiveScreen] = useState<'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS'>('MAP');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -119,6 +123,10 @@ export default function App() {
     localStorage.setItem('completed_world_countries', JSON.stringify(completedCountries));
   }, [completedCountries]);
 
+  useEffect(() => {
+    localStorage.setItem('country_win_counts', JSON.stringify(countryWinCounts));
+  }, [countryWinCounts]);
+
   // Sync dark mode style settings
   useEffect(() => {
     localStorage.setItem('world_political_dark_mode', darkMode.toString());
@@ -178,36 +186,6 @@ export default function App() {
       setSelectedCountry(initCountry);
       setActiveScreen('PARTY_CREATOR');
     };
-
-    if (completedCountries.includes(country.id)) {
-      // Go straight to ruling dashboard automatically as requested
-      const preppedRegions = country.regions.map(r => {
-        const supports = { ...r.supports, player_party: 55 };
-        return { ...r, supports };
-      });
-      
-      const mockParty = {
-        id: 'player_party',
-        name: 'Ruling Coalition Party',
-        leader: 'President of ' + country.name,
-        ideology: 'Sosyal Demokrat',
-        color: '#3b82f6',
-        budget: 500000,
-        members: 25000,
-        influence: 100,
-        photo: '',
-        traits: { charisma: 5, eloquence: 4, organization: 4, strategy: 5 }
-      };
-      
-      setSelectedCountry({ ...country, regions: preppedRegions });
-      setPlayerParty(mockParty);
-      setIsRuling(true);
-      setIsJuniorMember(false);
-      setCampaignTurn(1);
-      setDashboardTab('CABINET');
-      setActiveScreen('MAIN_DASHBOARD');
-      return;
-    }
 
     startCampaignFlow(country);
   };
@@ -288,17 +266,6 @@ export default function App() {
 
     setPlayerParty(party);
     setCampaignTurn(1);
-
-    if (party.startAsGovernment) {
-      setIsRuling(true);
-      setTreasury(1000000);
-      setFreedomIndex(85);
-      setBannedParties([]);
-      setCivilWarRisk(0);
-      setDashboardTab('CABINET');
-      setActiveScreen('MAIN_DASHBOARD');
-      return;
-    }
 
     const hasMatchedRival = selectedCountry?.rivals.some(r => 
       r.name.toLowerCase().trim() === party.name.toLowerCase().trim() ||
@@ -440,17 +407,52 @@ export default function App() {
     // 1. Advance the months count
     const nextMonths = rulingMonthsCount + 1;
     setRulingMonthsCount(nextMonths);
+    
+    // Check if the current term is ending
+    const termLengthMonths = selectedCountry.electionCycleYears * 12;
+    if (nextMonths > 0 && nextMonths % termLengthMonths === 0) {
+      playSound('error'); // Dramatic sound
+      
+      // Snap Election / Normal Re-election
+      setCurrentEvent({
+        title: "END OF TERM: GENERAL ELECTIONS",
+        description: `Your ${selectedCountry.electionCycleYears}-year term has concluded. The country must go to the polls. Are you ready to face the voters again?`,
+        options: [
+          {
+            text: "Relaunch Campaign for Re-election!",
+            effect: () => {
+              setWarningAlert("🗳️ CAMPAIGN SEASON: Your term has ended and a new election cycle has officially begun.");
+              setIsRuling(false);
+              setCampaignTurn(1);
+              setCurrentEvent(null);
+            }
+          },
+          {
+            text: "Step down voluntarily (Return to World Map)",
+            effect: () => {
+              setWarningAlert("📜 VOLUNTARY RETIREMENT: You have chosen not to seek re-election and step away from politics.");
+              setActiveScreen('MAP');
+              setSelectedCountry(null);
+              setPlayerParty(null);
+              setIsRuling(false);
+              setCurrentEvent(null);
+            }
+          }
+        ]
+      });
+      return; // Do not process taxes/events during term end
+    }
 
     // Check for extreme Civil War / Revolt Risk Rebellion
     if (civilWarRisk >= 80 || (civilWarRisk >= 50 && Math.random() < 0.35)) {
       // Trigger a dramatic Rebellion / Coup crisis!
       playSound('error');
       setCurrentEvent({
-        title: "🔥 ASİLERİN AYAKLANMASI VE HÜKÜMET DARBESİ!",
-        description: `KRİTİK UYARI! Muhalif partilerin kapatılması, aşırı siyasi baskı veya toplumsal huzursuzluk nedeniyle isyan ve iç savaş riski %${civilWarRisk} seviyesine ulaştı! Silahlı isyancı hücreler başkentte Cumhurbaşkanlığı sarayına giden yolları kesti. Nasıl müdahale edeceksiniz?`,
+        title: "🔥 ARMED REBELLION AND COUP ATTEMPT!",
+        description: `CRITICAL WARNING! Due to political suppression or extreme unrest, the civil war risk has reached ${civilWarRisk}%! Armed rebel cells have barricaded the roads leading to the Presidential palace in the capital. How will you respond?`,
         options: [
           {
-            text: "Orduyu Görevlendir ve Asilerle Taktik Haritada Çatış! (Maliyet: 200.000 ₺, Özgürlük -25)",
+            text: "Deploy the Military and engage rebels on the Tactical Map! (Cost: $200,000, Freedom -25)",
             effect: () => {
               setTreasury(prev => Math.max(0, prev - 200000));
               setFreedomIndex(prev => Math.max(10, prev - 25));
@@ -459,9 +461,9 @@ export default function App() {
             }
           },
           {
-            text: "Ülkeden Kaç ve Sürgünde Hükümet Kur (İstifa et, Ülkeyi kaybet)",
+            text: "Flee the country and form a government in exile (Resign, lose the country)",
             effect: () => {
-              setWarningAlert("✈️ KAÇIŞ: Özel bir uçakla dost bir ülkeye sığındınız. Yönetiminiz çöktü ve bir askeri geçiş konseyi kontrolü ele aldı.");
+              setWarningAlert("✈️ ESCAPE: You fled to a friendly nation on a private jet. Your administration collapsed, and a transitional military council took control.");
               setActiveScreen('MAP');
               setSelectedCountry(null);
               setPlayerParty(null);
@@ -857,6 +859,11 @@ export default function App() {
       if (!completedCountries.includes(selectedCountry.id)) {
         setCompletedCountries([...completedCountries, selectedCountry.id]);
       }
+      
+      setCountryWinCounts(prev => ({
+        ...prev,
+        [selectedCountry.id]: (prev[selectedCountry.id] || 0) + 1
+      }));
 
       // Generate dynamic AI-to-AI coalitions if no majority
       if (finalSeats) {
@@ -1070,9 +1077,9 @@ export default function App() {
         <div className="w-full relative overflow-hidden flex items-center h-full">
           <div className="whitespace-nowrap flex gap-16 absolute animate-marquee">
             <span>🔥 ELECTION DAY SPECIAL: Paths to Power simulations forecast heavy voter turnout in {selectedCountry ? selectedCountry.name : 'major sovereign nations'}!</span>
-            <span>🌐 DIPLOMATIC BRIEF: Geopolitical shifts observed as leaders negotiate strategic alignments and global treaties.</span>
-            <span>📈 ECONOMIC FEED: Fiscal markets fluctuate as parliament tables new reform bills and taxation rates.</span>
-            <span>⚡ CAMPAIGN MONITOR: State headquarters report record-breaking volunteer mobilizations and public address events.</span>
+            <span>🌐 DIPLOMATIC BRIEF: UN Security Council convenes an emergency session regarding the ongoing war in Ukraine.</span>
+            <span>📈 ECONOMIC FEED: Global markets fluctuate amid soaring energy prices and supply chain disruptions.</span>
+            <span>⚡ GEOPOLITICAL MONITOR: Tensions rise in the Asia-Pacific region as new naval exercises are announced.</span>
             <span>📣 GLOBAL WATCH: Democratic scores and freedom indexes adjust dynamically across eight regional capitals.</span>
             {isRuling && (
               <>
@@ -1156,6 +1163,7 @@ export default function App() {
         {activeScreen === 'MAP' && (
           <WorldMap
             completedCountries={completedCountries}
+            countryWinCounts={countryWinCounts}
             onSelectCountry={handleSelectCountry}
             darkMode={darkMode}
           />
@@ -1219,7 +1227,7 @@ export default function App() {
                     </div>
                     <div className="text-xs text-slate-400 mt-1">
                       <div>
-                        {selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'Cumhurbaşkanı:' : 'Cumhurbaşkanı Adayı:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
+                        {selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span>Ideology: <strong className={darkMode ? 'text-slate-250' : 'text-slate-750'}>{playerParty.ideology}</strong></span>
@@ -1656,6 +1664,7 @@ export default function App() {
                 treasury={treasury}
                 onUpdateTreasury={setTreasury}
                 darkMode={darkMode}
+                coalitions={coalitions}
               />
             )}
 
@@ -1766,10 +1775,10 @@ export default function App() {
             onBattleFinished={(success: boolean) => {
               if (success) {
                 setCivilWarRisk(10);
-                setWarningAlert("💥 MUHTEŞEM ZAFER: Askeri birliklerimiz başkentteki tüm isyan hücrelerini temizledi. Devletin bölünmez bütünlüğü başarıyla korundu!");
+                setWarningAlert("💥 GLORIOUS VICTORY: Our military forces have cleared all rebel cells in the capital. The indivisible integrity of the state has been successfully protected!");
                 setActiveScreen('MAIN_DASHBOARD');
               } else {
-                setWarningAlert("💀 BOZGUN: Askeri birliklerimizin yenilmesinin ardından asiler cumhurbaşkanlığı sarayını bastı ve hükümeti devirdi. Yönetimi kaybettiniz.");
+                setWarningAlert("💀 DEFEAT: After our military units were defeated, the rebels stormed the presidential palace and overthrew the government. You have lost control of the administration.");
                 setActiveScreen('MAP');
                 setSelectedCountry(null);
                 setPlayerParty(null);
@@ -1962,27 +1971,27 @@ export default function App() {
                     reporter: "Ahmet Yılmaz (TRT Haber)",
                     avatar: "🎤 TRT",
                     color: "border-red-500 text-red-400 bg-red-500/15",
-                    question: `Sayın Başkan, seçim zaferinizin ardından ilk icraatınız ekonomik reformlar ve vergiler konusunda ne olacak? Halkımız rahatlayacak mı?`,
+                    question: `Mr. President, following your electoral victory, what will be your first actions regarding economic reforms and taxes? Will the public find relief?`,
                     options: [
                       {
-                        text: "Zenginlerden yüksek vergi alıp halkı rahatlatacağız! (Popülist)",
-                        bonusDesc: "+100k Başlangıç Hazinesi, Demokrasi ve Özgürlük puanlarında artış",
+                        text: "We will heavily tax the rich and relieve the public! (Populist)",
+                        bonusDesc: "+100k Starting Treasury, increase in Democracy and Freedom scores",
                         effect: () => {
                           setPressTreasuryBonus(100000);
                           setPressFreedomBonus(10);
                         }
                       },
                       {
-                        text: "Devlet hazinesini hızla doldurmak için vergileri artıracağız! (Mali Odak)",
-                        bonusDesc: "+250k Başlangıç Hazinesi, Düşük Halk Özgürlüğü",
+                        text: "We will increase taxes to quickly fill the state treasury! (Fiscal Focus)",
+                        bonusDesc: "+250k Starting Treasury, Low Public Freedom",
                         effect: () => {
                           setPressTreasuryBonus(250000);
                           setPressFreedomBonus(-15);
                         }
                       },
                       {
-                        text: "Dengeli bir bütçe ve serbest piyasa kurallarını koruyacağız. (Mevcut Durum)",
-                        bonusDesc: "Standart başlangıç bütçesi ve özgürlük puanları",
+                        text: "We will maintain a balanced budget and free market rules. (Status Quo)",
+                        bonusDesc: "Standard starting budget and freedom scores",
                         effect: () => {
                           setPressTreasuryBonus(0);
                           setPressFreedomBonus(0);
@@ -1994,27 +2003,27 @@ export default function App() {
                     reporter: "Sarah Jenkins (BBC World)",
                     avatar: "🇬🇧 BBC",
                     color: "border-blue-500 text-blue-400 bg-blue-500/15",
-                    question: `Sayın Başkan, yeni yönetim döneminizde basın özgürlüğü ve muhalif sesler konusundaki tavrınız ne olacak? Güçler birliği mi, tam hürriyet mi?`,
+                    question: `Mr. President, what will be your stance on press freedom and opposition voices in your new term? Consolidation of power or full liberty?`,
                     options: [
                       {
-                        text: "Demokrasiyi sonuna kadar savunacağız, tam bağımsız basın! (Özgürlükçü)",
-                        bonusDesc: "+25 Demokrasi/Özgürlük Endeksi, +15 Uluslararası İtibar",
+                        text: "We will defend democracy to the end, fully independent press! (Libertarian)",
+                        bonusDesc: "+25 Democracy/Freedom Index, +15 International Reputation",
                         effect: () => {
                           setPressFreedomBonus(prev => prev + 25);
                           setPressReputationBonus(15);
                         }
                       },
                       {
-                        text: "Ulusal güvenlik her şeyden önce gelir. Gerekirse kısıtlamalar uygulayacağız! (Otoriter)",
-                        bonusDesc: "-20 Demokrasi/Özgürlük Endeksi, Ordu ve Asayiş gücünde artış",
+                        text: "National security comes first. We will apply restrictions if necessary! (Authoritarian)",
+                        bonusDesc: "-20 Democracy/Freedom Index, increase in Military and Security power",
                         effect: () => {
                           setPressFreedomBonus(prev => prev - 20);
                           setPressReputationBonus(-15);
                         }
                       },
                       {
-                        text: "Anayasal çerçeveye ve yasalara tam bağlılığı sürdüreceğiz. (Demokratik)",
-                        bonusDesc: "+5 Demokrasi/Özgürlük Endeksi, Dengeli Durum",
+                        text: "We will maintain strict adherence to the constitutional framework and laws. (Democratic)",
+                        bonusDesc: "+5 Democracy/Freedom Index, Balanced Status",
                         effect: () => {
                           setPressFreedomBonus(prev => prev + 5);
                           setPressReputationBonus(5);
@@ -2026,26 +2035,26 @@ export default function App() {
                     reporter: "Halid bin Velid (Al Jazeera)",
                     avatar: "🇶🇦 AJ",
                     color: "border-amber-500 text-amber-400 bg-amber-500/15",
-                    question: `Yeni dönemde küresel diplomasi, sınır ötesi askeri operasyonlar ve komşu devletler hakkındaki stratejiniz nedir? Savaş ihtimali var mı?`,
+                    question: `What is your strategy regarding global diplomacy, cross-border military operations, and neighboring states in the new term? Is there a possibility of war?`,
                     options: [
                       {
-                        text: "Yurtta sulh, cihanda sulh! Diplomatik diyalog tek seçeneğimizdir. (Pasifist)",
-                        bonusDesc: "+20 Uluslararası İtibar, Komşularla Barışçıl Durum",
+                        text: "Peace at home, peace in the world! Diplomatic dialogue is our only option. (Pacifist)",
+                        bonusDesc: "+20 International Reputation, Peaceful Relations with Neighbors",
                         effect: () => {
                           setPressReputationBonus(prev => prev + 20);
                         }
                       },
                       {
-                        text: "Bölgemizde tam liderlik! Gücümüzü ve milli duruşumuzu herkese ilan edeceğiz. (Milliyetçi)",
-                        bonusDesc: "-15 Uluslararası İtibar, Ekstra Askeri Hazırlık Puanı",
+                        text: "Absolute leadership in our region! We will declare our power and national stance to everyone. (Nationalist)",
+                        bonusDesc: "-15 International Reputation, Extra Military Readiness Points",
                         effect: () => {
                           setPressReputationBonus(prev => prev - 15);
                           setPressTreasuryBonus(prev => prev + 50000);
                         }
                       },
                       {
-                        text: "Kendi sınırlarımıza odaklanarak küresel çatışmalarda tarafsız kalacağız. (Yalıtılmışlık)",
-                        bonusDesc: "Dengeli uluslararası ilişkiler ve tarafsız dış politika",
+                        text: "We will focus on our own borders and remain neutral in global conflicts. (Isolationist)",
+                        bonusDesc: "Balanced international relations and neutral foreign policy",
                         effect: () => {
                           setPressReputationBonus(prev => prev + 5);
                         }
@@ -2061,7 +2070,7 @@ export default function App() {
                     <div className="flex justify-between items-center pb-3 border-b border-slate-500/10">
                       <h4 className="text-xs font-mono font-bold tracking-wider text-emerald-400 flex items-center gap-2 uppercase">
                         <span className="animate-ping w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                        CANLI BASIN TOPLANTISI • LIVE PRESS CONFERENCE ({pressConferenceIndex + 1}/3)
+                        LIVE PRESS CONFERENCE ({pressConferenceIndex + 1}/3)
                       </h4>
                       <span className="text-[10px] font-mono text-slate-500">PRESIDENTIAL DECREE</span>
                     </div>
@@ -2112,17 +2121,17 @@ export default function App() {
 
                 <div className="space-y-3 text-center">
                   <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400">
-                    Electoral Victory • Seçim Zaferi
+                    Electoral Victory
                   </span>
                   <h3 className={`text-2xl font-black uppercase tracking-tight ${
                     darkMode ? 'text-slate-100' : 'text-slate-900'
                   }`}>
-                    TEBRİKLER! {playerParty.name} SEÇİMİ KAZANDI!
+                    CONGRATULATIONS! {playerParty.name} WINS THE ELECTION!
                   </h3>
                   <p className={`text-sm leading-relaxed ${
                     darkMode ? 'text-slate-400' : 'text-slate-600'
                   }`}>
-                    Basın toplantısını başarıyla tamamladınız! Seçim sonuçları resmileşti. Kabineyi kurup, bakanları atayarak diplomatik ve askeri kararlar almaya hemen başlamak ister misiniz?
+                    You have successfully concluded the press conference! The election results are now official. Would you like to immediately form your cabinet, appoint ministers, and begin making diplomatic and military decisions?
                   </p>
 
                   <div className="p-3.5 bg-slate-900/60 border border-slate-850 rounded-2xl flex flex-wrap gap-4 items-center justify-center text-xs font-mono max-w-sm mx-auto">
@@ -2146,7 +2155,7 @@ export default function App() {
                     }}
                     className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg cursor-pointer text-center uppercase tracking-widest transition-all"
                   >
-                    Kabineyi Kur & Yönetmeye Başla (Governing Phase)
+                    Form Cabinet & Start Governing
                   </button>
 
                   <button
@@ -2158,7 +2167,7 @@ export default function App() {
                       darkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    Dünya Haritasına Dön
+                    Return to World Map
                   </button>
                 </div>
               </>
@@ -2214,6 +2223,10 @@ export default function App() {
         </div>
       )}
 
+      {/* Footer Copyright */}
+      <footer className={`py-4 text-center text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+        © 2026 Paths To Power. All rights reserved.
+      </footer>
     </div>
   );
 }

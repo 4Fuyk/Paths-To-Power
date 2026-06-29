@@ -29,6 +29,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [currentRegionIndex, setCurrentRegionIndex] = useState(0);
   const [countedRegions, setCountedRegions] = useState<string[]>([]);
   const [seatsWon, setSeatsWon] = useState<Record<string, number>>({});
+  const [popularVotes, setPopularVotes] = useState<Record<string, number>>({});
+  const [totalSeatsCounted, setTotalSeatsCounted] = useState<number>(0);
   const [newsTicker, setNewsTicker] = useState<string>('Polls closed, counting phase begins...');
   const [step, setStep] = useState<'intro' | 'counting' | 'results'>('intro');
   const [userSpeed, setUserSpeed] = useState<number>(2000); // ms per region
@@ -157,6 +159,17 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
           });
           return next;
         });
+
+        // Add weighted support for popular vote
+        setPopularVotes((prev) => {
+          const next = { ...prev };
+          Object.entries(regionSupports).forEach(([pId, val]) => {
+            const numVal = val as number;
+            next[pId] = (next[pId] || 0) + (numVal * regionSeats);
+          });
+          return next;
+        });
+        setTotalSeatsCounted((prev) => prev + regionSeats);
 
         // Set live television news reports based on country flag and index
         setNewsTicker(generateNewsTickerText(country.id, region, localSeatResult));
@@ -392,7 +405,10 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: party.color }}></span>
                       {party.name} (You)
                     </span>
-                    <span className="font-mono">{seatsWon[party.id] || 0} Seats</span>
+                    <span className="font-mono">
+                      {seatsWon[party.id] || 0} Seats
+                      {totalSeatsCounted > 0 && <span className="ml-2 text-[10px] text-slate-400">({((popularVotes[party.id] || 0) / totalSeatsCounted).toFixed(1)}%)</span>}
+                    </span>
                   </div>
                   <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                     <div
@@ -415,7 +431,10 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rival.color }}></span>
                           {rival.name}
                         </span>
-                        <span className="font-mono text-slate-400">{seats} Seats</span>
+                        <span className="font-mono text-slate-400">
+                          {seats} Seats
+                          {totalSeatsCounted > 0 && <span className="ml-2 text-[10px] text-slate-500">({((popularVotes[rival.id] || 0) / totalSeatsCounted).toFixed(1)}%)</span>}
+                        </span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-850">
                         <div
@@ -467,50 +486,73 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
               </div>
             </div>
 
-            {/* List of regions process blocks */}
+            {/* List of regions process blocks acting as a stylized Map */}
             {step === 'counting' && (
               <div className={`p-5 rounded-3xl border flex-grow ${
                 darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
               }`}>
-                <h4 className="text-xs font-bold text-slate-400 tracking-wider font-mono mb-3">DISTRICT COUNTING PROCESS ({countedRegions.length} / {country.regions.length})</h4>
+                <h4 className="text-xs font-bold text-slate-400 tracking-wider font-mono mb-3">ELECTORAL MAP STATUS ({countedRegions.length} / {country.regions.length})</h4>
                 
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pr-1 max-h-[220px] overflow-y-auto">
                   {country.regions.map((reg, idx) => {
                     const isDone = countedRegions.includes(reg.id);
                     const isCurrent = currentRegionIndex === idx;
+                    
+                    let bgColor = 'bg-transparent';
+                    let borderColor = 'border-slate-500/10';
+                    let textColor = 'text-slate-500';
+                    let winPartyName = '';
+                    let displayValue = '';
+                    
+                    if (isDone) {
+                      // Find winner of this region
+                      let winnerId = party.id;
+                      let max = reg.supports[party.id] || 0;
+                      Object.entries(reg.supports).forEach(([pId, val]) => {
+                         if ((val as number) > max) { max = (val as number); winnerId = pId; }
+                      });
+                      
+                      const winnerColor = getPartyColor(winnerId);
+                      winPartyName = getPartyName(winnerId);
+                      displayValue = max.toFixed(1) + '%';
+                      
+                      bgColor = darkMode ? 'bg-opacity-20' : 'bg-opacity-10';
+                      borderColor = 'border-opacity-50';
+                      textColor = darkMode ? 'text-slate-200' : 'text-slate-800';
+                      
+                      return (
+                        <div
+                          id={`count-bar-${reg.id}`}
+                          key={reg.id}
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center transition-all shadow-sm`}
+                          style={{ backgroundColor: `${winnerColor}33`, borderColor: winnerColor, color: textColor }}
+                        >
+                          <span className="text-[10px] font-bold mb-1 line-clamp-1">{reg.name}</span>
+                          <span className="text-xs font-mono font-bold" style={{ color: winnerColor }}>{displayValue}</span>
+                          <span className="text-[8px] uppercase tracking-wider opacity-80 truncate w-full">{winPartyName}</span>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div
                         id={`count-bar-${reg.id}`}
                         key={reg.id}
-                        className={`p-3 rounded-xl border flex justify-between items-center text-xs transition-all ${
+                        className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center transition-all ${
                           isCurrent
-                            ? 'bg-indigo-950/20 border-indigo-500'
-                            : isDone
-                            ? 'bg-slate-500/5 border-slate-500/10 text-slate-400'
-                            : 'bg-transparent border-slate-500/5 text-slate-500'
+                            ? 'bg-indigo-950/20 border-indigo-500 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
+                            : 'bg-slate-500/5 border-slate-500/10 text-slate-500'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          {isDone ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          ) : isCurrent ? (
-                            <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin" />
-                          ) : (
-                            <span className="w-2 h-2 rounded bg-slate-500 shrink-0"></span>
-                          )}
-                          <span className="font-bold">{reg.name}</span>
-                        </div>
-
-                        <span className="font-mono">
-                          {isCurrent ? (
-                            <span className="text-indigo-400 font-bold animate-pulse">COUNTING</span>
-                          ) : isDone ? (
-                            <span>100% Completed</span>
-                          ) : (
-                            <span>Sealed & Waiting</span>
-                          )}
-                        </span>
+                        {isCurrent ? (
+                          <RefreshCw className="w-4 h-4 mb-1.5 text-indigo-400 animate-spin" />
+                        ) : (
+                          <div className="w-4 h-4 mb-1.5 flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                          </div>
+                        )}
+                        <span className="text-[10px] font-bold line-clamp-1">{reg.name}</span>
+                        <span className="text-[9px] opacity-60 font-mono">{isCurrent ? 'COUNTING' : 'WAITING'}</span>
                       </div>
                     );
                   })}

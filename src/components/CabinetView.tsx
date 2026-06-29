@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Country, Party, MinisterCandidate } from '../types';
+import { Country, Party, MinisterCandidate, Coalition } from '../types';
 import { playSound } from '../lib/sounds';
 import { CABINET_POSITIONS_BY_COUNTRY, POLITICIAN_CANDIDATES_POOL, CabinetPosition } from '../constants/cabinetData';
 import { Briefcase, ArrowRight, CheckCircle, Shield, Landmark, Sparkles, User, Users, Coins, AlertTriangle, ShieldCheck, Heart, Medal, X } from 'lucide-react';
@@ -12,6 +12,7 @@ interface CabinetViewProps {
   treasury: number;
   onUpdateTreasury: (updatedTreasury: number) => void;
   darkMode: boolean;
+  coalitions?: Coalition[];
 }
 
 export const CabinetView: React.FC<CabinetViewProps> = ({
@@ -22,6 +23,7 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   treasury,
   onUpdateTreasury,
   darkMode,
+  coalitions = [],
 }) => {
   const [selectedPost, setSelectedPost] = useState<CabinetPosition | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -29,7 +31,27 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
 
   const countryCode = country.id;
   const positions = CABINET_POSITIONS_BY_COUNTRY[countryCode] || CABINET_POSITIONS_BY_COUNTRY['DE'];
-  const candidatesPool = POLITICIAN_CANDIDATES_POOL[countryCode] || POLITICIAN_CANDIDATES_POOL['DE'];
+  const baseCandidatesPool = POLITICIAN_CANDIDATES_POOL[countryCode] || POLITICIAN_CANDIDATES_POOL['DE'];
+
+  // Filter out rival party leaders unless they are in a coalition with the player
+  const playerCoalition = coalitions.find(c => c.parties.includes(party.name));
+  const coalitionPartyNames = playerCoalition ? playerCoalition.parties : [];
+  
+  const candidatesPool = baseCandidatesPool.filter(candidate => {
+    // Find if candidate is a leader of a rival party
+    const isLeaderOfRival = country.rivals.some(r => r.leader === candidate.name);
+    
+    if (isLeaderOfRival) {
+      // Allow if their party is in our coalition
+      // Match by party id or name
+      const rivalInfo = country.rivals.find(r => r.leader === candidate.name);
+      if (rivalInfo && (coalitionPartyNames.includes(rivalInfo.name) || coalitionPartyNames.includes(rivalInfo.id))) {
+        return true; // They are in our coalition, so they can be selected manually (or auto-assigned later)
+      }
+      return false; // Leader of rival party NOT in our coalition
+    }
+    return true; // Not a leader, or from our party
+  });
 
   const getCurrencySymbol = () => {
     if (country.id === 'US') return '$';
@@ -41,6 +63,42 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   };
 
   const currency = getCurrencySymbol();
+
+  // Auto-assign coalition partners
+  React.useEffect(() => {
+    if (!playerCoalition) return;
+    
+    let changed = false;
+    const nextCabinet = { ...cabinet };
+    
+    // Find rivals in our coalition
+    const coalitionRivals = country.rivals.filter(r => 
+      coalitionPartyNames.includes(r.name) || coalitionPartyNames.includes(r.id)
+    );
+    
+    coalitionRivals.forEach(rival => {
+      // Is this rival leader already appointed?
+      const isAlreadyAppointed = Object.values(nextCabinet).some((c: any) => c && c.name === rival.leader);
+      if (!isAlreadyAppointed) {
+        // Find their candidate card
+        const cand = baseCandidatesPool.find(c => c.name === rival.leader);
+        if (cand) {
+          // Find an empty slot
+          const emptySlotId = positions.find(p => !nextCabinet[p.id])?.id;
+          if (emptySlotId) {
+            nextCabinet[emptySlotId] = { ...cand, role: emptySlotId };
+            changed = true;
+          }
+        }
+      }
+    });
+
+    if (changed) {
+      onUpdateCabinet(nextCabinet);
+      setSuccessMessage('Coalition partners have been automatically assigned to available ministries!');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerCoalition, baseCandidatesPool, country.rivals, positions]);
 
   // Appoint candidate to a specific post
   const handleAppoint = (postKey: string, candidate: MinisterCandidate) => {

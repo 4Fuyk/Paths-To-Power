@@ -24,7 +24,6 @@ export interface Party {
     strategy: number;      // Strateji
   };
   photo?: string;    // Leader photo URL
-  startAsGovernment?: boolean; // Skip campaign, start directly as ruling government
 }
 
 export interface RivalParty {
@@ -87,6 +86,7 @@ export interface Country {
   bills: Bill[];
   campaignTurns: number; // Total weeks or campaign actions allowed
   electionCycleYears: number; // election cycle frequency in years
+  termLimit?: number; // Maximum number of terms allowed (e.g. 2 for US). Infinite if undefined.
 }
 
 export interface Coalition {
