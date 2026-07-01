@@ -26,7 +26,49 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
   if (countryId === 'DE') {
     return `DE_${normName}`;
   }
-  if (countryId && ['BR', 'JP', 'EG', 'GB'].includes(countryId)) {
+  if (countryId === 'EG') {
+    const egMap: Record<string, string> = {
+      'albahralahmar': 'redsea',
+      'janubsina': 'southsinai',
+      'luxor': 'luxor',
+      'alismailiyah': 'ismailia',
+      'algharbiyah': 'gharbia',
+      'alminufiyah': 'monufia',
+      'alqahirah': 'cairo',
+      'alqalyubiyah': 'qalyubia',
+      'ashsharqiyah': 'sharqia',
+      'shamalsina': 'northsinai',
+      'assuways': 'suez',
+      'addaqahliyah': 'dakahlia',
+      'bursaid': 'portsaid',
+      'dumyat': 'damietta',
+      'albuhayrah': 'beheira',
+      'matruh': 'matrouh',
+      'aliskandariyah': 'alexandria',
+      'aljizah': 'giza',
+      'alfayyum': 'faiyum',
+      'alwadiatjadid': 'newvalley',
+      'alminya': 'minya',
+      'banisuwayf': 'benisuef',
+      'kafrashshaykh': 'kafrelsheikh',
+      'asyut': 'asyut',
+      'aswan': 'aswan',
+      'qina': 'qena',
+      'suhaj': 'sohag'
+    };
+    return egMap[normName] || normName;
+  }
+  if (countryId === 'JP') {
+    let cleanName = normName.toLowerCase();
+    if (cleanName.endsWith('to')) cleanName = cleanName.slice(0, -2);
+    else if (cleanName.endsWith('fu')) cleanName = cleanName.slice(0, -2);
+    else if (cleanName.endsWith('ken')) cleanName = cleanName.slice(0, -3);
+    
+    // exception
+    if (cleanName === 'hokkai') return 'hokkaido';
+    return cleanName;
+  }
+  if (countryId && ['BR', 'GB'].includes(countryId)) {
     return normName; // Handled by fallback matching in CampaignView
   }
   const coreMap: Record<string, string> = {
@@ -53,7 +95,7 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
 export const getFeatureName = (feature: any): string => {
   if (!feature) return '';
   if (feature.properties) {
-    return feature.properties.NAME_1 || feature.properties.name || feature.properties.NAME || feature.properties.EER13NM || feature.properties['hc-key'] || feature.properties.admin || '';
+    return feature.properties.NAME_1 || feature.properties.name || feature.properties.nam || feature.properties.NAME || feature.properties.EER13NM || feature.properties['hc-key'] || feature.properties.admin || '';
   }
   return feature.name || '';
 };

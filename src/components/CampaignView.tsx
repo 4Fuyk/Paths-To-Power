@@ -1390,8 +1390,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     if (!['BR', 'JP', 'EG', 'GB'].includes(country.id)) return;
     
     let url = '';
-    if (country.id === 'BR') url = 'https://unpkg.com/@highcharts/map-collection/countries/br/br-all.geo.json';
-    else if (country.id === 'JP') url = 'https://unpkg.com/@highcharts/map-collection/countries/jp/jp-all.geo.json';
+    if (country.id === 'BR') url = 'https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson';
+    else if (country.id === 'JP') url = 'https://cdn.jsdelivr.net/gh/dataofjapan/land@master/japan.geojson';
     else if (country.id === 'EG') url = 'https://unpkg.com/@highcharts/map-collection/countries/eg/eg-all.geo.json';
     else if (country.id === 'GB') url = 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json';
 
