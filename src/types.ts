@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type Ideology = 'Sosyal Demokrat' | 'Muhafazakar' | 'Milliyetçi' | 'Liberal' | 'Sosyalist' | 'Ekolojist';
+export type Ideology = 'Sosyal Demokrat' | 'Muhafazakar' | 'Milliyetçi' | 'Liberal' | 'Sosyalist' | 'Ekolojist' | 'Merkez' | 'Aşırı Sağ' | 'Aşırı Sol' | 'Komünist' | 'Sosyal Muhafazakar' | 'İlerici' | 'Social Democrat' | 'Conservative' | 'Nationalist' | 'Socialist' | 'Ecologist';
 
-export type VoterGroup = 'İşçiler' | 'Gençler' | 'Milliyetçiler' | 'Liberaller' | 'Gelenekçiler' | 'Esnaflar';
+export type VoterGroup = 'İşçiler' | 'Gençler' | 'Milliyetçiler' | 'Liberaller' | 'Gelenekçiler' | 'Esnaflar' | 'lowerClass' | 'upperClass' | 'nationalists' | 'liberals' | 'middleClass' | 'Nationalistler';
 
 export interface Party {
   id: string;
@@ -42,7 +42,7 @@ export interface Region {
   id: string;
   name: string;
   seats: number; // Parliamentary seats allocated to this state/region
-  voterDistribution: Record<VoterGroup, number>; // Ratio of voters (adds up to 100%)
+  voterDistribution: Record<string, number>; // Ratio of voters (adds up to 100%)
   supports: Record<string, number>; // Current support percentages (key is party.id or rival.id, adds up to 100)
   infrastructure: number; // Campaign multiplier (1-5, cost/efficiency)
   campaignLevel: number; // Player's rally level
@@ -55,7 +55,7 @@ export interface Bill {
   title: string;
   description: string;
   category: 'Ekonomi' | 'Özgürlükler' | 'Güvenlik' | 'Sağlık / Eğitim';
-  voterImpacts: Record<VoterGroup, number>; // Positive or negative effect on support if passed
+  voterImpacts: Record<string, number>; // Positive or negative effect on support if passed
   budgetCost: number; // Bütçe etkisi
   influenceMod: number; // Nüfuz etkisi
   status: 'Bekliyor' | 'Kabul Edildi' | 'Reddedildi';
@@ -77,7 +77,7 @@ export interface Country {
   description: string;
   flag: string;
   seats: number;
-  system: 'Hükümet Koalisyonu' | 'Başkanlık Sistemi' | 'Dar Bölge Meclisi';
+  system: 'Hükümet Koalisyonu' | 'Başkanlık Sistemi' | 'Dar Bölge Meclisi' | 'Presidential System' | 'Coalition Government' | 'First-Past-The-Post';
   parliamentName: string;
   population: string;
   primaryColor: string; // Map color when unlocked
@@ -127,7 +127,7 @@ export interface GameState {
 export interface SpeechChoice {
   text: string;
   impactText: string;
-  voterImpacts: Partial<Record<VoterGroup, number>>;
+  voterImpacts: Partial<Record<string, number>>;
   budgetCost: number;
   influenceMod: number;
 }

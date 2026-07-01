@@ -168,8 +168,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const rebelTurn = () => {
     setRegionStatus(prev => {
       const next = { ...prev };
-      const rebels = Object.values(next).filter(r => r.type === 'rebel');
-      const loyals = Object.values(next).filter(r => r.type === 'loyal');
+      const rebels = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'rebel');
+      const loyals = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'loyal');
       
       if (rebels.length === 0 || loyals.length === 0) return next; // battle is over
       
@@ -346,7 +346,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         armyMarkersLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
       }
 
-      const regionsList = Object.values(regionStatus);
+      const regionsList = Object.values(regionStatus) as RegionUnit[];
       const getDistance = (id1: string, id2: string) => {
         const c1 = regionCentersRef.current[id1];
         const c2 = regionCentersRef.current[id2];
@@ -354,7 +354,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         return Math.sqrt(Math.pow(c1.lat - c2.lat, 2) + Math.pow(c1.lng - c2.lng, 2));
       };
 
-      const isBorder = (regionId: string, myType: 'loyal' | 'rebel') => {
+      const isBorder = (regionId: string, myType: 'loyal' | 'rebel' | 'contested') => {
         const enemies = regionsList.filter(r => r.type !== myType);
         if (enemies.length === 0) return false;
         
@@ -406,7 +406,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   // Check victory / defeat
   useEffect(() => {
-    const statuses = Object.values(regionStatus);
+    const statuses = Object.values(regionStatus) as RegionUnit[];
     if (statuses.length === 0) return;
     
     const rebelCount = statuses.filter(s => s.type === 'rebel').length;

@@ -1390,9 +1390,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     if (!['BR', 'JP', 'EG', 'GB'].includes(country.id)) return;
     
     let url = '';
-    if (country.id === 'BR') url = 'https://code.highcharts.com/mapdata/countries/br/br-all.geo.json';
-    else if (country.id === 'JP') url = 'https://code.highcharts.com/mapdata/countries/jp/jp-all.geo.json';
-    else if (country.id === 'EG') url = 'https://code.highcharts.com/mapdata/countries/eg/eg-all.geo.json';
+    if (country.id === 'BR') url = 'https://unpkg.com/@highcharts/map-collection/countries/br/br-all.geo.json';
+    else if (country.id === 'JP') url = 'https://unpkg.com/@highcharts/map-collection/countries/jp/jp-all.geo.json';
+    else if (country.id === 'EG') url = 'https://unpkg.com/@highcharts/map-collection/countries/eg/eg-all.geo.json';
     else if (country.id === 'GB') url = 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json';
 
     const tryFetch = async () => {
@@ -2461,18 +2461,49 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         }
       `}</style>
       {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY, GERMANY, OR USA) */}
-      {(country.id === 'TR' || country.id === 'DE' || country.id === 'US') && (
+      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB'].includes(country.id)) && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div>
-            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP ({country.id === 'DE' ? '2025' : country.id === 'US' ? '2024' : '2024'} BASE)</span>
+            <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold uppercase">GEOGRAPHICAL MAP (2024 BASE)</span>
             <h3 className="text-xl font-bold tracking-tight">
-              {country.id === 'US' ? `${country.name} Presidential & State Control GIS Map` : country.id === 'DE' ? `${country.name} Federal State Control GIS Map` : `${country.name} Municipal Control GIS Map`}
+              {country.id === 'US' ? `${country.name} Presidential & State Control GIS Map` : country.id === 'DE' ? `${country.name} Federal State Control GIS Map` : `${country.name} Regional Control GIS Map`}
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Click on a {country.id === 'DE' ? 'state' : country.id === 'US' ? 'state' : 'province'} directly on the geographic Leaflet map to select it. The {country.id === 'DE' ? 'state' : country.id === 'US' ? 'state' : 'province'} colors represent leading candidate control, and its real-time polls appear instantly in the right-hand panel.
+              Click on a {country.id === 'DE' ? 'state' : country.id === 'US' ? 'state' : 'region'} directly on the geographic Leaflet map to select it. The colors represent leading candidate control, and its real-time polls appear instantly in the right-hand panel.
             </p>
+          </div>
+
+          {/* National Polling Averages */}
+          <div className={`p-4 rounded-xl border flex flex-wrap gap-4 mt-2 ${darkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="w-full text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">National Polling Averages</div>
+            {(() => {
+              const totals: Record<string, number> = {};
+              let totalSeats = 0;
+              country.regions.forEach(r => {
+                totalSeats += r.seats;
+                Object.entries(r.supports).forEach(([pid, val]) => {
+                  if (!totals[pid]) totals[pid] = 0;
+                  totals[pid] += (val as number) * r.seats;
+                });
+              });
+              const results: { id: string; name: string; color: string; val: number }[] = [];
+              Object.entries(totals).forEach(([pid, val]) => {
+                const percentage = totalSeats > 0 ? val / totalSeats : 0;
+                const isMe = pid === party.id;
+                const pName = isMe ? party.name : getRivalName(pid);
+                const pColor = isMe ? party.color : getRivalColor(pid);
+                results.push({ id: pid, name: pName, color: pColor, val: percentage });
+              });
+              return results.sort((a, b) => b.val - a.val).map((poll) => (
+                <div key={poll.id} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: poll.color }}></div>
+                  <div className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{poll.name}</div>
+                  <div className="text-sm font-mono text-slate-400">%{poll.val.toFixed(1)}</div>
+                </div>
+              ));
+            })()}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">

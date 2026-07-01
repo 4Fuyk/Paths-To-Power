@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Country, Party, MinisterCandidate, Coalition } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
+import { ALL_PRESS_QUESTIONS } from './constants/pressQuestions';
 import { ThemeToggle } from './components/ThemeToggle';
 import { WorldMap } from './components/WorldMap';
 import { PartyCreator } from './components/PartyCreator';
@@ -61,6 +62,7 @@ export default function App() {
   } | null>(null);
   const [showElectionSuccessModal, setShowElectionSuccessModal] = useState<boolean>(false);
   const [showPressConference, setShowPressConference] = useState<boolean>(false);
+  const [activePressQuestions, setActivePressQuestions] = useState<any[]>([]);
   const [pressConferenceIndex, setPressConferenceIndex] = useState<number>(0);
   const [pressTreasuryBonus, setPressTreasuryBonus] = useState<number>(0);
   const [pressFreedomBonus, setPressFreedomBonus] = useState<number>(0);
@@ -931,6 +933,8 @@ export default function App() {
         }
       }
 
+      const shuffled = [...ALL_PRESS_QUESTIONS].sort(() => 0.5 - Math.random());
+      setActivePressQuestions(shuffled.slice(0, 3));
       setShowElectionSuccessModal(true);
       setShowPressConference(true);
       setPressConferenceIndex(0);
@@ -1230,20 +1234,7 @@ export default function App() {
                         {selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span className="flex items-center gap-1">Ideology: 
-                          <select 
-                            className={`bg-transparent text-xs font-bold focus:ring-0 cursor-pointer ${darkMode ? 'text-slate-250' : 'text-slate-750'}`}
-                            value={playerParty.ideology}
-                            onChange={(e) => setPlayerParty({ ...playerParty, ideology: e.target.value as any })}
-                          >
-                            <option value="Sosyal Demokrat" className="text-black">Sosyal Demokrat</option>
-                            <option value="Muhafazakar" className="text-black">Muhafazakar</option>
-                            <option value="Milliyetçi" className="text-black">Milliyetçi</option>
-                            <option value="Liberal" className="text-black">Liberal</option>
-                            <option value="Sosyalist" className="text-black">Sosyalist</option>
-                            <option value="Ekolojist" className="text-black">Ekolojist</option>
-                          </select>
-                        </span>
+                        <span>Ideology: <strong className={darkMode ? 'text-slate-250' : 'text-slate-750'}>{playerParty.ideology}</strong></span>
                         {isRuling && (
                           <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
                             Regime: {getRegimeType(playerParty.ideology)}
@@ -1980,104 +1971,9 @@ export default function App() {
             {showPressConference && pressConferenceIndex < 3 ? (
               // Press Conference Steps
               (() => {
-                const pressQuestions = [
-                  {
-                    reporter: "Ahmet Yılmaz (TRT Haber)",
-                    avatar: "🎤 TRT",
-                    color: "border-red-500 text-red-400 bg-red-500/15",
-                    question: `Mr. President, following your electoral victory, what will be your first actions regarding economic reforms and taxes? Will the public find relief?`,
-                    options: [
-                      {
-                        text: "We will heavily tax the rich and relieve the public! (Populist)",
-                        bonusDesc: "+100k Starting Treasury, increase in Democracy and Freedom scores",
-                        effect: () => {
-                          setPressTreasuryBonus(100000);
-                          setPressFreedomBonus(10);
-                        }
-                      },
-                      {
-                        text: "We will increase taxes to quickly fill the state treasury! (Fiscal Focus)",
-                        bonusDesc: "+250k Starting Treasury, Low Public Freedom",
-                        effect: () => {
-                          setPressTreasuryBonus(250000);
-                          setPressFreedomBonus(-15);
-                        }
-                      },
-                      {
-                        text: "We will maintain a balanced budget and free market rules. (Status Quo)",
-                        bonusDesc: "Standard starting budget and freedom scores",
-                        effect: () => {
-                          setPressTreasuryBonus(0);
-                          setPressFreedomBonus(0);
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    reporter: "Sarah Jenkins (BBC World)",
-                    avatar: "🇬🇧 BBC",
-                    color: "border-blue-500 text-blue-400 bg-blue-500/15",
-                    question: `Mr. President, what will be your stance on press freedom and opposition voices in your new term? Consolidation of power or full liberty?`,
-                    options: [
-                      {
-                        text: "We will defend democracy to the end, fully independent press! (Libertarian)",
-                        bonusDesc: "+25 Democracy/Freedom Index, +15 International Reputation",
-                        effect: () => {
-                          setPressFreedomBonus(prev => prev + 25);
-                          setPressReputationBonus(15);
-                        }
-                      },
-                      {
-                        text: "National security comes first. We will apply restrictions if necessary! (Authoritarian)",
-                        bonusDesc: "-20 Democracy/Freedom Index, increase in Military and Security power",
-                        effect: () => {
-                          setPressFreedomBonus(prev => prev - 20);
-                          setPressReputationBonus(-15);
-                        }
-                      },
-                      {
-                        text: "We will maintain strict adherence to the constitutional framework and laws. (Democratic)",
-                        bonusDesc: "+5 Democracy/Freedom Index, Balanced Status",
-                        effect: () => {
-                          setPressFreedomBonus(prev => prev + 5);
-                          setPressReputationBonus(5);
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    reporter: "Halid bin Velid (Al Jazeera)",
-                    avatar: "🇶🇦 AJ",
-                    color: "border-amber-500 text-amber-400 bg-amber-500/15",
-                    question: `What is your strategy regarding global diplomacy, cross-border military operations, and neighboring states in the new term? Is there a possibility of war?`,
-                    options: [
-                      {
-                        text: "Peace at home, peace in the world! Diplomatic dialogue is our only option. (Pacifist)",
-                        bonusDesc: "+20 International Reputation, Peaceful Relations with Neighbors",
-                        effect: () => {
-                          setPressReputationBonus(prev => prev + 20);
-                        }
-                      },
-                      {
-                        text: "Absolute leadership in our region! We will declare our power and national stance to everyone. (Nationalist)",
-                        bonusDesc: "-15 International Reputation, Extra Military Readiness Points",
-                        effect: () => {
-                          setPressReputationBonus(prev => prev - 15);
-                          setPressTreasuryBonus(prev => prev + 50000);
-                        }
-                      },
-                      {
-                        text: "We will focus on our own borders and remain neutral in global conflicts. (Isolationist)",
-                        bonusDesc: "Balanced international relations and neutral foreign policy",
-                        effect: () => {
-                          setPressReputationBonus(prev => prev + 5);
-                        }
-                      }
-                    ]
-                  }
-                ];
+                const currentQ = activePressQuestions[pressConferenceIndex];
 
-                const currentQ = pressQuestions[pressConferenceIndex];
+                if (!currentQ) return null;
 
                 return (
                   <div className="w-full flex flex-col gap-5 text-left">
@@ -2093,10 +1989,6 @@ export default function App() {
                       <span className={`px-2.5 py-1 rounded-full font-mono font-bold text-xs border ${currentQ.color}`}>
                         {currentQ.avatar}
                       </span>
-                      <div>
-                        <span className="text-[11px] text-slate-400 font-mono font-bold">MUHABİR:</span>
-                        <div className="text-xs font-bold text-slate-200">{currentQ.reporter}</div>
-                      </div>
                     </div>
 
                     <p className="text-sm font-semibold text-slate-250 italic leading-relaxed border-l-2 border-emerald-500/40 pl-3">
@@ -2105,12 +1997,14 @@ export default function App() {
 
                     <div className="flex flex-col gap-2.5 mt-2">
                       <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">CEVABINIZI SEÇİN • SELECT YOUR RESPONSE:</span>
-                      {currentQ.options.map((opt, oIdx) => (
+                      {currentQ.options.map((opt: any, oIdx: number) => (
                         <button
                           key={oIdx}
                           onClick={() => {
                             playSound('click');
-                            opt.effect();
+                            setPressTreasuryBonus(prev => prev + (opt.treasuryBonus || 0));
+                            setPressFreedomBonus(prev => prev + (opt.freedomBonus || 0));
+                            setPressReputationBonus(prev => prev + (opt.reputationBonus || 0));
                             setPressConferenceIndex(prev => prev + 1);
                           }}
                           className="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 hover:bg-slate-850 text-slate-200 text-left transition-all hover:scale-[1.01] cursor-pointer"

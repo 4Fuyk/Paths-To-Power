@@ -26,6 +26,9 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
   if (countryId === 'DE') {
     return `DE_${normName}`;
   }
+  if (countryId && ['BR', 'JP', 'EG', 'GB'].includes(countryId)) {
+    return normName; // Handled by fallback matching in CampaignView
+  }
   const coreMap: Record<string, string> = {
     'istanbul': 'TR_ist',
     'ankara': 'TR_ank',
@@ -48,6 +51,9 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
 };
 
 export const getFeatureName = (feature: any): string => {
-  if (!feature || !feature.properties) return '';
-  return feature.properties.NAME_1 || feature.properties.name || feature.properties.NAME || feature.properties.EER13NM || '';
+  if (!feature) return '';
+  if (feature.properties) {
+    return feature.properties.NAME_1 || feature.properties.name || feature.properties.NAME || feature.properties.EER13NM || feature.properties['hc-key'] || feature.properties.admin || '';
+  }
+  return feature.name || '';
 };

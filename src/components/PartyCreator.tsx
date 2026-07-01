@@ -302,11 +302,11 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">PARTY MANIFESTO IDEOLOGY</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {AVAILABLE_IDEOLOGIES.map((ideo) => {
+                {[...AVAILABLE_IDEOLOGIES, ...(AVAILABLE_IDEOLOGIES.some(i => i.value === selectedIdeology) ? [] : [{ value: selectedIdeology, desc: 'Special Ideology Template', focus: 'Unique bonus attributes.' }])].map((ideo) => {
                   const isSelected = selectedIdeology === ideo.value;
                   return (
                     <button
-                      id={`ideology-select-${ideo.value.replace(' ', '-')}`}
+                      id={`ideology-select-${ideo.value.replace(/\s+/g, '-')}`}
                       key={ideo.value}
                       type="button"
                       onClick={() => setSelectedIdeology(ideo.value)}
