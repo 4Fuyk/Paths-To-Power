@@ -1230,7 +1230,20 @@ export default function App() {
                         {selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span>Ideology: <strong className={darkMode ? 'text-slate-250' : 'text-slate-750'}>{playerParty.ideology}</strong></span>
+                        <span className="flex items-center gap-1">Ideology: 
+                          <select 
+                            className={`bg-transparent text-xs font-bold focus:ring-0 cursor-pointer ${darkMode ? 'text-slate-250' : 'text-slate-750'}`}
+                            value={playerParty.ideology}
+                            onChange={(e) => setPlayerParty({ ...playerParty, ideology: e.target.value as any })}
+                          >
+                            <option value="Sosyal Demokrat" className="text-black">Sosyal Demokrat</option>
+                            <option value="Muhafazakar" className="text-black">Muhafazakar</option>
+                            <option value="Milliyetçi" className="text-black">Milliyetçi</option>
+                            <option value="Liberal" className="text-black">Liberal</option>
+                            <option value="Sosyalist" className="text-black">Sosyalist</option>
+                            <option value="Ekolojist" className="text-black">Ekolojist</option>
+                          </select>
+                        </span>
                         {isRuling && (
                           <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
                             Regime: {getRegimeType(playerParty.ideology)}
@@ -1771,6 +1784,7 @@ export default function App() {
           <TacticalBattleView
             country={selectedCountry}
             party={playerParty}
+            civilWarRisk={civilWarRisk}
             darkMode={darkMode}
             onBattleFinished={(success: boolean) => {
               if (success) {

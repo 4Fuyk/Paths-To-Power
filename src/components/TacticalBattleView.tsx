@@ -15,6 +15,7 @@ interface RegionUnit {
 interface TacticalBattleViewProps {
   country: Country;
   party: { name: string };
+  civilWarRisk?: number;
   darkMode: boolean;
   onBattleFinished: (success: boolean) => void;
 }
@@ -22,6 +23,7 @@ interface TacticalBattleViewProps {
 export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   country,
   party,
+  civilWarRisk = 50,
   darkMode,
   onBattleFinished
 }) => {
@@ -39,6 +41,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const armyMarkersLayerRef = useRef<L.LayerGroup | null>(null);
   const regionCentersRef = useRef<Record<string, { lat: number; lng: number }>>({});
   const regionStatusRef = useRef<Record<string, RegionUnit>>({});
+  const [centersReady, setCentersReady] = useState(false);
   
   useEffect(() => {
     regionStatusRef.current = regionStatus;
@@ -73,7 +76,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     
     // In GIS mode, wait for centers to be calculated by Leaflet
     if (mapMode === 'GIS') {
-       if (Object.keys(regionCentersRef.current).length < regions.length * 0.5) {
+       if (!centersReady) {
           // not ready yet
           return;
        }
@@ -94,7 +97,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
        };
 
        const sorted = [...regions].sort((a,b) => getDist(a.id) - getDist(b.id));
-       const rebelCount = Math.floor(regions.length * 0.4); // 40% are rebels clustered together
+       const rebelProportion = Math.max(0.1, Math.min(0.8, civilWarRisk / 120)); 
+       const rebelCount = Math.floor(regions.length * rebelProportion); 
        
        sorted.forEach((reg, idx) => {
          const isRebel = idx < rebelCount;
@@ -107,8 +111,9 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
        });
     } else {
        // Distribute randomly for CARDS mode
+       const rebelProportion = Math.max(0.1, Math.min(0.8, civilWarRisk / 120)); 
        regions.forEach((reg, idx) => {
-         const isRebel = idx > 0 && Math.random() > 0.4;
+         const isRebel = idx > 0 && Math.random() < rebelProportion;
          initialStatus[reg.id] = {
            regionId: reg.id,
            type: isRebel ? 'rebel' : 'loyal',
@@ -127,7 +132,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
     setRegionStatus(initialStatus);
     setIsInitialized(true);
-  }, [country, isInitialized, mapMode, geoJsonData]); // run when geoJsonData changes (which populates centers)
+  }, [country, isInitialized, mapMode, centersReady]); // run when centersReady changes
 
   const addLog = (msg: string) => {
     setBattleLogs(prev => [msg, ...prev].slice(0, 8));
@@ -207,16 +212,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         zoomControl: true,
       });
 
-      const tileUrl = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+      const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
-      tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 18 }).addTo(map);
+      tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 18, attribution: 'Tiles &copy; Esri' }).addTo(map);
       mapInstanceRef.current = map;
     } else if (tileLayerRef.current) {
-       const tileUrl = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+       const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
        tileLayerRef.current.setUrl(tileUrl);
     }
   }, [mapMode, darkMode, country.id]);
@@ -302,98 +303,105 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
           layer.on('click', () => {
              const status = regionStatusRef.current[matchRegion.id];
              if (status?.type === 'rebel') {
-                handleAttack(matchRegion.id);
+                setTimeout(() => handleAttack(matchRegion.id), 10);
              }
           });
         }
       }
     }).addTo(mapInstanceRef.current);
+    
+    setCentersReady(true);
   }, [geoJsonData, country.regions]); // Only recreate when GeoJSON data changes
 
   // Update styles and markers when regionStatus changes
   useEffect(() => {
     if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
 
-    // Update GeoJSON layer styles
-    geoJsonLayerRef.current.setStyle((feature: any) => {
-      const normName = normalizeName(getFeatureName(feature));
-      let regionId = getRegionIdFromNormalizedName(normName, country.id);
-      let matchRegion = country.regions.find(r => r.id === regionId);
-      if (!matchRegion) {
-        matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-        if (matchRegion) regionId = matchRegion.id;
-      }
+    const updateTimer = setTimeout(() => {
+      if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
 
-      const status = matchRegion ? regionStatus[matchRegion.id] : null;
-      
-      if (status?.type === 'rebel') {
-        return { fillColor: '#ef4444', color: '#ef4444', weight: 1.5, fillOpacity: 0.85 };
-      } else if (status?.type === 'loyal') {
-        return { fillColor: '#10b981', color: '#10b981', weight: 1.5, fillOpacity: 0.7 };
-      }
-      return { fillColor: '#64748b', color: '#64748b', weight: 1, fillOpacity: 0.3 };
-    });
+      // Update GeoJSON layer styles
+      geoJsonLayerRef.current.setStyle((feature: any) => {
+        const normName = normalizeName(getFeatureName(feature));
+        let regionId = getRegionIdFromNormalizedName(normName, country.id);
+        let matchRegion = country.regions.find(r => r.id === regionId);
+        if (!matchRegion) {
+          matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
+          if (matchRegion) regionId = matchRegion.id;
+        }
 
-    if (armyMarkersLayerRef.current) {
-      armyMarkersLayerRef.current.clearLayers();
-    } else {
-      armyMarkersLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
-    }
-
-    const regionsList = Object.values(regionStatus);
-    const getDistance = (id1: string, id2: string) => {
-      const c1 = regionCentersRef.current[id1];
-      const c2 = regionCentersRef.current[id2];
-      if (!c1 || !c2) return 999999;
-      return Math.sqrt(Math.pow(c1.lat - c2.lat, 2) + Math.pow(c1.lng - c2.lng, 2));
-    };
-
-    const isBorder = (regionId: string, myType: 'loyal' | 'rebel') => {
-      const enemies = regionsList.filter(r => r.type !== myType);
-      if (enemies.length === 0) return false;
-      
-      let minDst = 999999;
-      for (const e of enemies) {
-        const d = getDistance(regionId, e.regionId);
-        if (d < minDst) minDst = d;
-      }
-      
-      const allOthers = regionsList.filter(r => r.regionId !== regionId);
-      let minAny = 999999;
-      for (const o of allOthers) {
-        const d = getDistance(regionId, o.regionId);
-        if (d < minAny) minAny = d;
-      }
-      
-      return minDst <= minAny * 2.8;
-    };
-
-    regionsList.forEach(status => {
-      const center = regionCentersRef.current[status.regionId];
-      if (center && isBorder(status.regionId, status.type)) {
-        const iconHtml = status.type === 'loyal' 
-          ? `<div style="width: 24px; height: 24px; background: #0ea5e9; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>`
-          : `<div style="width: 24px; height: 24px; background: #ef4444; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div>`;
+        const status = matchRegion ? regionStatus[matchRegion.id] : null;
         
-        const customIcon = L.divIcon({
-          html: iconHtml,
-          className: 'custom-army-icon',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        });
+        if (status?.type === 'rebel') {
+          return { fillColor: '#ef4444', color: '#ef4444', weight: 1.5, fillOpacity: 0.85 };
+        } else if (status?.type === 'loyal') {
+          return { fillColor: '#10b981', color: '#10b981', weight: 1.5, fillOpacity: 0.7 };
+        }
+        return { fillColor: '#64748b', color: '#64748b', weight: 1, fillOpacity: 0.3 };
+      });
 
-        const marker = L.marker([center.lat, center.lng], { icon: customIcon });
-        
-        marker.on('click', () => {
-          if (status.type === 'rebel') {
-            handleAttack(status.regionId);
-          }
-        });
-        
-        marker.addTo(armyMarkersLayerRef.current!);
+      if (armyMarkersLayerRef.current) {
+        armyMarkersLayerRef.current.clearLayers();
+      } else {
+        armyMarkersLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
       }
-    });
 
+      const regionsList = Object.values(regionStatus);
+      const getDistance = (id1: string, id2: string) => {
+        const c1 = regionCentersRef.current[id1];
+        const c2 = regionCentersRef.current[id2];
+        if (!c1 || !c2) return 999999;
+        return Math.sqrt(Math.pow(c1.lat - c2.lat, 2) + Math.pow(c1.lng - c2.lng, 2));
+      };
+
+      const isBorder = (regionId: string, myType: 'loyal' | 'rebel') => {
+        const enemies = regionsList.filter(r => r.type !== myType);
+        if (enemies.length === 0) return false;
+        
+        let minDst = 999999;
+        for (const e of enemies) {
+          const d = getDistance(regionId, e.regionId);
+          if (d < minDst) minDst = d;
+        }
+        
+        const allOthers = regionsList.filter(r => r.regionId !== regionId);
+        let minAny = 999999;
+        for (const o of allOthers) {
+          const d = getDistance(regionId, o.regionId);
+          if (d < minAny) minAny = d;
+        }
+        
+        return minDst <= minAny * 2.8;
+      };
+
+      regionsList.forEach(status => {
+        const center = regionCentersRef.current[status.regionId];
+        if (center && isBorder(status.regionId, status.type)) {
+          const iconHtml = status.type === 'loyal' 
+            ? `<div style="width: 24px; height: 24px; background: #0ea5e9; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>`
+            : `<div style="width: 24px; height: 24px; background: #ef4444; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div>`;
+          
+          const customIcon = L.divIcon({
+            html: iconHtml,
+            className: 'custom-army-icon',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+          });
+
+          const marker = L.marker([center.lat, center.lng], { icon: customIcon });
+          
+          marker.on('click', () => {
+            if (status.type === 'rebel') {
+              setTimeout(() => handleAttack(status.regionId), 10);
+            }
+          });
+          
+          marker.addTo(armyMarkersLayerRef.current!);
+        }
+      });
+    }, 100);
+
+    return () => clearTimeout(updateTimer);
   }, [geoJsonData, regionStatus, country.regions]);
 
   // Check victory / defeat
