@@ -330,7 +330,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
   // Launch electronic votes counts
   const handleTriggerVote = (voteFor: boolean) => {
-    if (selectedBill.status !== 'Pending' && selectedBill.status !== 'Bekliyor') return;
+    if (selectedBill.status !== 'Pending') return;
 
     setVotingAnimation(true);
 
@@ -450,10 +450,10 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
   const getStatusBadge = (status: Bill['status']) => {
     switch (status as string) {
-      case 'Kabul Edildi':
+      case 'Passed':
       case 'Passed':
         return <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">PASSED</span>;
-      case 'Reddedildi':
+      case 'Rejected':
       case 'Rejected':
         return <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-bold border border-rose-500/20">REJECTED</span>;
       default:
@@ -641,7 +641,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
             </div>
 
             {/* If bill is STILL pending state */}
-            {(selectedBill.status === 'Bekliyor' || selectedBill.status === 'Pending') && !votingAnimation && (
+            {(selectedBill.status === 'Pending') && !votingAnimation && (
               <div className="flex flex-col gap-4 mt-auto">
                 {/* Lobby and buying tools */}
                 <div className="border-t border-slate-500/10 pt-4">
@@ -736,9 +736,9 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
             )}
 
             {/* If bill is ALREADY VOTED ON (Passed or failed feedback info) */}
-            {selectedBill.status !== 'Bekliyor' && selectedBill.status !== 'Pending' && !votingAnimation && (
+            {selectedBill.status !== 'Pending' && !votingAnimation && (
               <div className="flex flex-col gap-4 p-5 rounded-2xl bg-black/25 border border-slate-500/5 mt-auto text-center justify-center items-center">
-                {selectedBill.status === 'Kabul Edildi' || selectedBill.status === 'Passed' ? (
+                {selectedBill.status === 'Passed' ? (
                   <>
                     <CheckCircle2 className="w-10 h-10 text-emerald-400" />
                     <div>

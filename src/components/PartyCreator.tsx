@@ -16,12 +16,12 @@ interface PartyCreatorProps {
 
 
 const AVAILABLE_IDEOLOGIES: { value: Ideology; desc: string; focus: string }[] = [
-  { value: 'Sosyal Demokrat', desc: 'Social justice, robust state support programs, labor wellness, and comprehensive civil rights.', focus: 'Provides bonus support within Labor and Youth factions.' },
-  { value: 'Muhafazakar', desc: 'Cultural patriotism, public order, preservation of heritage, and localized tax alleviation.', focus: 'Provides bonus support within Traditionalist and Merchant factions.' },
-  { value: 'Milliyetçi', desc: 'Robust border security, domestic high-tech industries, and sovereign defense posturing.', focus: 'Provides bonus support within Nationalist and Traditionalist factions.' },
+  { value: 'Social Democrat', desc: 'Social justice, robust state support programs, labor wellness, and comprehensive civil rights.', focus: 'Provides bonus support within Labor and Youth factions.' },
+  { value: 'Conservative', desc: 'Cultural patriotism, public order, preservation of heritage, and localized tax alleviation.', focus: 'Provides bonus support within Traditionalist and Merchant factions.' },
+  { value: 'Nationalist', desc: 'Robust border security, domestic high-tech industries, and sovereign defense posturing.', focus: 'Provides bonus support within Nationalist and Traditionalist factions.' },
   { value: 'Liberal', desc: 'Free markets, maximum individual liberty, deregulation, and advanced digital integration.', focus: 'Provides bonus support within Liberal and Merchant factions.' },
-  { value: 'Sosyalist', desc: 'Nationalized essential infrastructure, progressive capital wealth taxes, and worker equity.', focus: 'Provides powerful base support within Labor and Youth factions.' },
-  { value: 'Ekolojist', desc: 'Sustained green transition, carbon taxation, clean grid infrastructure, and conservation.', focus: 'Provides bonus support within Youth and Liberal factions.' },
+  { value: 'Socialist', desc: 'Nationalized essential infrastructure, progressive capital wealth taxes, and worker equity.', focus: 'Provides powerful base support within Labor and Youth factions.' },
+  { value: 'Ecologist', desc: 'Sustained green transition, carbon taxation, clean grid infrastructure, and conservation.', focus: 'Provides bonus support within Youth and Liberal factions.' },
 ];
 
 const POLITICAL_COLORS = [
@@ -41,7 +41,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 }) => {
   const [partyName, setPartyName] = useState('');
   const [leaderName, setLeaderName] = useState('');
-  const [selectedIdeology, setSelectedIdeology] = useState<Ideology>('Sosyal Demokrat');
+  const [selectedIdeology, setSelectedIdeology] = useState<Ideology>('Social Democrat');
   const [selectedColor, setSelectedColor] = useState('#dc2626');
   const [selectedPhoto, setSelectedPhoto] = useState('');
   const [isPresetSelected, setIsPresetSelected] = useState(false);

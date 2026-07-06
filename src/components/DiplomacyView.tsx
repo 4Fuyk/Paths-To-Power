@@ -88,32 +88,32 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       {
         countryA: 'TR',
         countryB: 'EG',
-        description: 'Doğu Akdeniz doğalgaz arama hakları ve deniz yetki sınırları gerilimi.'
+        description: 'Eastern Mediterranean natural gas exploration rights and maritime boundary tensions.'
       },
       {
         countryA: 'US',
         countryB: 'DE',
-        description: 'NATO askeri harcamaları ve otomotiv ticaret gümrük tarifeleri gergisi.'
+        description: 'NATO military spending and automotive trade tariff tensions.'
       },
       {
         countryA: 'GB',
         countryB: 'DE',
-        description: 'Kuzey Denizi balıkçılık kotaları ve ticaret sınırlamaları anlaşmazlığı.'
+        description: 'North Sea fishing quotas and trade restrictions dispute.'
       },
       {
         countryA: 'US',
         countryB: 'JP',
-        description: 'Yarı iletken çip üretim paylaşımları ve teknolojik ihracat engellemeleri rekabeti.'
+        description: 'Semiconductor chip production sharing and tech export blockades competition.'
       },
       {
         countryA: 'BR',
         countryB: 'US',
-        description: 'Amazon havzası çevre yönergeleri ve tarımsal gıda ithalat gümrük vergileri gerginliği.'
+        description: 'Amazon basin environmental regulations and agricultural food import tariffs tension.'
       },
       {
         countryA: 'EG',
         countryB: 'GB',
-        description: 'Süveyş Kanalı kargo geçiş ücretleri ve tarihi eser iade davası ihtilafı.'
+        description: 'Suez Canal cargo transit fees and historical artifact return lawsuit dispute.'
       }
     ];
 

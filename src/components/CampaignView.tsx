@@ -1392,7 +1392,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     let url = '';
     if (country.id === 'BR') url = 'https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson';
     else if (country.id === 'JP') url = 'https://cdn.jsdelivr.net/gh/dataofjapan/land@master/japan.geojson';
-    else if (country.id === 'EG') url = 'https://unpkg.com/@highcharts/map-collection/countries/eg/eg-all.geo.json';
+    else if (country.id === 'EG') url = '/egypt-provinces.geojson';
     else if (country.id === 'GB') url = 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json';
 
     const tryFetch = async () => {
@@ -1585,6 +1585,14 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         map.setView([51.1657, 10.4515], 6);
       } else if (country.id === 'US') {
         map.setView([37.0902, -95.7129], 4);
+      } else if (country.id === 'BR') {
+        map.setView([-14.235, -51.9253], 4);
+      } else if (country.id === 'JP') {
+        map.setView([36.2048, 138.2529], 5);
+      } else if (country.id === 'EG') {
+        map.setView([26.8206, 30.8025], 5);
+      } else if (country.id === 'GB') {
+        map.setView([54.3781, -3.4360], 5);
       } else {
         map.setView([38.9637, 35.2433], 6);
       }
@@ -1715,7 +1723,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
             const normName = normalizeName(getFeatureName(feat));
             const regionId = getRegionIdFromNormalizedName(normName, country.id);
             if (regionId) {
-              const reg = country.regions.find(r => r.id === regionId);
+              const reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
               if (reg) {
                 const defaultCenter = country.id === 'DE' ? { lat: 51.1657, lng: 10.4515 } : country.id === 'US' ? { lat: 37.0902, lng: -95.7129 } : { lat: 38.9637, lng: 35.2433 };
                 let center = provinceCentersRef.current[reg.id] || defaultCenter;
@@ -1775,7 +1783,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
 
           const normName = normalizeName(getFeatureName(feature));
           let regionId = getRegionIdFromNormalizedName(normName, country.id);
-          let reg = country.regions.find(r => r.id === regionId);
+          let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
           if (!reg) {
             reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
             if (reg) regionId = reg.id;
@@ -1941,7 +1949,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           const normName = normalizeName(getFeatureName(feature));
           let regionId = getRegionIdFromNormalizedName(normName, country.id);
 
-          let reg = country.regions.find(r => r.id === regionId);
+          let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
           if (!reg) {
             reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
             if (reg) regionId = reg.id;

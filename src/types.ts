@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type Ideology = 'Sosyal Demokrat' | 'Muhafazakar' | 'Milliyetçi' | 'Liberal' | 'Sosyalist' | 'Ekolojist' | 'Merkez' | 'Aşırı Sağ' | 'Aşırı Sol' | 'Komünist' | 'Sosyal Muhafazakar' | 'İlerici' | 'Social Democrat' | 'Conservative' | 'Nationalist' | 'Socialist' | 'Ecologist';
+export type Ideology = 'Social Democrat' | 'Conservative' | 'Nationalist' | 'Liberal' | 'Socialist' | 'Ecologist' | 'Centrist' | 'Far Right' | 'Far Left' | 'Communist' | 'Social Conservative' | 'Progressive' | 'Alliance';
 
-export type VoterGroup = 'İşçiler' | 'Gençler' | 'Milliyetçiler' | 'Liberaller' | 'Gelenekçiler' | 'Esnaflar' | 'lowerClass' | 'upperClass' | 'nationalists' | 'liberals' | 'middleClass' | 'Nationalistler';
+export type VoterGroup = 'Workers' | 'Youth' | 'Nationalists' | 'Liberals' | 'Traditionalists' | 'Shopkeepers';
 
 export interface Party {
   id: string;
@@ -54,11 +54,11 @@ export interface Bill {
   id: string;
   title: string;
   description: string;
-  category: 'Ekonomi' | 'Özgürlükler' | 'Güvenlik' | 'Sağlık / Eğitim';
+  category: 'Economy' | 'Freedoms' | 'Security' | 'Environment' | 'Education' | 'Healthcare' | 'Infrastructure' | 'Technology';
   voterImpacts: Record<string, number>; // Positive or negative effect on support if passed
   budgetCost: number; // Bütçe etkisi
   influenceMod: number; // Nüfuz etkisi
-  status: 'Bekliyor' | 'Kabul Edildi' | 'Reddedildi';
+  status: 'Pending' | 'Passed' | 'Rejected';
   yesVotesPercentage: number; // Realized yes vote percentage
 }
 

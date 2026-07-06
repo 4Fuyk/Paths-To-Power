@@ -306,7 +306,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
 
   const isVictor = checkVictory() || coalitionSuccess === true;
   const winningCoalition = getWinningCoalition() || (coalitionSuccess ? {
-    name: "Yeni Koalisyon Hükümeti",
+    name: "New Coalition Government",
     parties: [party.name, ...selectedCoalitionParties.map(id => country.rivals.find(r => r.id === id)?.name || '')],
     totalSeats: (seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0),
     ideologyAvg: "Alliance"

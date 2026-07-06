@@ -223,10 +223,10 @@ export default function App() {
         (party.name.includes("BSW") && r.id === "BSW") ||
         (party.name.includes("FDP") && r.id === "FDP") ||
         (party.name.includes("SSW") && r.id === "SSW") ||
-        (party.name.includes("Cumhuriyetçi Parti") && r.id === "REP") ||
-        (party.name.includes("Demokrat Parti") && r.id === "DEM_US") ||
-        (party.name.includes("Özgürlükçü Parti") && r.id === "LP") ||
-        (party.name.includes("Yeşiller Partisi") && r.id === "GP")
+        (party.name.includes("Republican Party") && r.id === "REP") ||
+        (party.name.includes("Democratic Party") && r.id === "DEM_US") ||
+        (party.name.includes("Libertarian Party") && r.id === "LP") ||
+        (party.name.includes("Green Party") && r.id === "GP")
       );
 
       if (matchedRival) {
@@ -294,10 +294,10 @@ export default function App() {
       (party.name.includes("BSW") && r.id === "BSW") ||
       (party.name.includes("FDP") && r.id === "FDP") ||
       (party.name.includes("SSW") && r.id === "SSW") ||
-      (party.name.includes("Cumhuriyetçi Parti") && r.id === "REP") ||
-      (party.name.includes("Demokrat Parti") && r.id === "DEM_US") ||
-      (party.name.includes("Özgürlükçü Parti") && r.id === "LP") ||
-      (party.name.includes("Yeşiller Partisi") && r.id === "GP")
+      (party.name.includes("Republican Party") && r.id === "REP") ||
+      (party.name.includes("Democratic Party") && r.id === "DEM_US") ||
+      (party.name.includes("Libertarian Party") && r.id === "LP") ||
+      (party.name.includes("Green Party") && r.id === "GP")
     );
 
     if (hasMatchedRival) {

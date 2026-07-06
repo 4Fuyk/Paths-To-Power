@@ -138,18 +138,18 @@ export const getTurkeyRegions = (): Region[] => {
 
     const workers = 20 + Math.floor(Math.random() * 15);
     const youth = 15 + Math.floor(Math.random() * 15);
-    const nationalists = 10 + Math.floor(Math.random() * 15);
-    const liberals = 8 + Math.floor(Math.random() * 10);
+    const Nationalists = 10 + Math.floor(Math.random() * 15);
+    const Liberals = 8 + Math.floor(Math.random() * 10);
     const traditionalists = 10 + Math.floor(Math.random() * 20);
-    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
 
     const voterDistribution = {
-      'İşçiler': workers,
-      'Gençler': youth,
-      'Nationalistler': nationalists,
-      'Liberaller': liberals,
-      'Gelenekçiler': traditionalists,
-      'Esnaflar': Math.max(2, shopkeepers),
+      'Workers': workers,
+      'Youth': youth,
+      'Nationalists': Nationalists,
+      'Liberals': Liberals,
+      'Traditionalists': traditionalists,
+      'Shopkeepers': Math.max(2, shopkeepers),
     };
 
     const isEast = ['DEM'].includes(prov.winner) || ['Diyarbakır', 'Van', 'Mardin', 'Batman', 'Siirt', 'Hakkari', 'Şırnak'].includes(prov.name);
@@ -264,18 +264,18 @@ export const getGermanyRegions = (): Region[] => {
 
     const workers = 18 + Math.floor(Math.random() * 15);
     const youth = 16 + Math.floor(Math.random() * 15);
-    const nationalists = 8 + Math.floor(Math.random() * 12);
-    const liberals = 12 + Math.floor(Math.random() * 10);
+    const Nationalists = 8 + Math.floor(Math.random() * 12);
+    const Liberals = 12 + Math.floor(Math.random() * 10);
     const traditionalists = 12 + Math.floor(Math.random() * 15);
-    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
 
     const voterDistribution = {
-      'İşçiler': workers,
-      'Gençler': youth,
-      'Nationalistler': nationalists,
-      'Liberaller': liberals,
-      'Gelenekçiler': traditionalists,
-      'Esnaflar': Math.max(2, shopkeepers),
+      'Workers': workers,
+      'Youth': youth,
+      'Nationalists': Nationalists,
+      'Liberals': Liberals,
+      'Traditionalists': traditionalists,
+      'Shopkeepers': Math.max(2, shopkeepers),
     };
 
     const isEast = ['Brandenburg', 'Mecklenburg-Vorpommern', 'Sachsen', 'Sachsen-Anhalt', 'Thüringen'].includes(spec.name);
@@ -389,18 +389,18 @@ export const getUSRegions = (): Region[] => {
 
     const workers = 15 + Math.floor(Math.random() * 15);
     const youth = 15 + Math.floor(Math.random() * 15);
-    const nationalists = 10 + Math.floor(Math.random() * 15);
-    const liberals = 15 + Math.floor(Math.random() * 10);
+    const Nationalists = 10 + Math.floor(Math.random() * 15);
+    const Liberals = 15 + Math.floor(Math.random() * 10);
     const traditionalists = 10 + Math.floor(Math.random() * 15);
-    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
 
     const voterDistribution = {
-      'İşçiler': workers,
-      'Gençler': youth,
-      'Nationalistler': nationalists,
-      'Liberaller': liberals,
-      'Gelenekçiler': traditionalists,
-      'Esnaflar': Math.max(2, shopkeepers),
+      'Workers': workers,
+      'Youth': youth,
+      'Nationalists': Nationalists,
+      'Liberals': Liberals,
+      'Traditionalists': traditionalists,
+      'Shopkeepers': Math.max(2, shopkeepers),
     };
 
     const normalized = spec.name.toLowerCase()
@@ -427,17 +427,17 @@ export const getUSRegions = (): Region[] => {
 const makeVoterGroup = (
   workers: number,
   youth: number,
-  nationalists: number,
-  liberals: number,
+  Nationalists: number,
+  Liberals: number,
   traditionalists: number,
   shopkeepers: number
 ): Record<string, number> => ({
-  'İşçiler': workers,
-  'Gençler': youth,
-  'Nationalistler': nationalists,
-  'Liberaller': liberals,
-  'Gelenekçiler': traditionalists,
-  'Esnaflar': shopkeepers,
+  'Workers': workers,
+  'Youth': youth,
+  'Nationalists': Nationalists,
+  'Liberals': Liberals,
+  'Traditionalists': traditionalists,
+  'Shopkeepers': shopkeepers,
 });
 
 // Mock Bills for countries
@@ -448,7 +448,7 @@ const BILL_POOL = [
     category: 'Economy',
     budgetCost: 450000,
     influenceMod: 15,
-    voterImpacts: { 'İşçiler': 8, 'Gençler': 2, 'Esnaflar': -4, 'Liberaller': -5, 'Nationalistler': 2, 'Gelenekçiler': 4 }
+    voterImpacts: { 'Workers': 8, 'Youth': 2, 'Shopkeepers': -4, 'Liberals': -5, 'Nationalists': 2, 'Traditionalists': 4 }
   },
   {
     title: 'Digital Freedoms & Social Media Law',
@@ -456,7 +456,7 @@ const BILL_POOL = [
     category: 'Freedoms',
     budgetCost: 50000,
     influenceMod: 25,
-    voterImpacts: { 'İşçiler': 1, 'Gençler': 12, 'Esnaflar': 2, 'Liberaller': 10, 'Nationalistler': -4, 'Gelenekçiler': -8 }
+    voterImpacts: { 'Workers': 1, 'Youth': 12, 'Shopkeepers': 2, 'Liberals': 10, 'Nationalists': -4, 'Traditionalists': -8 }
   },
   {
     title: 'National Defense Industry Incentive Package',
@@ -464,7 +464,7 @@ const BILL_POOL = [
     category: 'Security',
     budgetCost: 750000,
     influenceMod: 30,
-    voterImpacts: { 'İşçiler': 4, 'Gençler': -2, 'Esnaflar': 2, 'Liberaller': -6, 'Nationalistler': 15, 'Gelenekçiler': 8 }
+    voterImpacts: { 'Workers': 4, 'Youth': -2, 'Shopkeepers': 2, 'Liberals': -6, 'Nationalists': 15, 'Traditionalists': 8 }
   },
   {
     title: 'Green Energy Transition Plan',
@@ -472,7 +472,7 @@ const BILL_POOL = [
     category: 'Environment',
     budgetCost: 300000,
     influenceMod: 18,
-    voterImpacts: { 'İşçiler': -3, 'Gençler': 10, 'Esnaflar': -5, 'Liberaller': 8, 'Nationalistler': -2, 'Gelenekçiler': -4 }
+    voterImpacts: { 'Workers': -3, 'Youth': 10, 'Shopkeepers': -5, 'Liberals': 8, 'Nationalists': -2, 'Traditionalists': -4 }
   },
   {
     title: 'Small Business Tax Relief Bill',
@@ -480,7 +480,7 @@ const BILL_POOL = [
     category: 'Economy',
     budgetCost: 250000,
     influenceMod: 20,
-    voterImpacts: { 'İşçiler': 2, 'Gençler': 3, 'Esnaflar': 15, 'Liberaller': 6, 'Nationalistler': 2, 'Gelenekçiler': 5 }
+    voterImpacts: { 'Workers': 2, 'Youth': 3, 'Shopkeepers': 15, 'Liberals': 6, 'Nationalists': 2, 'Traditionalists': 5 }
   },
   {
     title: 'Comprehensive Education Reform',
@@ -488,7 +488,7 @@ const BILL_POOL = [
     category: 'Education',
     budgetCost: 600000,
     influenceMod: 22,
-    voterImpacts: { 'İşçiler': 6, 'Gençler': 14, 'Esnaflar': 4, 'Liberaller': 8, 'Nationalistler': 5, 'Gelenekçiler': -2 }
+    voterImpacts: { 'Workers': 6, 'Youth': 14, 'Shopkeepers': 4, 'Liberals': 8, 'Nationalists': 5, 'Traditionalists': -2 }
   },
   {
     title: 'Universal Healthcare Expansion',
@@ -496,7 +496,7 @@ const BILL_POOL = [
     category: 'Healthcare',
     budgetCost: 850000,
     influenceMod: 28,
-    voterImpacts: { 'İşçiler': 12, 'Gençler': 5, 'Esnaflar': 6, 'Liberaller': -4, 'Nationalistler': 3, 'Gelenekçiler': 7 }
+    voterImpacts: { 'Workers': 12, 'Youth': 5, 'Shopkeepers': 6, 'Liberals': -4, 'Nationalists': 3, 'Traditionalists': 7 }
   },
   {
     title: 'Strict Immigration Control Act',
@@ -504,7 +504,7 @@ const BILL_POOL = [
     category: 'Security',
     budgetCost: 150000,
     influenceMod: 35,
-    voterImpacts: { 'İşçiler': 5, 'Gençler': -8, 'Esnaflar': 4, 'Liberaller': -12, 'Nationalistler': 18, 'Gelenekçiler': 10 }
+    voterImpacts: { 'Workers': 5, 'Youth': -8, 'Shopkeepers': 4, 'Liberals': -12, 'Nationalists': 18, 'Traditionalists': 10 }
   },
   {
     title: 'Urban Housing Development Initiative',
@@ -512,7 +512,7 @@ const BILL_POOL = [
     category: 'Infrastructure',
     budgetCost: 550000,
     influenceMod: 16,
-    voterImpacts: { 'İşçiler': 10, 'Gençler': 8, 'Esnaflar': 5, 'Liberaller': 2, 'Nationalistler': 0, 'Gelenekçiler': 2 }
+    voterImpacts: { 'Workers': 10, 'Youth': 8, 'Shopkeepers': 5, 'Liberals': 2, 'Nationalists': 0, 'Traditionalists': 2 }
   },
   {
     title: 'Free Trade Agreement Ratification',
@@ -520,7 +520,7 @@ const BILL_POOL = [
     category: 'Economy',
     budgetCost: 0,
     influenceMod: 12,
-    voterImpacts: { 'İşçiler': -6, 'Gençler': 4, 'Esnaflar': -2, 'Liberaller': 15, 'Nationalistler': -8, 'Gelenekçiler': -5 }
+    voterImpacts: { 'Workers': -6, 'Youth': 4, 'Shopkeepers': -2, 'Liberals': 15, 'Nationalists': -8, 'Traditionalists': -5 }
   },
   {
     title: 'Clean Water & Forest Protection Act',
@@ -528,7 +528,7 @@ const BILL_POOL = [
     category: 'Environment',
     budgetCost: 180000,
     influenceMod: 10,
-    voterImpacts: { 'İşçiler': 2, 'Gençler': 10, 'Esnaflar': -2, 'Liberaller': 5, 'Nationalistler': 4, 'Gelenekçiler': 2 }
+    voterImpacts: { 'Workers': 2, 'Youth': 10, 'Shopkeepers': -2, 'Liberals': 5, 'Nationalists': 4, 'Traditionalists': 2 }
   },
   {
     title: 'AI and High-Tech Incentive Law',
@@ -536,7 +536,7 @@ const BILL_POOL = [
     category: 'Technology',
     budgetCost: 350000,
     influenceMod: 20,
-    voterImpacts: { 'İşçiler': 0, 'Gençler': 15, 'Esnaflar': 4, 'Liberaller': 12, 'Nationalistler': 5, 'Gelenekçiler': -4 }
+    voterImpacts: { 'Workers': 0, 'Youth': 15, 'Shopkeepers': 4, 'Liberals': 12, 'Nationalists': 5, 'Traditionalists': -4 }
   }
 ];
 
@@ -550,8 +550,8 @@ const createBills = (countryId: string): Bill[] => {
     id: `${countryId}_bill_${index + 1}`,
     title: bill.title,
     description: bill.description,
-    category: bill.category,
-    status: 'Bekliyor',
+    category: bill.category as any,
+    status: 'Pending',
     budgetCost: bill.budgetCost,
     influenceMod: bill.influenceMod,
     yesVotesPercentage: 0,
@@ -684,12 +684,12 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     population: '214 Million',
     primaryColor: '#16a34a', // Tailwind green-600
     rivals: [
-      { id: 'PT', name: 'Workers\' Party (PT)', leader: 'Lula da Silva', ideology: 'Sosyal Demokrat', symbol: 'Star', color: '#c21807', baseSupport: 29, photo: 'https://th.bing.com/th/id/OIP.x2yptB1cDjH36fVRRH3VzwHaEb?w=300&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'PL', name: 'Liberal Party (PL)', leader: 'Jair Bolsonaro', ideology: 'Aşırı Sağ', symbol: 'Shield', color: '#22409A', baseSupport: 30, photo: 'https://www.bing.com/th/id/OIP.2sLRomhOdVMhC3km9TgeTgHaHa?w=180&h=180&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2' },
-      { id: 'UNIAO', name: 'União Brasil', leader: 'Antonio Rueda', ideology: 'Muhafazakar', symbol: 'Users', color: '#0052A5', baseSupport: 15, photo: 'https://th.bing.com/th/id/OIP.hRVKfsEj_QqEJmXSZu-drAHaEy?w=252&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'MDB', name: 'MDB', leader: 'Baleia Rossi', ideology: 'Merkez', symbol: 'Compass', color: '#00A859', baseSupport: 11, photo: 'https://th.bing.com/th/id/OIP._qa1PZ2MmFr5pOlCUImQ3gHaE2?w=271&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'PSD', name: 'PSD', leader: 'Gilberto Kassab', ideology: 'Merkez', symbol: 'Globe', color: '#FFA500', baseSupport: 10, photo: 'https://th.bing.com/th/id/OIP.EwUpQAPDpFISnZancWJpBwHaE8?w=273&h=182&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'PP', name: 'Progressistas', leader: 'Ciro Nogueira', ideology: 'Muhafazakar', symbol: 'Landmark', color: '#0057A0', baseSupport: 5, photo: 'https://th.bing.com/th/id/OIP._3KxON20q7QIRaCUhbqqKAHaE8?w=277&h=185&c=7&r=0&o=7&pid=1.7&rm=3' }
+      { id: 'PT', name: 'Workers\' Party (PT)', leader: 'Lula da Silva', ideology: 'Social Democrat', symbol: 'Star', color: '#c21807', baseSupport: 29, photo: 'https://th.bing.com/th/id/OIP.x2yptB1cDjH36fVRRH3VzwHaEb?w=300&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'PL', name: 'Liberal Party (PL)', leader: 'Jair Bolsonaro', ideology: 'Far Right', symbol: 'Shield', color: '#22409A', baseSupport: 30, photo: 'https://www.bing.com/th/id/OIP.2sLRomhOdVMhC3km9TgeTgHaHa?w=180&h=180&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2' },
+      { id: 'UNIAO', name: 'União Brasil', leader: 'Antonio Rueda', ideology: 'Conservative', symbol: 'Users', color: '#0052A5', baseSupport: 15, photo: 'https://th.bing.com/th/id/OIP.hRVKfsEj_QqEJmXSZu-drAHaEy?w=252&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'MDB', name: 'MDB', leader: 'Baleia Rossi', ideology: 'Centrist', symbol: 'Compass', color: '#00A859', baseSupport: 11, photo: 'https://th.bing.com/th/id/OIP._qa1PZ2MmFr5pOlCUImQ3gHaE2?w=271&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'PSD', name: 'PSD', leader: 'Gilberto Kassab', ideology: 'Centrist', symbol: 'Globe', color: '#FFA500', baseSupport: 10, photo: 'https://th.bing.com/th/id/OIP.EwUpQAPDpFISnZancWJpBwHaE8?w=273&h=182&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'PP', name: 'Progressistas', leader: 'Ciro Nogueira', ideology: 'Conservative', symbol: 'Landmark', color: '#0057A0', baseSupport: 5, photo: 'https://th.bing.com/th/id/OIP._3KxON20q7QIRaCUhbqqKAHaE8?w=277&h=185&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
     regions: [
       { id: 'Acre', name: 'Acre', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":0.4,"PL":83.2,"UNIAO":0.9,"MDB":5.8,"PSD":1.7,"PP":8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
@@ -735,61 +735,61 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     population: '125 Million',
     primaryColor: '#ef4444', // Tailwind red-500
     rivals: [
-      { id: 'LDP', name: 'LDP', leader: 'Shigeru Ishiba', ideology: 'Muhafazakar', symbol: 'Building', color: '#52B848', baseSupport: 26, photo: 'https://th.bing.com/th/id/OIP.aG6EjA34Q-xI3FgZQPkrDQHaE8?w=278&h=185&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'CDP', name: 'CDP', leader: 'Yoshihiko Noda', ideology: 'Sosyal Demokrat', symbol: 'Users', color: '#004098', baseSupport: 21, photo: 'https://th.bing.com/th/id/OIP.vzuIBz2UaUE26Z3U5OlvqwHaJ4?w=150&h=200&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'KOMEITO', name: 'Komeito', leader: 'Keiichi Ishii', ideology: 'Sosyal Muhafazakar', symbol: 'Sun', color: '#EB6EA5', baseSupport: 10, photo: 'https://th.bing.com/th/id/OIP.326mM8yNsnZex5CVpO7oPwHaFr?w=210&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'ISHIN', name: 'Ishin no Kai', leader: 'Nobuyuki Baba', ideology: 'Milliyetçi', symbol: 'Shield', color: '#B6D300', baseSupport: 9, photo: 'https://th.bing.com/th/id/OIP.mUTZIzPxyV40k6XOoiwwCwHaE8?w=264&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'DPFP', name: 'DPFP', leader: 'Yuichiro Tamaki', ideology: 'Merkez', symbol: 'Bird', color: '#F6B132', baseSupport: 7, photo: 'https://th.bing.com/th/id/OIP.qTp0c0jdUr7oqIqSSZyQ-gHaE7?w=239&h=187&c=7&r=0&o=7&pid=1.7&rm=3' },
-      { id: 'JCP', name: 'JCP', leader: 'Tomoko Tamura', ideology: 'Komünist', symbol: 'Star', color: '#DB001C', baseSupport: 6, photo: 'https://th.bing.com/th/id/OIP._SMDrNs9CjSBMW5Fl3-PbgHaF3?w=219&h=180&c=7&r=0&o=7&pid=1.7&rm=3' }
+      { id: 'LDP', name: 'LDP', leader: 'Shigeru Ishiba', ideology: 'Conservative', symbol: 'Building', color: '#52B848', baseSupport: 26, photo: 'https://th.bing.com/th/id/OIP.aG6EjA34Q-xI3FgZQPkrDQHaE8?w=278&h=185&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'CDP', name: 'CDP', leader: 'Yoshihiko Noda', ideology: 'Social Democrat', symbol: 'Users', color: '#004098', baseSupport: 21, photo: 'https://th.bing.com/th/id/OIP.vzuIBz2UaUE26Z3U5OlvqwHaJ4?w=150&h=200&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'KOMEITO', name: 'KOMEITO', leader: 'Keiichi Ishii', ideology: 'Social Conservative', symbol: 'Sun', color: '#EB6EA5', baseSupport: 10, photo: 'https://th.bing.com/th/id/OIP.326mM8yNsnZex5CVpO7oPwHaFr?w=210&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'ISHIN', name: 'ISHIN', leader: 'Nobuyuki Baba', ideology: 'Nationalist', symbol: 'Shield', color: '#B6D300', baseSupport: 9, photo: 'https://th.bing.com/th/id/OIP.mUTZIzPxyV40k6XOoiwwCwHaE8?w=264&h=180&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'DPFP', name: 'DPFP', leader: 'Yuichiro Tamaki', ideology: 'Centrist', symbol: 'Bird', color: '#F6B132', baseSupport: 7, photo: 'https://th.bing.com/th/id/OIP.qTp0c0jdUr7oqIqSSZyQ-gHaE7?w=239&h=187&c=7&r=0&o=7&pid=1.7&rm=3' },
+      { id: 'JCP', name: 'JCP', leader: 'Tomoko Tamura', ideology: 'Communist', symbol: 'Star', color: '#DB001C', baseSupport: 6, photo: 'https://th.bing.com/th/id/OIP._SMDrNs9CjSBMW5Fl3-PbgHaF3?w=219&h=180&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
     regions: [
-      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.4,"CDP":1.5,"Komeito":1.7,"Ishin no Kai":6.1,"DPFP":3.3,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.5,"CDP":5.2,"Komeito":2.3,"Ishin no Kai":7.2,"DPFP":5.4,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":0.2,"Komeito":5,"Ishin no Kai":4,"DPFP":2.9,"JCP":5.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.3,"CDP":2,"Komeito":2.6,"Ishin no Kai":7.3,"DPFP":3.1,"JCP":1.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.5,"CDP":2.9,"Komeito":6.2,"Ishin no Kai":5.4,"DPFP":1.3,"JCP":1.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.3,"CDP":5.5,"Komeito":3.8,"Ishin no Kai":2.9,"DPFP":3.3,"JCP":0.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":3.8,"Komeito":3.5,"Ishin no Kai":3.1,"DPFP":2.1,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.6,"CDP":4.6,"Komeito":1.5,"Ishin no Kai":3.4,"DPFP":6.1,"JCP":0.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":70.7,"CDP":6.3,"Komeito":4.7,"Ishin no Kai":6.2,"DPFP":5.9,"JCP":6.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.4,"CDP":6.4,"Komeito":6,"Ishin no Kai":4.2,"DPFP":0.2,"JCP":4.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.7,"CDP":6.5,"Komeito":6.6,"Ishin no Kai":3.3,"DPFP":4,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.3,"CDP":77.6,"Komeito":2.9,"Ishin no Kai":2.6,"DPFP":5.9,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":7.1,"CDP":5.3,"Komeito":3.3,"Ishin no Kai":75.1,"DPFP":3.4,"JCP":5.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'Ishin no Kai' },
-      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":80.9,"CDP":1.5,"Komeito":6.7,"Ishin no Kai":4.4,"DPFP":6,"JCP":0.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":3.6,"Komeito":5.7,"Ishin no Kai":0.6,"DPFP":1.3,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.4,"CDP":87.6,"Komeito":3.8,"Ishin no Kai":1,"DPFP":1.2,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76.1,"CDP":2.8,"Komeito":5.8,"Ishin no Kai":7.6,"DPFP":6.2,"JCP":1.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":0.5,"Komeito":5.7,"Ishin no Kai":4.5,"DPFP":2.7,"JCP":2.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.7,"CDP":3.9,"Komeito":3.4,"Ishin no Kai":2.5,"DPFP":4.5,"JCP":6.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.1,"CDP":7.2,"Komeito":6.3,"Ishin no Kai":3.9,"DPFP":3.6,"JCP":2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":2.5,"Komeito":1.8,"Ishin no Kai":2,"DPFP":0.5,"JCP":6.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":81,"CDP":3,"Komeito":0.7,"Ishin no Kai":6.5,"DPFP":2,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83,"CDP":7.7,"Komeito":1.3,"Ishin no Kai":0.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74,"CDP":3.8,"Komeito":5.9,"Ishin no Kai":4.4,"DPFP":6.9,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.5,"CDP":2.8,"Komeito":5.7,"Ishin no Kai":2.8,"DPFP":1.5,"JCP":2.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":6.8,"CDP":84.1,"Komeito":1.6,"Ishin no Kai":0.1,"DPFP":0.7,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.4,"CDP":3.4,"Komeito":6.6,"Ishin no Kai":6.7,"DPFP":3.4,"JCP":5.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.1,"CDP":0.6,"Komeito":0.2,"Ishin no Kai":6,"DPFP":3.4,"JCP":7.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85,"CDP":1,"Komeito":1.1,"Ishin no Kai":5.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":73.3,"CDP":4.2,"Komeito":4.3,"Ishin no Kai":6.1,"DPFP":5.5,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.9,"CDP":7.5,"Komeito":3,"Ishin no Kai":5.1,"DPFP":2,"JCP":6.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.5,"CDP":78,"Komeito":0.9,"Ishin no Kai":7.4,"DPFP":3.1,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.9,"CDP":0.3,"Komeito":4.3,"Ishin no Kai":84.8,"DPFP":0.8,"JCP":7.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'Ishin no Kai' },
-      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.6,"Komeito":2.1,"Ishin no Kai":0.8,"DPFP":1.9,"JCP":7.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"Komeito":7.6,"Ishin no Kai":5.7,"DPFP":2.9,"JCP":1.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.3,"CDP":4,"Komeito":5,"Ishin no Kai":7.6,"DPFP":1.6,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":1.1,"Komeito":6.7,"Ishin no Kai":3.1,"DPFP":3.7,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76,"CDP":6.2,"Komeito":2,"Ishin no Kai":1.4,"DPFP":6.4,"JCP":8.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.3,"CDP":4.2,"Komeito":2.2,"Ishin no Kai":2.4,"DPFP":7.1,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"Komeito":6.2,"Ishin no Kai":2.2,"DPFP":6.2,"JCP":3.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.8,"CDP":1.2,"Komeito":2.7,"Ishin no Kai":7.7,"DPFP":1.8,"JCP":2.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.6,"CDP":3.7,"Komeito":1.5,"Ishin no Kai":1.3,"DPFP":7.3,"JCP":3.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.3,"Komeito":4.6,"Ishin no Kai":1,"DPFP":4.8,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":3.6,"Komeito":2.7,"Ishin no Kai":1.3,"DPFP":2,"JCP":3.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":7.4,"Komeito":1.7,"Ishin no Kai":5.6,"DPFP":1.6,"JCP":4.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":72.4,"CDP":5,"Komeito":6.8,"Ishin no Kai":6.4,"DPFP":2.8,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.8,"CDP":7.6,"Komeito":3.8,"Ishin no Kai":6.2,"DPFP":2.7,"JCP":3.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
+      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.4,"CDP":1.5,"KOMEITO":1.7,"ISHIN":6.1,"DPFP":3.3,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.5,"CDP":5.2,"KOMEITO":2.3,"ISHIN":7.2,"DPFP":5.4,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":0.2,"KOMEITO":5,"ISHIN":4,"DPFP":2.9,"JCP":5.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.3,"CDP":2,"KOMEITO":2.6,"ISHIN":7.3,"DPFP":3.1,"JCP":1.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.5,"CDP":2.9,"KOMEITO":6.2,"ISHIN":5.4,"DPFP":1.3,"JCP":1.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.3,"CDP":5.5,"KOMEITO":3.8,"ISHIN":2.9,"DPFP":3.3,"JCP":0.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":3.8,"KOMEITO":3.5,"ISHIN":3.1,"DPFP":2.1,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.6,"CDP":4.6,"KOMEITO":1.5,"ISHIN":3.4,"DPFP":6.1,"JCP":0.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":70.7,"CDP":6.3,"KOMEITO":4.7,"ISHIN":6.2,"DPFP":5.9,"JCP":6.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.4,"CDP":6.4,"KOMEITO":6,"ISHIN":4.2,"DPFP":0.2,"JCP":4.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.7,"CDP":6.5,"KOMEITO":6.6,"ISHIN":3.3,"DPFP":4,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.3,"CDP":77.6,"KOMEITO":2.9,"ISHIN":2.6,"DPFP":5.9,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":7.1,"CDP":5.3,"KOMEITO":3.3,"ISHIN":75.1,"DPFP":3.4,"JCP":5.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
+      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":80.9,"CDP":1.5,"KOMEITO":6.7,"ISHIN":4.4,"DPFP":6,"JCP":0.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":3.6,"KOMEITO":5.7,"ISHIN":0.6,"DPFP":1.3,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.4,"CDP":87.6,"KOMEITO":3.8,"ISHIN":1,"DPFP":1.2,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76.1,"CDP":2.8,"KOMEITO":5.8,"ISHIN":7.6,"DPFP":6.2,"JCP":1.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":0.5,"KOMEITO":5.7,"ISHIN":4.5,"DPFP":2.7,"JCP":2.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.7,"CDP":3.9,"KOMEITO":3.4,"ISHIN":2.5,"DPFP":4.5,"JCP":6.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.1,"CDP":7.2,"KOMEITO":6.3,"ISHIN":3.9,"DPFP":3.6,"JCP":2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":2.5,"KOMEITO":1.8,"ISHIN":2,"DPFP":0.5,"JCP":6.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":81,"CDP":3,"KOMEITO":0.7,"ISHIN":6.5,"DPFP":2,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83,"CDP":7.7,"KOMEITO":1.3,"ISHIN":0.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74,"CDP":3.8,"KOMEITO":5.9,"ISHIN":4.4,"DPFP":6.9,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.5,"CDP":2.8,"KOMEITO":5.7,"ISHIN":2.8,"DPFP":1.5,"JCP":2.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":6.8,"CDP":84.1,"KOMEITO":1.6,"ISHIN":0.1,"DPFP":0.7,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.4,"CDP":3.4,"KOMEITO":6.6,"ISHIN":6.7,"DPFP":3.4,"JCP":5.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.1,"CDP":0.6,"KOMEITO":0.2,"ISHIN":6,"DPFP":3.4,"JCP":7.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85,"CDP":1,"KOMEITO":1.1,"ISHIN":5.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":73.3,"CDP":4.2,"KOMEITO":4.3,"ISHIN":6.1,"DPFP":5.5,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.9,"CDP":7.5,"KOMEITO":3,"ISHIN":5.1,"DPFP":2,"JCP":6.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.5,"CDP":78,"KOMEITO":0.9,"ISHIN":7.4,"DPFP":3.1,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.9,"CDP":0.3,"KOMEITO":4.3,"ISHIN":84.8,"DPFP":0.8,"JCP":7.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
+      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.6,"KOMEITO":2.1,"ISHIN":0.8,"DPFP":1.9,"JCP":7.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"KOMEITO":7.6,"ISHIN":5.7,"DPFP":2.9,"JCP":1.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.3,"CDP":4,"KOMEITO":5,"ISHIN":7.6,"DPFP":1.6,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":1.1,"KOMEITO":6.7,"ISHIN":3.1,"DPFP":3.7,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76,"CDP":6.2,"KOMEITO":2,"ISHIN":1.4,"DPFP":6.4,"JCP":8.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.3,"CDP":4.2,"KOMEITO":2.2,"ISHIN":2.4,"DPFP":7.1,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"KOMEITO":6.2,"ISHIN":2.2,"DPFP":6.2,"JCP":3.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.8,"CDP":1.2,"KOMEITO":2.7,"ISHIN":7.7,"DPFP":1.8,"JCP":2.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.6,"CDP":3.7,"KOMEITO":1.5,"ISHIN":1.3,"DPFP":7.3,"JCP":3.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.3,"KOMEITO":4.6,"ISHIN":1,"DPFP":4.8,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":3.6,"KOMEITO":2.7,"ISHIN":1.3,"DPFP":2,"JCP":3.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":7.4,"KOMEITO":1.7,"ISHIN":5.6,"DPFP":1.6,"JCP":4.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":72.4,"CDP":5,"KOMEITO":6.8,"ISHIN":6.4,"DPFP":2.8,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.8,"CDP":7.6,"KOMEITO":3.8,"ISHIN":6.2,"DPFP":2.7,"JCP":3.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
     ],
     bills: createBills('JP'),
     campaignTurns: 53,
@@ -854,9 +854,9 @@ export const SPEECH_CARDS_POOL: SpeechCard[] = [
     topic: 'Economy',
     question: 'How do you plan to tackle the rising inflation rates affecting daily goods?',
     choices: [
-      { text: 'Increase subsidies for essential goods', impactText: 'Appeals to lower class, costs high budget', voterImpacts: { lowerClass: 5, upperClass: -2 }, budgetCost: 50000, influenceMod: 0 },
-      { text: 'Implement strict fiscal austerity measures', impactText: 'Appeals to upper class and conservatives, lowers overall influence', voterImpacts: { upperClass: 5, lowerClass: -5, conservatives: 3 }, budgetCost: 0, influenceMod: -10 },
-      { text: 'Focus on domestic production incentives', impactText: 'Balanced approach, moderate cost', voterImpacts: { lowerClass: 2, upperClass: 2 }, budgetCost: 20000, influenceMod: 5 }
+      { text: 'Increase subsidies for essential goods', impactText: 'Appeals to workers, costs high budget', voterImpacts: { Workers: 5, Shopkeepers: -2 }, budgetCost: 50000, influenceMod: 0 },
+      { text: 'Implement strict fiscal austerity measures', impactText: 'Appeals to shopkeepers and Traditionalists, lowers overall influence', voterImpacts: { Shopkeepers: 5, Workers: -5, Traditionalists: 3 }, budgetCost: 0, influenceMod: -10 },
+      { text: 'Focus on domestic production incentives', impactText: 'Balanced approach, moderate cost', voterImpacts: { Workers: 2, Shopkeepers: 2 }, budgetCost: 20000, influenceMod: 5 }
     ]
   },
   {
@@ -864,9 +864,9 @@ export const SPEECH_CARDS_POOL: SpeechCard[] = [
     topic: 'National Security',
     question: 'With increasing border tensions, what is your stance on military spending?',
     choices: [
-      { text: 'Increase military budget significantly', impactText: 'Strongly appeals to nationalists and conservatives', voterImpacts: { nationalists: 6, conservatives: 4, liberals: -3 }, budgetCost: 60000, influenceMod: 10 },
-      { text: 'Maintain current budget, focus on efficiency', impactText: 'Appeals to moderates', voterImpacts: { liberals: 2, conservatives: -2 }, budgetCost: 0, influenceMod: 5 },
-      { text: 'Reduce military spending, fund social programs', impactText: 'Appeals to liberals and lower class', voterImpacts: { liberals: 5, lowerClass: 4, nationalists: -6 }, budgetCost: -20000, influenceMod: 0 }
+      { text: 'Increase military budget significantly', impactText: 'Strongly appeals to Nationalists and Traditionalists', voterImpacts: { Nationalists: 6, Traditionalists: 4, Liberals: -3 }, budgetCost: 60000, influenceMod: 10 },
+      { text: 'Maintain current budget, focus on efficiency', impactText: 'Appeals to moderates', voterImpacts: { Liberals: 2, Traditionalists: -2 }, budgetCost: 0, influenceMod: 5 },
+      { text: 'Reduce military spending, fund social programs', impactText: 'Appeals to Liberals and workers', voterImpacts: { Liberals: 5, Workers: 4, Nationalists: -6 }, budgetCost: -20000, influenceMod: 0 }
     ]
   },
   {
@@ -874,9 +874,9 @@ export const SPEECH_CARDS_POOL: SpeechCard[] = [
     topic: 'Social Policy',
     question: 'What is your vision for the future of our healthcare system?',
     choices: [
-      { text: 'Push for universal free healthcare', impactText: 'High cost, massive appeal to lower/middle class', voterImpacts: { lowerClass: 6, upperClass: -3, liberals: 4 }, budgetCost: 80000, influenceMod: 15 },
-      { text: 'Privatize aspects of the healthcare system', impactText: 'Appeals to upper class and conservatives, generates revenue', voterImpacts: { upperClass: 5, lowerClass: -5, conservatives: 3 }, budgetCost: -30000, influenceMod: -5 },
-      { text: 'Increase funding for rural clinics only', impactText: 'Moderate cost, appeals to middle class', voterImpacts: { middleClass: 4 }, budgetCost: 25000, influenceMod: 5 }
+      { text: 'Push for universal free healthcare', impactText: 'High cost, massive appeal to workers/shopkeepers', voterImpacts: { Workers: 6, Shopkeepers: -3, Liberals: 4 }, budgetCost: 80000, influenceMod: 15 },
+      { text: 'Privatize aspects of the healthcare system', impactText: 'Appeals to shopkeepers and Traditionalists, generates revenue', voterImpacts: { Shopkeepers: 5, Workers: -5, Traditionalists: 3 }, budgetCost: -30000, influenceMod: -5 },
+      { text: 'Increase funding for rural clinics only', impactText: 'Moderate cost, appeals to shopkeepers', voterImpacts: { Shopkeepers: 4 }, budgetCost: 25000, influenceMod: 5 }
     ]
   },
   {
@@ -884,9 +884,9 @@ export const SPEECH_CARDS_POOL: SpeechCard[] = [
     topic: 'Environment',
     question: 'How will you balance industrial growth with environmental protection?',
     choices: [
-      { text: 'Implement strict green energy regulations', impactText: 'Appeals to liberals, costs budget, angers conservatives', voterImpacts: { liberals: 5, conservatives: -4, upperClass: -2 }, budgetCost: 30000, influenceMod: 5 },
-      { text: 'Prioritize industrial output and jobs', impactText: 'Appeals to lower class and conservatives, angers liberals', voterImpacts: { lowerClass: 4, conservatives: 3, liberals: -5 }, budgetCost: 0, influenceMod: 5 },
-      { text: 'Subsidize clean technology research', impactText: 'High cost, balanced appeal', voterImpacts: { liberals: 3, middleClass: 2 }, budgetCost: 40000, influenceMod: 10 }
+      { text: 'Implement strict green energy regulations', impactText: 'Appeals to Liberals, costs budget, angers Traditionalists', voterImpacts: { Liberals: 5, Traditionalists: -4, Shopkeepers: -2 }, budgetCost: 30000, influenceMod: 5 },
+      { text: 'Prioritize industrial output and jobs', impactText: 'Appeals to workers and Traditionalists, angers Liberals', voterImpacts: { Workers: 4, Traditionalists: 3, Liberals: -5 }, budgetCost: 0, influenceMod: 5 },
+      { text: 'Subsidize clean technology research', impactText: 'High cost, balanced appeal', voterImpacts: { Liberals: 3, Shopkeepers: 2 }, budgetCost: 40000, influenceMod: 10 }
     ]
   }
 ];
