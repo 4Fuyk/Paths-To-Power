@@ -267,10 +267,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       style: (feature) => {
         const normName = normalizeName(getFeatureName(feature));
         let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId);
+        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
         if (!matchRegion) {
           matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-          if (matchRegion) regionId = matchRegion.id;
+        }
+        if (matchRegion) {
+          regionId = matchRegion.id;
         }
 
         const status = matchRegion ? regionStatusRef.current[matchRegion.id] : null;
@@ -285,10 +287,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       onEachFeature: (feature, layer) => {
         const normName = normalizeName(getFeatureName(feature));
         let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId);
+        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
         if (!matchRegion) {
           matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-          if (matchRegion) regionId = matchRegion.id;
+        }
+        if (matchRegion) {
+          regionId = matchRegion.id;
         }
         
         if (matchRegion) {
@@ -324,10 +328,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       geoJsonLayerRef.current.setStyle((feature: any) => {
         const normName = normalizeName(getFeatureName(feature));
         let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId);
+        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
         if (!matchRegion) {
           matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-          if (matchRegion) regionId = matchRegion.id;
+        }
+        if (matchRegion) {
+          regionId = matchRegion.id;
         }
 
         const status = matchRegion ? regionStatus[matchRegion.id] : null;

@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import { Country, Region, Party, VoterGroup, SpeechCard, SpeechChoice } from '../types';
-import { SPEECH_CARDS_POOL } from '../constants/countries';
+import { SPEECH_CARDS_POOL, getDeterministicMayorName } from '../constants/countries';
 import { 
   Megaphone, MapPin, Coins, Users, Landmark, 
   HelpCircle, BarChart3, ChevronRight, CheckCircle, Flame,
@@ -1026,17 +1026,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         }
       });
       
-      const mayorFullNames: Record<string, string[]> = {
-        CHP: ['Ahmet Yılmaz', 'Mustafa Demir', 'Kemal Şahin', 'Mehmet Kaya', 'Canan Kaftancıoğlu', 'Mansur Kutlu', 'Ali Seçkin', 'Ömer Faruk'],
-        AKP: ['Süleyman Çelik', 'Recep Aksoy', 'Hasan Doğan', 'Murat Kurum', 'Mehmet Özhaseki', 'Mehmet Şimşek', 'Ali İhsan Yavuz'],
-        MHP: ['Devlet Yanık', 'Semih Yalçın', 'Savaş Kalaycı', 'Yıldırım Filiz', 'Cengiz Ergün', 'İsmail Hakkı'],
-        DEM: ['Selahattin Kaya', 'Serra Bucak', 'Tuncer Bakır', 'Gülüstan Sönük', 'Ahmet Türk', 'Abdullah Zeydan'],
-        YRP: ['Suat Pamukçu', 'Doğan Aydal', 'Fatih Yazıcı', 'Kazım Arslan', 'Kasım Gülpınar', 'Mehmet Karaca']
-      };
-      
-      const candidates = mayorFullNames[winner] || ['Ahmet Yılmaz', 'Mustafa Demir', 'Kemal Şahin', 'Mehmet Kaya'];
-      const mayorIndex = Math.floor(myRandom(s + 1000) * candidates.length);
-      const mayorName = candidates[mayorIndex];
+      const mayorName = getDeterministicMayorName(name, country.id);
       
       return {
         name,
@@ -1196,6 +1186,29 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     
     return finalRing;
   };
+
+  
+const getPolygonCenter = (feat: any) => {
+  let minX = 180, maxX = -180, minY = 90, maxY = -90;
+  let pts = 0;
+  const processCoords = (coords: any[]) => {
+    if (typeof coords[0] === 'number') {
+      const lng = coords[0], lat = coords[1];
+      if (lng < minX) minX = lng;
+      if (lng > maxX) maxX = lng;
+      if (lat < minY) minY = lat;
+      if (lat > maxY) maxY = lat;
+      pts++;
+    } else {
+      coords.forEach(processCoords);
+    }
+  };
+  if (feat.geometry && feat.geometry.coordinates) {
+    processCoords(feat.geometry.coordinates);
+  }
+  if (pts === 0) return null;
+  return { lat: (minY + maxY) / 2, lng: (minX + maxX) / 2 };
+};
 
   const subdivideProvinceGeoJson = (feature: any, reg: Region, districts: any[]): any[] => {
     if (!feature.geometry || !feature.geometry.coordinates) return [];
@@ -1483,6 +1496,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
     if (turkeyMapInstanceRef.current) {
       const map = turkeyMapInstanceRef.current;
       try {
+         map.stop();
+      } catch(e) {}
+      try {
         map.closeTooltip();
       } catch (e) {}
       try {
@@ -1509,8 +1525,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
       } catch (e) {}
       try {
         const container = map.getContainer() as any;
-        if (container && container._leaflet_id) {
+        if (container) {
           map.remove();
+          container._leaflet_id = null;
         }
       } catch (e) {}
       turkeyMapInstanceRef.current = null;
@@ -1598,37 +1615,22 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
       }
     }
 
-    // Clear old layers/markers robustly
+        // Clear old layers/markers robustly
     try {
       map.closeTooltip();
     } catch (e) {}
-
     try {
       map.eachLayer((layer) => {
         if (layer !== turkeyTileLayerRef.current) {
-          // Unbind tooltips and close any active tooltips before removing layer to prevent '_leaflet_pos' errors during asynchronous cycles
-          if (typeof (layer as any).closeTooltip === 'function') {
-            try {
-              (layer as any).closeTooltip();
-            } catch (e) {}
-          }
-          if (typeof (layer as any).unbindTooltip === 'function') {
-            try {
-              (layer as any).unbindTooltip();
-            } catch (e) {}
-          }
-          if (typeof (layer as any).off === 'function') {
-            try {
-              (layer as any).off();
-            } catch (e) {}
-          }
           try {
+            if (layer.unbindTooltip) layer.unbindTooltip();
+            if (layer.unbindPopup) layer.unbindPopup();
+            if (layer.off) layer.off();
             map.removeLayer(layer);
           } catch (e) {}
         }
       });
     } catch (e) {}
-
     turkeyGeoJsonLayerRef.current = null;
     provinceOverlayLayerRef.current = null;
     turkeyMarkersRef.current = [];
@@ -1726,7 +1728,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
               const reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
               if (reg) {
                 const defaultCenter = country.id === 'DE' ? { lat: 51.1657, lng: 10.4515 } : country.id === 'US' ? { lat: 37.0902, lng: -95.7129 } : { lat: 38.9637, lng: 35.2433 };
-                let center = provinceCentersRef.current[reg.id] || defaultCenter;
+                let center = provinceCentersRef.current[reg.id] || getPolygonCenter(feat) || defaultCenter;
                 const fallback = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
                 if (fallback) center = { lat: fallback.lat, lng: fallback.lng };
                 const dList = getDeterministicDistricts(reg, center);
@@ -1786,7 +1788,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
           if (!reg) {
             reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-            if (reg) regionId = reg.id;
+          }
+          if (reg) {
+            regionId = reg.id;
           }
           
           if (reg) {
@@ -1952,7 +1956,9 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
           if (!reg) {
             reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-            if (reg) regionId = reg.id;
+          }
+          if (reg) {
+            regionId = reg.id;
           }
           if (!reg) return;
 
@@ -2037,7 +2043,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
           layer.bindTooltip(`
             <div class="p-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
               <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-              <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
+              <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getDeterministicMayorName(reg.name, country.id)}</strong></div>
               <div class="mt-1 pt-1 border-t border-slate-800/40">
                 ${rivalHtmlList}
               </div>
@@ -2111,7 +2117,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
         marker.bindTooltip(`
           <div class="p-1 px-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
             <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || 'N/A'}</strong></div>
+            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getDeterministicMayorName(reg.name, country.id)}</strong></div>
             <div class="mt-1 pt-1 border-t border-slate-800/40">
               ${rivalHtmlList}
             </div>
@@ -2949,14 +2955,16 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
                   <h3 className="text-xl font-bold tracking-tight mt-1">{selectedRegion.name}</h3>
                   <p className="text-xs text-slate-400 mt-0.5 font-medium">Headquarters Status: {selectedRegion.infrastructure}/5 | Seat Allocation: {selectedRegion.seats}</p>
                 </div>
-                {selectedRegion.mayorName && (
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <span className="text-[10px] text-slate-400 font-mono uppercase block">Local Mayor</span>
-                      <strong className="text-xs text-slate-200">{selectedRegion.mayorName}</strong>
-                    </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-mono uppercase block">
+                      {country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Local Mayor'}
+                    </span>
+                    <strong className="text-xs text-slate-200">
+                      {selectedRegion.mayorName || getDeterministicMayorName(selectedRegion.name, country.id)}
+                    </strong>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Voter demographics breakdown bars */}

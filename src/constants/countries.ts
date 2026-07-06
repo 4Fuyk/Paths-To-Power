@@ -6,87 +6,87 @@
 import { Country, VoterGroup, Bill, RivalParty, Region, SpeechCard } from '../types';
 
 const TURKEY_PROVINCES_SPEC = [
-  { name: 'Adana', seats: 15, winner: 'CHP', mayor: 'Zeydan Karalar' },
-  { name: 'Adıyaman', seats: 5, winner: 'CHP', mayor: 'Abdurrahman Tutdere' },
-  { name: 'Afyonkarahisar', seats: 6, winner: 'CHP', mayor: 'Burcu Köksal' },
-  { name: 'Ağrı', seats: 4, winner: 'DEM', mayor: 'Hazal Aras' },
-  { name: 'Amasya', seats: 3, winner: 'CHP', mayor: 'Turgay Sevindi' },
-  { name: 'Ankara', seats: 36, winner: 'CHP', mayor: 'Mansur Yavaş', supports: { CHP: 60.44, AKP: 31.68, YRP: 3.12, ZAFER: 1.51, DEM: 1.01, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 0.5, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
-  { name: 'Antalya', seats: 17, winner: 'CHP', mayor: 'Muhittin Böcek' },
-  { name: 'Artvin', seats: 2, winner: 'CHP', mayor: 'Bilgehan Erdem' },
-  { name: 'Aydın', seats: 8, winner: 'CHP', mayor: 'Özlem Çerçioğlu' },
-  { name: 'Balıkesir', seats: 9, winner: 'CHP', mayor: 'Ahmet Akın' },
-  { name: 'Bilecik', seats: 2, winner: 'CHP', mayor: 'Melek Mızrak Subaşı' },
-  { name: 'Bingöl', seats: 3, winner: 'AKP', mayor: 'Erdal Arıkan' },
-  { name: 'Bitlis', seats: 3, winner: 'AKP', mayor: 'Nesrullah Tanğlay' },
-  { name: 'Bolu', seats: 3, winner: 'CHP', mayor: 'Tanju Özcan' },
-  { name: 'Burdur', seats: 3, winner: 'CHP', mayor: 'Ali Orkun Ercengiz' },
-  { name: 'Bursa', seats: 20, winner: 'CHP', mayor: 'Mustafa Bozbey' },
-  { name: 'Çanakkale', seats: 4, winner: 'CHP', mayor: 'Muharrem Erkek' },
-  { name: 'Çankırı', seats: 2, winner: 'MHP', mayor: 'İsmail Hakkı Esen' },
-  { name: 'Çorum', seats: 4, winner: 'AKP', mayor: 'Halil İbrahim Aşgın' },
-  { name: 'Denizli', seats: 7, winner: 'CHP', mayor: 'Bülent Nuri Çavuşoğlu' },
-  { name: 'Diyarbakır', seats: 12, winner: 'DEM', mayor: 'Ayşe Serra Bucak Küçük', supports: { CHP: 3.50, AKP: 16.85, YRP: 3.65, DEM: 64.09, ZAFER: 0.5, MHP: 0.1, TIP: 0.3, TKP: 0.1, SAADET: 0.8, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'Edirne', seats: 4, winner: 'CHP', mayor: 'Filiz Gencan Akın' },
-  { name: 'Elazığ', seats: 5, winner: 'AKP', mayor: 'Şahin Şerifoğulları' },
-  { name: 'Erzincan', seats: 2, winner: 'MHP', mayor: 'Bekir Aksun' },
-  { name: 'Erzurum', seats: 6, winner: 'AKP', mayor: 'Mehmet Sekmen' },
-  { name: 'Eskişehir', seats: 7, winner: 'CHP', mayor: 'Ayşe Ünlüce', supports: { CHP: 51.02, AKP: 37.85, YRP: 2.12, ZAFER: 2.45, DEM: 1.15, MHP: 0.1, TIP: 0.8, TKP: 0.2, SAADET: 0.6, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
-  { name: 'Gaziantep', seats: 14, winner: 'AKP', mayor: 'Fatma Şahin', supports: { CHP: 28.12, AKP: 38.83, YRP: 17.22, DEM: 5.48, ZAFER: 2.45, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 1.1, DEVA: 0.8, GELECEK: 0.3, VATAN: 0.1 } },
-  { name: 'Giresun', seats: 4, winner: 'CHP', mayor: 'Fuat Köse' },
-  { name: 'Gümüşhane', seats: 2, winner: 'MHP', mayor: 'Vedat Soner Başer' },
-  { name: 'Hakkari', seats: 3, winner: 'DEM', mayor: 'Mehmet Sıddık Akış' },
-  { name: 'Hatay', seats: 11, winner: 'AKP', mayor: 'Mehmet Öntürk', supports: { CHP: 44.02, AKP: 44.48, TIP: 2.01, DEM: 1.5, YRP: 2.1, ZAFER: 1.2, MHP: 0.1, TKP: 0.1, SAADET: 0.5, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
-  { name: 'Isparta', seats: 4, winner: 'AKP', mayor: 'Şükrü Başdeğirmen' },
-  { name: 'Mersin', seats: 13, winner: 'CHP', mayor: 'Vahap Seçer' },
-  { name: 'İstanbul', seats: 98, winner: 'CHP', mayor: 'Ekrem İmamoğlu', supports: { CHP: 51.15, AKP: 39.59, YRP: 2.61, ZAFER: 2.25, DEM: 2.12, MHP: 0.1, TIP: 0.5, TKP: 0.2, SAADET: 0.8, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'İzmir', seats: 28, winner: 'CHP', mayor: 'Cemil Tugay', supports: { CHP: 48.97, AKP: 37.06, DEM: 4.19, ZAFER: 2.52, YRP: 0.9, MHP: 0.1, TIP: 1.5, TKP: 0.4, SAADET: 0.6, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
-  { name: 'Kars', seats: 3, winner: 'MHP', mayor: 'Ötüken Senger' },
-  { name: 'Kastamonu', seats: 3, winner: 'CHP', mayor: 'Hasan Baltacı' },
-  { name: 'Kayseri', seats: 10, winner: 'AKP', mayor: 'Memduh Büyükkılıç' },
-  { name: 'Kırklareli', seats: 3, winner: 'MHP', mayor: 'Derya Bulut' },
-  { name: 'Kırşehir', seats: 2, winner: 'CHP', mayor: 'Selahattin Ekicioğlu' },
-  { name: 'Kocaeli', seats: 14, winner: 'AKP', mayor: 'Tahir Büyükakın' },
-  { name: 'Konya', seats: 15, winner: 'AKP', mayor: 'Uğur İbrahim Altay', supports: { CHP: 12.86, AKP: 49.44, YRP: 23.44, ZAFER: 3.01, DEM: 3.42, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 2.1, DEVA: 0.5, GELECEK: 0.7, VATAN: 0.1 } },
-  { name: 'Kütahya', seats: 5, winner: 'CHP', mayor: 'Eyüp Kahveci' },
-  { name: 'Malatya', seats: 6, winner: 'AKP', mayor: 'Sami Er' },
-  { name: 'Manisa', seats: 10, winner: 'CHP', mayor: 'Ferdi Zeyrek' },
-  { name: 'Kahramanmaraş', seats: 8, winner: 'AKP', mayor: 'Fırat Görgel' },
-  { name: 'Mardin', seats: 6, winner: 'DEM', mayor: 'Ahmet Türk' },
-  { name: 'Muğla', seats: 7, winner: 'CHP', mayor: 'Ahmet Aras' },
-  { name: 'Muş', seats: 3, winner: 'DEM', mayor: 'Sırrı Söylemez' },
-  { name: 'Nevşehir', seats: 3, winner: 'AKP', mayor: 'Rasim Arı' },
-  { name: 'Niğde', seats: 3, winner: 'AKP', mayor: 'Emrah Özdemir' },
-  { name: 'Ordu', seats: 6, winner: 'AKP', mayor: 'Mehmet Hilmi Güler' },
-  { name: 'Osmaniye', seats: 4, winner: 'MHP', mayor: 'Ibrahim Çenet' },
-  { name: 'Rize', seats: 3, winner: 'AKP', mayor: 'Rahmi Metin' },
-  { name: 'Sakarya', seats: 8, winner: 'AKP', mayor: 'Yusuf Alemdar' },
-  { name: 'Samsun', seats: 9, winner: 'AKP', mayor: 'Halit Doğan' },
-  { name: 'Şanlıurfa', seats: 14, winner: 'YRP', mayor: 'Mehmet Kasım Gülpınar', supports: { CHP: 1.51, AKP: 33.64, YRP: 38.87, DEM: 21.16, ZAFER: 0.5, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 0.9, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'Siirt', seats: 3, winner: 'DEM', mayor: 'Sofya Alağaş' },
-  { name: 'Sinop', seats: 2, winner: 'CHP', mayor: 'Metin Gürbüz' },
-  { name: 'Şırnak', seats: 4, winner: 'AKP', mayor: 'Mehmet Yarka' },
-  { name: 'Sivas', seats: 5, winner: 'MHP', mayor: 'Adem Uzun', supports: { CHP: 7.35, AKP: 29.15, MHP: 43.32, YRP: 13.12, ZAFER: 1.5, DEM: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.2, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'Tekirdağ', seats: 8, winner: 'CHP', mayor: 'Candan Yüceer' },
-  { name: 'Tokat', seats: 5, winner: 'MHP', mayor: 'Mehmet Kemal Yazıcıoğlu' },
-  { name: 'Trabzon', seats: 6, winner: 'AKP', mayor: 'Ahmet Metin Genç', supports: { CHP: 28.46, AKP: 51.48, YRP: 9.14, ZAFER: 2.12, DEM: 0.15, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'Tunceli', seats: 1, winner: 'DEM', mayor: 'Cevdet Konak' },
-  { name: 'Uşak', seats: 3, winner: 'CHP', mayor: 'Özkan Yalım' },
-  { name: 'Van', seats: 8, winner: 'DEM', mayor: 'Abdullah Zeydan' },
-  { name: 'Yalova', seats: 3, winner: 'CHP', mayor: 'Mehmet Gürel' },
-  { name: 'Yozgat', seats: 4, winner: 'YRP', mayor: 'Kazım Arslan' },
-  { name: 'Zonguldak', seats: 5, winner: 'CHP', mayor: 'Tahsin Erdem' },
-  { name: 'Aksaray', seats: 4, winner: 'AKP', mayor: 'Evren Dinçer' },
-  { name: 'Bayburt', seats: 1, winner: 'AKP', mayor: 'Mete Memiş' },
-  { name: 'Karaman', seats: 3, winner: 'MHP', mayor: 'Savaş Kalaycı' },
-  { name: 'Kırıkkale', seats: 3, winner: 'CHP', mayor: 'Ahmet Önal' },
-  { name: 'Batman', seats: 5, winner: 'DEM', mayor: 'Gülüstan Sönük' },
-  { name: 'Bartın', seats: 2, winner: 'CHP', mayor: 'Rıza Yalçınkaya' },
-  { name: 'Ardahan', seats: 2, winner: 'CHP', mayor: 'Faruk Demir' },
-  { name: 'Iğdır', seats: 2, winner: 'DEM', mayor: 'Mehmet Nuri Güneş' },
-  { name: 'Karabük', seats: 3, winner: 'AKP', mayor: 'Özkan Çetinkaya' },
-  { name: 'Kilis', seats: 2, winner: 'CHP', mayor: 'Hakan Bilecen' },
-  { name: 'Düzce', seats: 3, winner: 'AKP', mayor: 'Faruk Özlü' }
+  { name: 'Adana', seats: 15, winner: 'CHP', mayorName: 'Zeydan Karalar' },
+  { name: 'Adıyaman', seats: 5, winner: 'CHP', mayorName: 'Abdurrahman Tutdere' },
+  { name: 'Afyonkarahisar', seats: 6, winner: 'CHP', mayorName: 'Burcu Köksal' },
+  { name: 'Ağrı', seats: 4, winner: 'DEM', mayorName: 'Hazal Aras' },
+  { name: 'Amasya', seats: 3, winner: 'CHP', mayorName: 'Turgay Sevindi' },
+  { name: 'Ankara', seats: 36, winner: 'CHP', mayorName: 'Mansur Yavaş', supports: { CHP: 60.44, AKP: 31.68, YRP: 3.12, ZAFER: 1.51, DEM: 1.01, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 0.5, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Antalya', seats: 17, winner: 'CHP', mayorName: 'Muhittin Böcek' },
+  { name: 'Artvin', seats: 2, winner: 'CHP', mayorName: 'Bilgehan Erdem' },
+  { name: 'Aydın', seats: 8, winner: 'CHP', mayorName: 'Özlem Çerçioğlu' },
+  { name: 'Balıkesir', seats: 9, winner: 'CHP', mayorName: 'Ahmet Akın' },
+  { name: 'Bilecik', seats: 2, winner: 'CHP', mayorName: 'Melek Mızrak Subaşı' },
+  { name: 'Bingöl', seats: 3, winner: 'AKP', mayorName: 'Erdal Arıkan' },
+  { name: 'Bitlis', seats: 3, winner: 'AKP', mayorName: 'Nesrullah Tanğlay' },
+  { name: 'Bolu', seats: 3, winner: 'CHP', mayorName: 'Tanju Özcan' },
+  { name: 'Burdur', seats: 3, winner: 'CHP', mayorName: 'Ali Orkun Ercengiz' },
+  { name: 'Bursa', seats: 20, winner: 'CHP', mayorName: 'Mustafa Bozbey' },
+  { name: 'Çanakkale', seats: 4, winner: 'CHP', mayorName: 'Muharrem Erkek' },
+  { name: 'Çankırı', seats: 2, winner: 'MHP', mayorName: 'İsmail Hakkı Esen' },
+  { name: 'Çorum', seats: 4, winner: 'AKP', mayorName: 'Halil İbrahim Aşgın' },
+  { name: 'Denizli', seats: 7, winner: 'CHP', mayorName: 'Bülent Nuri Çavuşoğlu' },
+  { name: 'Diyarbakır', seats: 12, winner: 'DEM', mayorName: 'Ayşe Serra Bucak Küçük', supports: { CHP: 3.50, AKP: 16.85, YRP: 3.65, DEM: 64.09, ZAFER: 0.5, MHP: 0.1, TIP: 0.3, TKP: 0.1, SAADET: 0.8, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Edirne', seats: 4, winner: 'CHP', mayorName: 'Filiz Gencan Akın' },
+  { name: 'Elazığ', seats: 5, winner: 'AKP', mayorName: 'Şahin Şerifoğulları' },
+  { name: 'Erzincan', seats: 2, winner: 'MHP', mayorName: 'Bekir Aksun' },
+  { name: 'Erzurum', seats: 6, winner: 'AKP', mayorName: 'Mehmet Sekmen' },
+  { name: 'Eskişehir', seats: 7, winner: 'CHP', mayorName: 'Ayşe Ünlüce', supports: { CHP: 51.02, AKP: 37.85, YRP: 2.12, ZAFER: 2.45, DEM: 1.15, MHP: 0.1, TIP: 0.8, TKP: 0.2, SAADET: 0.6, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Gaziantep', seats: 14, winner: 'AKP', mayorName: 'Fatma Şahin', supports: { CHP: 28.12, AKP: 38.83, YRP: 17.22, DEM: 5.48, ZAFER: 2.45, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 1.1, DEVA: 0.8, GELECEK: 0.3, VATAN: 0.1 } },
+  { name: 'Giresun', seats: 4, winner: 'CHP', mayorName: 'Fuat Köse' },
+  { name: 'Gümüşhane', seats: 2, winner: 'MHP', mayorName: 'Vedat Soner Başer' },
+  { name: 'Hakkari', seats: 3, winner: 'DEM', mayorName: 'Mehmet Sıddık Akış' },
+  { name: 'Hatay', seats: 11, winner: 'AKP', mayorName: 'Mehmet Öntürk', supports: { CHP: 44.02, AKP: 44.48, TIP: 2.01, DEM: 1.5, YRP: 2.1, ZAFER: 1.2, MHP: 0.1, TKP: 0.1, SAADET: 0.5, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Isparta', seats: 4, winner: 'AKP', mayorName: 'Şükrü Başdeğirmen' },
+  { name: 'Mersin', seats: 13, winner: 'CHP', mayorName: 'Vahap Seçer' },
+  { name: 'İstanbul', seats: 98, winner: 'CHP', mayorName: 'Ekrem İmamoğlu', supports: { CHP: 51.15, AKP: 39.59, YRP: 2.61, ZAFER: 2.25, DEM: 2.12, MHP: 0.1, TIP: 0.5, TKP: 0.2, SAADET: 0.8, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'İzmir', seats: 28, winner: 'CHP', mayorName: 'Cemil Tugay', supports: { CHP: 48.97, AKP: 37.06, DEM: 4.19, ZAFER: 2.52, YRP: 0.9, MHP: 0.1, TIP: 1.5, TKP: 0.4, SAADET: 0.6, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Kars', seats: 3, winner: 'MHP', mayorName: 'Ötüken Senger' },
+  { name: 'Kastamonu', seats: 3, winner: 'CHP', mayorName: 'Hasan Baltacı' },
+  { name: 'Kayseri', seats: 10, winner: 'AKP', mayorName: 'Memduh Büyükkılıç' },
+  { name: 'Kırklareli', seats: 3, winner: 'MHP', mayorName: 'Derya Bulut' },
+  { name: 'Kırşehir', seats: 2, winner: 'CHP', mayorName: 'Selahattin Ekicioğlu' },
+  { name: 'Kocaeli', seats: 14, winner: 'AKP', mayorName: 'Tahir Büyükakın' },
+  { name: 'Konya', seats: 15, winner: 'AKP', mayorName: 'Uğur İbrahim Altay', supports: { CHP: 12.86, AKP: 49.44, YRP: 23.44, ZAFER: 3.01, DEM: 3.42, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 2.1, DEVA: 0.5, GELECEK: 0.7, VATAN: 0.1 } },
+  { name: 'Kütahya', seats: 5, winner: 'CHP', mayorName: 'Eyüp Kahveci' },
+  { name: 'Malatya', seats: 6, winner: 'AKP', mayorName: 'Sami Er' },
+  { name: 'Manisa', seats: 10, winner: 'CHP', mayorName: 'Ferdi Zeyrek' },
+  { name: 'Kahramanmaraş', seats: 8, winner: 'AKP', mayorName: 'Fırat Görgel' },
+  { name: 'Mardin', seats: 6, winner: 'DEM', mayorName: 'Ahmet Türk' },
+  { name: 'Muğla', seats: 7, winner: 'CHP', mayorName: 'Ahmet Aras' },
+  { name: 'Muş', seats: 3, winner: 'DEM', mayorName: 'Sırrı Söylemez' },
+  { name: 'Nevşehir', seats: 3, winner: 'AKP', mayorName: 'Rasim Arı' },
+  { name: 'Niğde', seats: 3, winner: 'AKP', mayorName: 'Emrah Özdemir' },
+  { name: 'Ordu', seats: 6, winner: 'AKP', mayorName: 'Mehmet Hilmi Güler' },
+  { name: 'Osmaniye', seats: 4, winner: 'MHP', mayorName: 'Ibrahim Çenet' },
+  { name: 'Rize', seats: 3, winner: 'AKP', mayorName: 'Rahmi Metin' },
+  { name: 'Sakarya', seats: 8, winner: 'AKP', mayorName: 'Yusuf Alemdar' },
+  { name: 'Samsun', seats: 9, winner: 'AKP', mayorName: 'Halit Doğan' },
+  { name: 'Şanlıurfa', seats: 14, winner: 'YRP', mayorName: 'Mehmet Kasım Gülpınar', supports: { CHP: 1.51, AKP: 33.64, YRP: 38.87, DEM: 21.16, ZAFER: 0.5, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 0.9, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Siirt', seats: 3, winner: 'DEM', mayorName: 'Sofya Alağaş' },
+  { name: 'Sinop', seats: 2, winner: 'CHP', mayorName: 'Metin Gürbüz' },
+  { name: 'Şırnak', seats: 4, winner: 'AKP', mayorName: 'Mehmet Yarka' },
+  { name: 'Sivas', seats: 5, winner: 'MHP', mayorName: 'Adem Uzun', supports: { CHP: 7.35, AKP: 29.15, MHP: 43.32, YRP: 13.12, ZAFER: 1.5, DEM: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.2, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Tekirdağ', seats: 8, winner: 'CHP', mayorName: 'Candan Yüceer' },
+  { name: 'Tokat', seats: 5, winner: 'MHP', mayorName: 'Mehmet Kemal Yazıcıoğlu' },
+  { name: 'Trabzon', seats: 6, winner: 'AKP', mayorName: 'Ahmet Metin Genç', supports: { CHP: 28.46, AKP: 51.48, YRP: 9.14, ZAFER: 2.12, DEM: 0.15, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Tunceli', seats: 1, winner: 'DEM', mayorName: 'Cevdet Konak' },
+  { name: 'Uşak', seats: 3, winner: 'CHP', mayorName: 'Özkan Yalım' },
+  { name: 'Van', seats: 8, winner: 'DEM', mayorName: 'Abdullah Zeydan' },
+  { name: 'Yalova', seats: 3, winner: 'CHP', mayorName: 'Mehmet Gürel' },
+  { name: 'Yozgat', seats: 4, winner: 'YRP', mayorName: 'Kazım Arslan' },
+  { name: 'Zonguldak', seats: 5, winner: 'CHP', mayorName: 'Tahsin Erdem' },
+  { name: 'Aksaray', seats: 4, winner: 'AKP', mayorName: 'Evren Dinçer' },
+  { name: 'Bayburt', seats: 1, winner: 'AKP', mayorName: 'Mete Memiş' },
+  { name: 'Karaman', seats: 3, winner: 'MHP', mayorName: 'Savaş Kalaycı' },
+  { name: 'Kırıkkale', seats: 3, winner: 'CHP', mayorName: 'Ahmet Önal' },
+  { name: 'Batman', seats: 5, winner: 'DEM', mayorName: 'Gülüstan Sönük' },
+  { name: 'Bartın', seats: 2, winner: 'CHP', mayorName: 'Rıza Yalçınkaya' },
+  { name: 'Ardahan', seats: 2, winner: 'CHP', mayorName: 'Faruk Demir' },
+  { name: 'Iğdır', seats: 2, winner: 'DEM', mayorName: 'Mehmet Nuri Güneş' },
+  { name: 'Karabük', seats: 3, winner: 'AKP', mayorName: 'Özkan Çetinkaya' },
+  { name: 'Kilis', seats: 2, winner: 'CHP', mayorName: 'Hakan Bilecen' },
+  { name: 'Düzce', seats: 3, winner: 'AKP', mayorName: 'Faruk Özlü' }
 ];
 
 export const getTurkeyRegions = (): Region[] => {
@@ -194,7 +194,7 @@ export const getTurkeyRegions = (): Region[] => {
       infrastructure,
       campaignLevel: 0,
       ownerPartyId: prov.winner,
-      mayorName: prov.mayor
+      mayorName: prov.mayorName
     };
   });
 };
@@ -794,7 +794,8 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     bills: createBills('JP'),
     campaignTurns: 53,
     electionCycleYears: 4,
-  },  {
+  },
+  {
     id: 'EG',
     name: 'Egypt',
     description: 'A deeply historic nation managing vast population growth and economic transitions along the Nile.',
@@ -813,33 +814,33 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'ESDP', name: 'ESDP', leader: 'Farid Zahran', ideology: 'Social Democrat', symbol: 'Compass', color: '#F97316', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Farid_Zahran.jpg/250px-Farid_Zahran.jpg' }
     ],
     regions: [
-      { id: 'Alexandria', name: 'Alexandria', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":31.8,"RPP":4.6,"WAFD":17.3,"HDP":15.1,"MEP":14.4,"ESDP":16.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Aswan', name: 'Aswan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":84.4,"RPP":3.4,"WAFD":3.5,"HDP":5,"MEP":2.4,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Asyut', name: 'Asyut', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":2.2,"WAFD":5.3,"HDP":2.8,"MEP":0.1,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beheira', name: 'Beheira', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":5.1,"WAFD":4.2,"HDP":6,"MEP":0.9,"ESDP":4.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beni Suef', name: 'Beni Suef', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":76.3,"RPP":3.3,"WAFD":5.8,"HDP":6.2,"MEP":3.6,"ESDP":4.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Cairo', name: 'Cairo', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":34,"RPP":16.8,"WAFD":0.6,"HDP":13.6,"MEP":14.3,"ESDP":20.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Dakahlia', name: 'Dakahlia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":3.6,"WAFD":5.3,"HDP":1.7,"MEP":3.6,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Damietta', name: 'Damietta', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.8,"RPP":3.2,"WAFD":3.9,"HDP":6.2,"MEP":3,"ESDP":2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Faiyum', name: 'Faiyum', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":3.2,"WAFD":3,"HDP":6.1,"MEP":0.6,"ESDP":0.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Gharbia', name: 'Gharbia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.5,"RPP":4.8,"WAFD":4.3,"HDP":3.6,"MEP":1.8,"ESDP":5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Giza', name: 'Giza', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":30.7,"RPP":18.7,"WAFD":1.9,"HDP":15,"MEP":14.1,"ESDP":19.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Ismailia', name: 'Ismailia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":3.7,"WAFD":4.6,"HDP":2.3,"MEP":4.8,"ESDP":5.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Kafr El Sheikh', name: 'Kafr El Sheikh', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":5.7,"WAFD":0.4,"HDP":0.9,"MEP":1.3,"ESDP":5.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Luxor', name: 'Luxor', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":6.4,"WAFD":2.6,"HDP":1.6,"MEP":2.9,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Matrouh', name: 'Matrouh', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":3,"WAFD":6.2,"HDP":3.4,"MEP":3.1,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Minya', name: 'Minya', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":82.4,"RPP":1.8,"WAFD":1.4,"HDP":5.8,"MEP":6.3,"ESDP":2.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Monufia', name: 'Monufia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.5,"RPP":6.6,"WAFD":0,"HDP":5.3,"MEP":0.3,"ESDP":4.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'New Valley', name: 'New Valley', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.5,"RPP":1.5,"WAFD":3.4,"HDP":5.8,"MEP":4.1,"ESDP":3.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'North Sinai', name: 'North Sinai', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":90.6,"RPP":0.7,"WAFD":0.6,"HDP":4.1,"MEP":2.4,"ESDP":1.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Port Said', name: 'Port Said', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":75.5,"RPP":5.9,"WAFD":4.7,"HDP":4.8,"MEP":3.3,"ESDP":5.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qalyubia', name: 'Qalyubia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.6,"RPP":1.8,"WAFD":6.3,"HDP":5.3,"MEP":0.2,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qena', name: 'Qena', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.6,"RPP":2.4,"WAFD":5.5,"HDP":2.5,"MEP":0.6,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Red Sea', name: 'Red Sea', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":1.1,"WAFD":1.7,"HDP":0.3,"MEP":3.8,"ESDP":6.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sharqia', name: 'Sharqia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.4,"RPP":1.3,"WAFD":3.9,"HDP":1,"MEP":1.1,"ESDP":5.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sohag', name: 'Sohag', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.4,"RPP":4,"WAFD":0.9,"HDP":5.1,"MEP":3.3,"ESDP":6.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'South Sinai', name: 'South Sinai', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83,"RPP":3.1,"WAFD":4.6,"HDP":2.7,"MEP":1.4,"ESDP":5.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Suez', name: 'Suez', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":4.7,"WAFD":4.9,"HDP":0,"MEP":6.2,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
+      { id: 'Alexandria', name: 'Alexandria', mayorName: 'Mohamed Taher Al-Sherif', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":31.8,"RPP":4.6,"WAFD":17.3,"HDP":15.1,"MEP":14.4,"ESDP":16.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Aswan', name: 'Aswan', mayorName: 'Ashraf Attia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":84.4,"RPP":3.4,"WAFD":3.5,"HDP":5,"MEP":2.4,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Asyut', name: 'Asyut', mayorName: 'Essam Saad', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":2.2,"WAFD":5.3,"HDP":2.8,"MEP":0.1,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Beheira', name: 'Beheira', mayorName: 'Hisham Amna', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":5.1,"WAFD":4.2,"HDP":6,"MEP":0.9,"ESDP":4.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Beni Suef', name: 'Beni Suef', mayorName: 'Mohamed Hany Ghoneim', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":76.3,"RPP":3.3,"WAFD":5.8,"HDP":6.2,"MEP":3.6,"ESDP":4.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Cairo', name: 'Cairo', mayorName: 'Khaled Abdel Aal', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":34,"RPP":16.8,"WAFD":0.6,"HDP":13.6,"MEP":14.3,"ESDP":20.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Dakahlia', name: 'Dakahlia', mayorName: 'Ayman Mokhtar', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":3.6,"WAFD":5.3,"HDP":1.7,"MEP":3.6,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Damietta', name: 'Damietta', mayorName: 'Manal Awad Mikhail', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.8,"RPP":3.2,"WAFD":3.9,"HDP":6.2,"MEP":3,"ESDP":2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Faiyum', name: 'Faiyum', mayorName: 'Ahmed Al-Ansari', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":3.2,"WAFD":3,"HDP":6.1,"MEP":0.6,"ESDP":0.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Gharbia', name: 'Gharbia', mayorName: 'Tarek Rahmy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.5,"RPP":4.8,"WAFD":4.3,"HDP":3.6,"MEP":1.8,"ESDP":5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Giza', name: 'Giza', mayorName: 'Ahmed Rashed', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":30.7,"RPP":18.7,"WAFD":1.9,"HDP":15,"MEP":14.1,"ESDP":19.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Ismailia', name: 'Ismailia', mayorName: 'Sherif Fahmy Bishara', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":3.7,"WAFD":4.6,"HDP":2.3,"MEP":4.8,"ESDP":5.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Kafr El Sheikh', name: 'Kafr El Sheikh', mayorName: 'Gamal Nour El-Din', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":5.7,"WAFD":0.4,"HDP":0.9,"MEP":1.3,"ESDP":5.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Luxor', name: 'Luxor', mayorName: 'Mustafa Al-Alham', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":6.4,"WAFD":2.6,"HDP":1.6,"MEP":2.9,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Matrouh', name: 'Matrouh', mayorName: 'Khaled Shoaib', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":3,"WAFD":6.2,"HDP":3.4,"MEP":3.1,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Minya', name: 'Minya', mayorName: 'Osama Al-Qady', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":82.4,"RPP":1.8,"WAFD":1.4,"HDP":5.8,"MEP":6.3,"ESDP":2.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Monufia', name: 'Monufia', mayorName: 'Ibrahim Abu Limon', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.5,"RPP":6.6,"WAFD":0,"HDP":5.3,"MEP":0.3,"ESDP":4.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'New Valley', name: 'New Valley', mayorName: 'Mohamed Al-Zamlout', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.5,"RPP":1.5,"WAFD":3.4,"HDP":5.8,"MEP":4.1,"ESDP":3.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'North Sinai', name: 'North Sinai', mayorName: 'Mohamed Shousha', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":90.6,"RPP":0.7,"WAFD":0.6,"HDP":4.1,"MEP":2.4,"ESDP":1.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Port Said', name: 'Port Said', mayorName: 'Adel Ghadban', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":75.5,"RPP":5.9,"WAFD":4.7,"HDP":4.8,"MEP":3.3,"ESDP":5.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Qalyubia', name: 'Qalyubia', mayorName: 'Abdel Hamid El-Haggan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.6,"RPP":1.8,"WAFD":6.3,"HDP":5.3,"MEP":0.2,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Qena', name: 'Qena', mayorName: 'Ashraf Daoudi', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.6,"RPP":2.4,"WAFD":5.5,"HDP":2.5,"MEP":0.6,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Red Sea', name: 'Red Sea', mayorName: 'Amr Hanafy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":1.1,"WAFD":1.7,"HDP":0.3,"MEP":3.8,"ESDP":6.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Sharqia', name: 'Sharqia', mayorName: 'Mamdouh Ghorab', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.4,"RPP":1.3,"WAFD":3.9,"HDP":1,"MEP":1.1,"ESDP":5.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Sohag', name: 'Sohag', mayorName: 'Tarek El-Feki', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.4,"RPP":4,"WAFD":0.9,"HDP":5.1,"MEP":3.3,"ESDP":6.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'South Sinai', name: 'South Sinai', mayorName: 'Khaled Fouda', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83,"RPP":3.1,"WAFD":4.6,"HDP":2.7,"MEP":1.4,"ESDP":5.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Suez', name: 'Suez', mayorName: 'Abdel Majeed Saqr', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":4.7,"WAFD":4.9,"HDP":0,"MEP":6.2,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
     ],
     bills: createBills('EG'),
     campaignTurns: 53,
@@ -914,6 +915,47 @@ export const generateName = (countryId: string): string => {
   const gbLast = ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright'];
 
   const sample = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+  if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
+  if (countryId === 'DE') return `${sample(deFirst)} ${sample(deLast)}`;
+  if (countryId === 'US') return `${sample(usFirst)} ${sample(usLast)}`;
+  if (countryId === 'BR') return `${sample(brFirst)} ${sample(brLast)}`;
+  if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
+  if (countryId === 'EG') return `${sample(egFirst)} ${sample(egLast)}`;
+  if (countryId === 'GB') return `${sample(gbFirst)} ${sample(gbLast)}`;
+
+  return `${sample(usFirst)} ${sample(usLast)}`;
+};
+
+export const getDeterministicMayorName = (regionName: string, countryId: string): string => {
+  const trFirst = ['Ahmet', 'Mehmet', 'Ayşe', 'Fatma', 'Mustafa', 'Ali', 'Zeynep', 'Hüseyin', 'Hatice', 'İbrahim'];
+  const trLast = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir'];
+  
+  const deFirst = ['Thomas', 'Michael', 'Andreas', 'Sabine', 'Martina', 'Susanne', 'Christian', 'Stefan', 'Maria', 'Peter'];
+  const deLast = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann'];
+
+  const usFirst = ['James', 'John', 'Robert', 'Michael', 'William', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth'];
+  const usLast = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+
+  const brFirst = ['João', 'Maria', 'José', 'Ana', 'Antônio', 'Francisco', 'Carlos', 'Paulo', 'Pedro', 'Lucas'];
+  const brLast = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes'];
+
+  const jpFirst = ['Kenji', 'Hiroshi', 'Takashi', 'Minoru', 'Naoki', 'Yuki', 'Akira', 'Satoshi', 'Yumi', 'Megumi'];
+  const jpLast = ['Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato'];
+
+  const egFirst = ['Ahmed', 'Mohamed', 'Mahmoud', 'Mustafa', 'Youssef', 'Ibrahim', 'Ali', 'Omar', 'Amr', 'Hassan'];
+  const egLast = ['Hassan', 'Ali', 'Mohamed', 'Ibrahim', 'Mahmoud', 'Salem', 'Hussein', 'Mostafa', 'Abdel', 'Fatah'];
+
+  const gbFirst = ['Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Noah', 'Charlie', 'Muhammad', 'Thomas', 'Oscar'];
+  const gbLast = ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright'];
+
+  let hash = 0;
+  for (let i = 0; i < regionName.length; i++) {
+    hash = regionName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  hash = Math.abs(hash);
+
+  const sample = (arr: string[]) => arr[hash % arr.length];
 
   if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
   if (countryId === 'DE') return `${sample(deFirst)} ${sample(deLast)}`;
