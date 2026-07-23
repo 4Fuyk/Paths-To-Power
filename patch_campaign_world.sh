@@ -1,0 +1,2 @@
+#!/bin/bash
+sed -i '/const \[geoJsonData, setGeoJsonData\] = useState<any>(null);/a \  const [worldGeoJsonData, setWorldGeoJsonData] = useState<any>(null);\n  useEffect(() => {\n    fetch("https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json")\n      .then(res => res.json())\n      .then(data => setWorldGeoJsonData(data))\n      .catch(err => console.error("Failed to load world geojson", err));\n  }, []);' src/components/CampaignView.tsx

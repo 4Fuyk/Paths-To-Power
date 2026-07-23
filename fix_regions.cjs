@@ -1,80 +1,86 @@
 const fs = require('fs');
+let c = fs.readFileSync('src/components/CampaignView.tsx', 'utf8');
 
-const jpParties = ['LDP', 'CDP', 'Komeito', 'Ishin no Kai', 'DPFP', 'JCP'];
-const egParties = ['NFP', 'RPP', 'WAFD', 'HDP', 'MEP', 'ESDP'];
-const brParties = ['PT', 'PL', 'UNIAO', 'MDB', 'PSD', 'PP'];
-
-function getJpParty(name) {
-  if (['Yamaguchi', 'Shimane', 'Kagoshima'].includes(name)) return 'LDP';
-  if (['Osaka', 'Hyogo'].includes(name)) return 'Ishin no Kai';
-  if (['Hokkaido', 'Iwate', 'Nagano'].includes(name)) return 'CDP';
-  if (name === 'Okinawa') return 'CDP';
-  return 'LDP';
-}
-
-function getEgParty(name) {
-  return 'NFP';
-}
-
-function getBrParty(name) {
-  if (['Bahia', 'Pernambuco', 'Ceará', 'Maranhão', 'Piauí', 'Alagoas', 'Paraíba', 'Rio Grande do Norte', 'Sergipe'].includes(name)) return 'PT';
-  if (['Santa Catarina', 'Paraná', 'Mato Grosso', 'Rondônia', 'Roraima', 'Mato Grosso do Sul', 'Goiás', 'Distrito Federal', 'Acre', 'Amapá'].includes(name)) return 'PL';
-  return (Math.random() > 0.5 ? 'PL' : 'PT');
-}
-
-function genSupports(partyIds, mainParty, isMixed) {
-  let supports = {};
-  let total = 0;
-  
-  partyIds.forEach(pid => {
-    let base = Math.random() * 5;
-    if (pid === mainParty) base += isMixed ? 35 : (partyIds === egParties ? 60 : 45);
-    else if (isMixed) base += Math.random() * 20;
+const injection = `
+  // Check for missing regions in geojson and add them dynamically
+  useEffect(() => {
+    if (!geoJsonData || !geoJsonData.features) return;
     
-    supports[pid] = base;
-    total += base;
-  });
-  
-  let norm = {};
-  partyIds.forEach(pid => {
-    norm[pid] = parseFloat(((supports[pid] / total) * 100).toFixed(1));
-  });
-  return norm;
-}
+    let hasChanges = false;
+    const newRegions = [...country.regions];
+    
+    const playerStart = 2;
 
-let content = fs.readFileSync('src/constants/countries.ts', 'utf8');
+    geoJsonData.features.forEach((feature: any) => {
+       if (feature.properties?.isDistrict) return;
 
-// Replace BR regions
-content = content.replace(/(id: 'BR'[\s\S]*?regions: )\[([\s\S]*?)\]/, (match, prefix, regionsStr) => {
-  let newRegions = regionsStr.replace(/\{ id: '([^']+)', name: '([^']+)', seats: (\d+), voterDistribution: makeVoterGroup\([^)]+\), supports: \{\}, infrastructure: \d+, campaignLevel: 0, ownerPartyId: '([^']+)' \}/g, (m, id, name, seats, oldOwner) => {
-    const owner = getBrParty(name);
-    const isMixed = ['São Paulo', 'Minas Gerais', 'Rio de Janeiro', 'Espírito Santo', 'Rio Grande do Sul'].includes(name);
-    const supp = genSupports(brParties, owner, isMixed);
-    return `{ id: '${id}', name: '${name}', seats: ${seats}, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: ${JSON.stringify(supp)}, infrastructure: 3, campaignLevel: 0, ownerPartyId: '${owner}' }`;
-  });
-  return prefix + '[' + newRegions + ']';
-});
+       const fName = getFeatureName(feature);
+       if (!fName) return;
+       
+       const normName = normalizeName(fName);
+       const regionId = getRegionIdFromNormalizedName(normName, country.id) || normName;
+       
+       const exists = newRegions.find(r => r.id === regionId || normalizeName(r.id) === normName || normalizeName(r.name) === normName);
+       
+       if (!exists) {
+         hasChanges = true;
+         
+         const supports: Record<string, number> = {};
+         supports[party.id] = playerStart;
+         
+         const totalRivalBase = country.rivals.reduce((sum, r) => sum + r.baseSupport, 0);
+         let sharedRemaining = 100 - playerStart;
+         country.rivals.forEach((rival) => {
+           const share = rival.baseSupport / totalRivalBase;
+           supports[rival.id] = share * sharedRemaining;
+         });
+         
+         // Normalize sum to 100
+         const currentSum = Object.values(supports).reduce((s, v) => s + v, 0);
+         if (Math.abs(currentSum - 100) > 0.1) {
+           const factor = 100 / currentSum;
+           Object.keys(supports).forEach(k => {
+             supports[k] = supports[k] * factor;
+           });
+         }
 
-// Replace JP regions
-content = content.replace(/(id: 'JP'[\s\S]*?regions: )\[([\s\S]*?)\]/, (match, prefix, regionsStr) => {
-  let newRegions = regionsStr.replace(/\{ id: '([^']+)', name: '([^']+)', seats: (\d+), voterDistribution: makeVoterGroup\([^)]+\), supports: \{\}, infrastructure: \d+, campaignLevel: 0, ownerPartyId: '([^']+)' \}/g, (m, id, name, seats, oldOwner) => {
-    const owner = getJpParty(name);
-    const supp = genSupports(jpParties, owner, false);
-    return `{ id: '${id}', name: '${name}', seats: ${seats}, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: ${JSON.stringify(supp)}, infrastructure: 4, campaignLevel: 0, ownerPartyId: '${owner}' }`;
-  });
-  return prefix + '[' + newRegions + ']';
-});
+         let leadingPartyId = party.id;
+         let maxSupport = supports[party.id];
+         Object.entries(supports).forEach(([pid, val]) => {
+           if (val > maxSupport) {
+             maxSupport = val;
+             leadingPartyId = pid;
+           }
+         });
 
-// Replace EG regions
-content = content.replace(/(id: 'EG'[\s\S]*?regions: )\[([\s\S]*?)\]/, (match, prefix, regionsStr) => {
-  let newRegions = regionsStr.replace(/\{ id: '([^']+)', name: '([^']+)', seats: (\d+), voterDistribution: makeVoterGroup\([^)]+\), supports: \{\}, infrastructure: \d+, campaignLevel: 0, ownerPartyId: '([^']+)' \}/g, (m, id, name, seats, oldOwner) => {
-    const owner = getEgParty(name);
-    const isMixed = ['Cairo', 'Alexandria', 'Giza'].includes(name);
-    const supp = genSupports(egParties, owner, isMixed);
-    return `{ id: '${id}', name: '${name}', seats: ${seats}, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: ${JSON.stringify(supp)}, infrastructure: 3, campaignLevel: 0, ownerPartyId: '${owner}' }`;
-  });
-  return prefix + '[' + newRegions + ']';
-});
+         newRegions.push({
+            id: regionId,
+            name: fName,
+            seats: 5, // Default generic seat count
+            voterDistribution: {
+                "Working Class": 20,
+                "Middle Class": 20,
+                "Upper Class": 20,
+                "Youth": 20,
+                "Elderly": 10,
+                "Rural": 10
+            },
+            supports: supports,
+            infrastructure: 1,
+            campaignLevel: 0,
+            ownerPartyId: leadingPartyId,
+            mayorName: ""
+         });
+       }
+    });
 
-fs.writeFileSync('src/constants/countries.ts', content, 'utf8');
-console.log('Done replacing regions in countries.ts');
+    if (hasChanges) {
+      onUpdateCountry({ ...country, regions: newRegions });
+    }
+  }, [geoJsonData]);
+`;
+
+c = c.replace(/const \[geoJsonData, setGeoJsonData\] = useState<any>\(null\);\s+const \[districtGeoJsonData, setDistrictGeoJsonData\] = useState<any>\(null\);/, `const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [districtGeoJsonData, setDistrictGeoJsonData] = useState<any>(null);` + injection);
+
+fs.writeFileSync('src/components/CampaignView.tsx', c, 'utf8');

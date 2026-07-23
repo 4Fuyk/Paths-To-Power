@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon } from 'lucide-react';
+import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
 import { Country } from '../types';
 import L from 'leaflet';
@@ -50,12 +50,9 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const cleanupMap = () => {
     if (mapInstanceRef.current) {
       const map = mapInstanceRef.current;
-      try {
-        const container = map.getContainer() as any;
-        if (container && container._leaflet_id) {
-          map.remove();
-        }
-      } catch (e) {}
+      
+      try { if(map.stop) map.stop(); map.off(); map.remove(); } catch(e) {}
+
       mapInstanceRef.current = null;
       geoJsonLayerRef.current = null;
       tileLayerRef.current = null;
@@ -68,7 +65,10 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   }, []);
 
   // Initialize board
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [gameSpeed, setGameSpeed] = useState<number>(1);
+  const [gameDate, setGameDate] = useState<Date>(new Date(2025, 0, 1));
 
   useEffect(() => {
     if (isInitialized) return;
@@ -134,11 +134,66 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     setIsInitialized(true);
   }, [country, isInitialized, mapMode, centersReady]); // run when centersReady changes
 
+
+  useEffect(() => {
+    if (!isPlaying || !isInitialized) return;
+    const intervalId = setInterval(() => {
+      // Advance date
+      setGameDate(prev => {
+        const nextDate = new Date(prev);
+        nextDate.setDate(nextDate.getDate() + 1);
+        return nextDate;
+      });
+      
+      // Auto battle
+      setRegionStatus(prev => {
+        const next = { ...prev };
+        const rebels = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'rebel');
+        const loyals = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'loyal');
+        if (rebels.length === 0 || loyals.length === 0) {
+           setIsPlaying(false);
+           return next;
+        }
+        
+        // Random loyal attacks
+        if (Math.random() < 0.3) {
+            const randomRebel = rebels[Math.floor(Math.random() * rebels.length)];
+            const damageDealt = 20 + Math.floor(Math.random() * 30);
+            const newHp = Math.max(0, randomRebel.hp - damageDealt);
+            if (newHp === 0) {
+               addLog(`🟢 ${country.regions.find(r => r.id === randomRebel.regionId)?.name} has been liberated from rebel control!`);
+               next[randomRebel.regionId] = { ...randomRebel, hp: randomRebel.maxHp, type: 'loyal' };
+            } else {
+               next[randomRebel.regionId] = { ...randomRebel, hp: newHp };
+            }
+        }
+        
+        // Random rebel attacks
+        if (Math.random() < 0.3) {
+            const targetLoyal = loyals[Math.floor(Math.random() * loyals.length)];
+            const rebelDamage = 20 + Math.floor(Math.random() * 30);
+            const newHp = Math.max(0, targetLoyal.hp - rebelDamage);
+            if (newHp === 0) {
+               addLog(`💀 We lost control of ${country.regions.find(r => r.id === targetLoyal.regionId)?.name}! Rebels took over.`);
+               next[targetLoyal.regionId] = { ...targetLoyal, hp: 150, type: 'rebel' };
+            } else {
+               next[targetLoyal.regionId] = { ...targetLoyal, hp: newHp };
+            }
+        }
+        
+        return next;
+      });
+      
+    }, 1000 / gameSpeed);
+    
+    return () => clearInterval(intervalId);
+  }, [isPlaying, gameSpeed, isInitialized]);
+
   const addLog = (msg: string) => {
     setBattleLogs(prev => [msg, ...prev].slice(0, 8));
   };
 
-  const handleAttack = (regionId: string) => {
+  const handleAttack = (regionId: string, isAuto: boolean = false) => {
     const target = regionStatusRef.current[regionId];
     if (!target || target.type !== 'rebel') return;
 
@@ -325,7 +380,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
 
       // Update GeoJSON layer styles
-      geoJsonLayerRef.current.setStyle((feature: any) => {
+      if (mapInstanceRef.current && mapInstanceRef.current.hasLayer(geoJsonLayerRef.current)) geoJsonLayerRef.current.setStyle((feature: any) => {
         const normName = normalizeName(getFeatureName(feature));
         let regionId = getRegionIdFromNormalizedName(normName, country.id);
         let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
@@ -382,25 +437,82 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
       regionsList.forEach(status => {
         const center = regionCentersRef.current[status.regionId];
-        if (center && isBorder(status.regionId, status.type)) {
-          const iconHtml = status.type === 'loyal' 
-            ? `<div style="width: 24px; height: 24px; background: #0ea5e9; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>`
-            : `<div style="width: 24px; height: 24px; background: #ef4444; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div>`;
+        if (center) {
+          const rName = country.regions.find(r => r.id === status.regionId)?.name || status.regionId;
+          const isL = status.type === 'loyal';
+          
+          const iconHtml = isL
+            ? `<div style="width: 36px; height: 24px; background: rgba(16,185,129,0.15); border: 1.5px solid #10b981; backdrop-filter: blur(4px); border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(16,185,129,0.3), inset 0 0 8px rgba(16,185,129,0.2); cursor: grab; position: relative; font-family: monospace;">
+                 <span style="font-size: 11px; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">${status.hp}</span>
+                 <div style="position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
+               </div>`
+            : `<div style="width: 36px; height: 24px; background: rgba(244,63,94,0.15); border: 1.5px solid #f43f5e; backdrop-filter: blur(4px); border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(244,63,94,0.3), inset 0 0 8px rgba(244,63,94,0.2); position: relative; font-family: monospace;">
+                 <span style="font-size: 11px; font-weight: 900; color: #f43f5e; letter-spacing: -0.5px;">${status.hp}</span>
+                 <div style="position: absolute; top: -3px; left: -3px; width: 6px; height: 6px; background: #f43f5e; border-radius: 50%;"></div>
+               </div>`;
           
           const customIcon = L.divIcon({
             html: iconHtml,
             className: 'custom-army-icon',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
+            iconSize: [36, 24],
+            iconAnchor: [18, 12],
           });
 
-          const marker = L.marker([center.lat, center.lng], { icon: customIcon });
-          
-          marker.on('click', () => {
-            if (status.type === 'rebel') {
-              setTimeout(() => handleAttack(status.regionId), 10);
-            }
+          const marker = L.marker([center.lat, center.lng], { 
+            icon: customIcon,
+            draggable: isL // Only loyal armies are draggable
           });
+
+          if (isL) {
+            marker.on('dragend', (e: any) => {
+              const droppedLatLng = e.target.getLatLng();
+              
+              // Find the closest rebel region center
+              let closestRegionId: string | null = null;
+              let minDistance = 999999;
+              
+              Object.entries(regionCentersRef.current).forEach(([regId, coords]) => {
+                const c = coords as { lat: number; lng: number };
+                const relStatus = regionStatusRef.current[regId];
+                if (relStatus && relStatus.type === 'rebel') {
+                  const dist = Math.sqrt(
+                    Math.pow(droppedLatLng.lat - c.lat, 2) + 
+                    Math.pow(droppedLatLng.lng - c.lng, 2)
+                  );
+                  if (dist < minDistance) {
+                    minDistance = dist;
+                    closestRegionId = regId;
+                  }
+                }
+              });
+              
+              if (closestRegionId && minDistance < 12.0) {
+                const rebelName = country.regions.find(r => r.id === closestRegionId)?.name || closestRegionId;
+                addLog(`🎯 Drag-and-Drop: Order received! Deploying military to attack rebel garrison in ${rebelName}!`);
+                handleAttack(closestRegionId);
+              } else {
+                addLog(`⚠️ Dropped too far from any active rebel territory! Deployed back to defensive base.`);
+              }
+              // Reset marker coordinates to its center base
+              marker.setLatLng([center.lat, center.lng]);
+            });
+          } else {
+            // Click target on rebel marker
+            marker.on('click', () => {
+              handleAttack(status.regionId);
+            });
+          }
+
+          marker.bindTooltip(`
+            <div style="font-family: monospace; padding: 4px 6px; background: rgba(15,23,42,0.9); border: 1px solid ${isL ? '#10b981' : '#f43f5e'}; border-radius: 4px; backdrop-filter: blur(4px);">
+              <b style="font-size: 10px; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.5px;">${rName}</b>
+              <br/><span style="font-size: 9px; color: ${isL ? '#10b981' : '#f43f5e'}; text-transform: uppercase;">
+                ${isL ? 'Loyal Forces' : 'Rebel Militia'}
+              </span>
+              <br/><span style="font-size: 9px; color: #94a3b8;">INTEGRITY: <b style="color: #f8fafc;">${status.hp}/${status.maxHp}</b></span>
+              ${isL ? `<br/><i style="font-size: 8px; color: #10b981; opacity: 0.8;">Drag to attack</i>` : ''}
+            </div>
+          `, { direction: 'top', opacity: 1, className: 'tactical-tooltip' });
           
           marker.addTo(armyMarkersLayerRef.current!);
         }
@@ -445,9 +557,41 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         </div>
         
         <div className="flex gap-4 items-center">
-          <div className="flex flex-col items-end">
+          {/* TIME CONTROL SYSTEM */}
+          <div className="flex items-center gap-2 border border-slate-700/40 bg-slate-950/20 px-3 py-1.5 rounded-xl">
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono tracking-wide transition-all flex items-center gap-2 ${
+                isPlaying 
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20' 
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20'
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
+                  </span>
+                  ⏱️ PAUSE TIME
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2 w-2 bg-slate-950 rounded-full" />
+                  ▶ START TIME
+                </>
+              )}
+            </button>
+            <div className="text-xs font-bold font-mono px-2 opacity-80 border-l border-slate-700/30">
+              📅 {gameDate.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end border-l border-slate-700/30 pl-4">
             <span className="text-[10px] font-mono opacity-60">GOVERNMENT STATUS</span>
-            <span className="text-xs font-bold text-emerald-500">ACTIVE - UNDER ATTACK</span>
+            <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              ACTIVE - UNDER ATTACK
+            </span>
           </div>
         </div>
       </div>
@@ -460,8 +604,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
             <h2 className="text-xs font-bold opacity-50 uppercase tracking-widest font-mono">REGIONAL COMMAND MAP</h2>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 text-[10px] font-bold uppercase font-mono">
-                <span className="flex items-center gap-1 text-emerald-500"><Shield className="w-3 h-3"/> Loyal</span>
-                <span className="flex items-center gap-1 text-red-500"><AlertTriangle className="w-3 h-3"/> Rebel</span>
+                <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"><Activity className="w-3 h-3"/> Loyal</span>
+                <span className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20"><Target className="w-3 h-3"/> Rebel</span>
               </div>
               
               {(country.id === 'TR' || country.id === 'DE' || country.id === 'US') && (
@@ -514,7 +658,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-bold text-sm line-clamp-1 pr-4">{reg.name}</span>
-                    {isRebel ? <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" /> : <Shield className="w-4 h-4 text-emerald-500 shrink-0" />}
+                    {isRebel ? <Target className="w-4 h-4 text-red-500 shrink-0" /> : <Activity className="w-4 h-4 text-emerald-500 shrink-0" />}
                   </div>
                   
                   <div className="flex flex-col gap-1 mt-4">

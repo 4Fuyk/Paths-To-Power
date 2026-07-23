@@ -29,6 +29,125 @@ import {
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
 
+const getDynamicIRLNews = (countryId: string | undefined, isRuling: boolean, playerPartyName?: string) => {
+  const globalNews = [
+    "🌐 GLOBAL FOCUS: Central banks around the world signal interest rate cuts as global inflation begins to cool.",
+    "⚡ TECH MONITOR: Artificial Intelligence regulations (AI Act) take full effect, prompting tech hubs to restructure compliance.",
+    "📣 ENVIRONMENT WATCH: Climate summits raise pressure on sovereign states to phase out thermal coal and triple renewable capacity.",
+    "📈 MARKET REPORT: Nasdaq and Nikkei hit fresh record highs amid strong semiconductor demand and tech earnings.",
+    "🛡️ DEFENSE LOG: Naval exercises in international waters reinforce maritime shipping route security protocols."
+  ];
+
+  if (!countryId) {
+    return globalNews;
+  }
+
+  const countrySpecific: Record<string, string[]> = {
+    TR: [
+      "🇹🇷 TCMB RAPORU: Merkez Bankası faiz kararını açıkladı; enflasyonla mücadele kapsamında sıkı para politikası sürdürülüyor.",
+      "🗳️ İÇ SİYASET: CHP, AKP ve diğer partiler arasında yeni anayasa tartışmaları ve meclis içi ittifak görüşmeleri hız kazandı.",
+      "🏙️ BELEDİYE HABERİ: İstanbul ve Ankara büyükşehir belediyeleri, kentsel dönüşüm ve deprem hazırlık bütçelerini artırıyor.",
+      "⚓ GEOPOLİTİK: Doğu Akdeniz ve Ege'de enerji arama faaliyetleri ve diplomatik diyaloglar yakından izleniyor.",
+      "📊 ENFLASYON VERİSİ: TÜİK aylık enflasyon rakamlarını açıkladı; tüketici fiyat endeksindeki değişim çarşı pazarın gündeminde."
+    ],
+    US: [
+      "🇺🇸 WASHINGTON BRIEF: Bipartisan Congressional committees lock horns over federal budget limits and national debt ceilings.",
+      "🏛️ FEDERAL RESERVE: Chairman Powell indicates interest rates may stay 'higher for longer' depending on upcoming jobs data.",
+      "🗳️ CAMPAIGN RAIL: Primary polls show tightening margins as key swing states of Pennsylvania and Wisconsin draw heavy ad spend.",
+      "🛡️ BORDER SECURITY: Legislative battles intensify over foreign aid packages paired with national border enforcement funding.",
+      "🚀 AEROSPACE LOG: NASA announces new schedule targets for the Artemis crewed lunar landings in collaboration with SpaceX."
+    ],
+    DE: [
+      "🇩🇪 BERLIN REPORT: Chancellor Scholz's traffic-light coalition faces intense policy debates over budget allocations.",
+      "📈 ECONOMIC FOCUS: German industrial sectors report rising export demand despite higher energy costs and supply bottlenecks.",
+      "🗳️ STATE ELECTIONS: Rising support for alternative factions in eastern states prompts strategy meetings among mainstream parties.",
+      "🚆 INFRALOG: Deutsche Bahn announces massive modernization investments to resolve network delays and infrastructure backlogs.",
+      "🍃 ENERGIEWENDE: Federal network agency reports wind power hit a record 43% share of national electricity generation."
+    ],
+    GB: [
+      "🇬🇧 WESTMINSTER FEED: Keir Starmer's Labour government presents new NHS funding reforms and green energy transition bills.",
+      "📈 COST OF LIVING: Bank of England monitors retail spending as inflation drops back to the target 2.0% rate.",
+      "🚢 HOME OFFICE: Debate intensifies in the House of Commons over immigration policies and asylum processing centers.",
+      "🏙️ LOCAL GOVERNMENT: Multiple councils appeal for emergency financial assistance amid rising social care costs.",
+      "🍃 ENERGY GRID: UK successfully operates for a full month without coal power, marking a historic carbon-reduction milestone."
+    ],
+    JP: [
+      "🇯🇵 TOKYO DAILY: Prime Minister Ishiba emphasizes national defense budget hikes and wage-inflation cycle support.",
+      "💴 YEN EXCHANGE: Bank of Japan monitors currency volatility as the Yen showing signs of recovery against the USD.",
+      "🔌 TECH FOCUS: Massive semiconductor fabricators in Kumamoto begin pilot production runs, securing domestic chip supply.",
+      "🗻 TOKYO STOCK: Nikkei 225 index fluctuates near historic levels as multinational corporations report record export revenues.",
+      "🍁 SOCIAL MONITOR: Ministry of Health proposes fresh nursery subsidies and parental leave expansions to boost birth rates."
+    ],
+    IT: [
+      "🇮🇹 ROMA FEED: Meloni's administration defends the national maritime migration plan and digital infrastructure investments.",
+      "🗳️ OPPOSITION UNION: Elly Schlein (PD) and Giuseppe Conte (M5S) hold public rallies to form a unified center-left alliance.",
+      "🏛️ FINANCIAL NOTE: Ministry of Finance implements the superbonus tax reform package to curb national deficit spikes.",
+      "🍇 ECONOMY BAROMETER: Agribusiness and high-end fashion exports lead Italy's economic growth indicators in the Eurozone.",
+      "🛶 VENICE WATCH: Conservation committees test upgraded MOSE barrier systems amid exceptional high tide warnings."
+    ],
+    ES: [
+      "🇪🇸 MADRID MONITOR: Sanchez's cabinet faces parliamentary inquiries over the implementation of the regional amnesty bills.",
+      "🗳️ OPPOSITION DRIVE: PP leader Núñez Feijóo organizes national demonstrations calling for immediate early general elections.",
+      "🏖️ TOURISM REFORM: Regional governments in Barcelona and Malaga announce stricter regulations on short-term holiday rentals.",
+      "🌾 CLIMATE CHALLENGE: Agriculture ministry allocates emergency irrigation funds to combat prolonged dry spells in Andalusia.",
+      "🚇 TRANSIT FOCUS: Government expands free regional train travel passes to ease cost-of-living pressures for young workers."
+    ],
+    ID: [
+      "🇮🇩 JAKARTA PRESS: President Prabowo outlines smooth transition policies focusing on infrastructure and digital education.",
+      "🏗️ IKN MONITOR: Construction of the new capital city Nusantara (IKN) in Kalimantan enters its final Phase 2 rollout.",
+      "🪙 TRADE RECORD: Mineral export revenues surge as nickel processing refineries in Sulawesi expand production capacity.",
+      "🗳️ REGIONAL POLLS: Dynamic campaigns begin across Jakarta and West Java as candidates compete for key governorships.",
+      "🌋 RISK ALERTS: Volcano monitoring agencies issue updated safety guidelines for active regions in East Java."
+    ],
+    IN: [
+      "🇮🇳 NEW DELHI MON: Prime Minister Narendra Modi's third-term cabinet focuses on manufacturing incentives and digital public infra.",
+      "📊 GDP REPORT: India remains the fastest-growing major economy, posting a 7.2% annualized growth rate.",
+      "🌾 RURAL FOCUS: Agriculture minister announces updated minimum support prices (MSP) for essential monsoon crops.",
+      "🛰️ ISRO LOG: Indian Space Research Organisation prepares to launch the crewless Gaganyaan test flight in late autumn.",
+      "🗳️ POLL WATCH: Tight local legislative contests in Maharashtra and Haryana draw intensive campaign visits by national leaders."
+    ],
+    KR: [
+      "🇰🇷 SEOUL BRIEF: Political deadlock continues in the National Assembly over Special Counsel investigation bills.",
+      "🏥 MEDICAL CRISIS: Health ministry initiates dialogue rounds with resident doctors over medical school admission quotas.",
+      "🔌 CHIP WAR: Samsung and SK Hynix announce massive joint R&D investments in the Yongin semiconductor super-cluster.",
+      "👶 POPULATION TASK: Presidential committee proposes cash-allowance bundles and housing priorities for newlywed couples.",
+      "🛡️ DEFENSE SHIELD: Combined military exercises conducted to reinforce readiness posture amid regional tensions."
+    ],
+    MX: [
+      "🇲🇽 MEXICO CITY: President Claudia Sheinbaum defends the judicial reform bills ensuring popular election of magistrates.",
+      "📈 NEARSHORING BOOM: Northern states of Nuevo León and Coahuila report record industrial park occupancy by auto suppliers.",
+      "🌳 TREN MAYA: Federal developers complete the final southern loop, connecting major Yucatan archaeological sites.",
+      "💲 PESO FLUCTUATIONS: Banco de México adjusts interest rates to maintain stable exchange rates amid US trade reviews.",
+      "🛡️ SECURITY UPDATE: National Guard expands specialized highway safety patrols to protect commercial cargo trucks."
+    ],
+    AU: [
+      "🇦🇺 CANBERRA PRESS: Albanese's administration outlines housing affordability initiatives and rental assistance programs.",
+      "🛡️ AUKUS DEBATE: Defense minister details ship-building timelines and strategic technology partnerships in South Australia.",
+      "📉 INTEREST RATES: RBA Governor warns of persistent service-sector inflation, keeping rate-cut expectations on hold.",
+      "🪸 ECO SYSTEM: Great Barrier Reef marine authorities report positive coral recovery rates following winter surveys.",
+      "🗳️ FEDERAL OUTLOOK: Coalition leader Peter Dutton targets suburban swing seats in Queensland and Western Australia."
+    ]
+  };
+
+  const selectedList = countrySpecific[countryId] || globalNews;
+  
+  // Create a mixed feed of 4 country-specific items + 2 global items
+  const mixedFeed = [
+    ...selectedList.slice(0, 4),
+    globalNews[Math.floor(Math.random() * globalNews.length)],
+    globalNews[(Math.floor(Math.random() * globalNews.length) + 1) % globalNews.length]
+  ];
+
+  if (isRuling && playerPartyName) {
+    mixedFeed.push(
+      `🏛️ CABINET HIGHLIGHT: Prime Minister's office (${playerPartyName}) coordinates with parliament on upcoming reform packages.`,
+      "📊 STATE STATUS: Economic feedback indicates high treasury efficiency. Voter response is monitored."
+    );
+  }
+
+  return mixedFeed;
+};
+
 export default function App() {
   // Global States
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -49,6 +168,7 @@ export default function App() {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [playerParty, setPlayerParty] = useState<Party | null>(null);
   const [campaignTurn, setCampaignTurn] = useState<number>(1); // 1 to country.campaignTurns
+
   const [dashboardTab, setDashboardTab] = useState<string>('CAMPAIGN');
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [warningAlert, setWarningAlert] = useState<string | null>(null);
@@ -70,8 +190,14 @@ export default function App() {
 
   // Sovereign Government and Diplomacy States
   const [isRuling, setIsRuling] = useState<boolean>(false);
+
+  const newsTickerItems = React.useMemo(() => {
+    return getDynamicIRLNews(selectedCountry?.id, isRuling, playerParty?.name);
+  }, [selectedCountry?.id, isRuling, campaignTurn, playerParty?.name]);
+
   const [hasReshuffledPrompt, setHasReshuffledPrompt] = useState<boolean>(false);
   const [coalitions, setCoalitions] = useState<Coalition[]>([]);
+  const [electionSeats, setElectionSeats] = useState<Record<string, number> | null>(null);
   const [rulingMonthsCount, setRulingMonthsCount] = useState<number>(0);
   const [isJuniorMember, setIsJuniorMember] = useState<boolean>(false);
   const [currentEvent, setCurrentEvent] = useState<{
@@ -143,27 +269,41 @@ export default function App() {
   const handleSelectCountry = (country: Country) => {
     const startCampaignFlow = (targetCountry: Country) => {
       setIsRuling(false);
+      setElectionSeats(null);
 
       // Reset starting region support configurations for the simulation run
-      const preppedRegions = targetCountry.regions.map((region) => {
+      const preppedRegions = targetCountry.regions.map((region, index) => {
         const supports: Record<string, number> = {};
-        const playerStart = 2;
+        const playerStart = 3 + Math.floor(Math.random() * 12); // Randomized player start between 3% and 14%
         supports['player_party'] = playerStart;
         
         const hasPreseeded = region.supports && Object.keys(region.supports).length > 0;
         if (hasPreseeded) {
           const remaining = 100 - playerStart;
-          const preseededSum = Object.values(region.supports).reduce((sum, v) => sum + v, 0);
+          // Apply a per-region randomized multiplier (+/- 35%) to create highly unique support ratios for each region
+          const regionalRatios: Record<string, number> = {};
           Object.entries(region.supports).forEach(([rivalId, val]) => {
+            const randomFactor = 0.65 + Math.random() * 0.70; // Random factor between 0.65 and 1.35
+            regionalRatios[rivalId] = val * randomFactor;
+          });
+
+          const preseededSum = Object.values(regionalRatios).reduce((sum, v) => sum + v, 0);
+          Object.entries(regionalRatios).forEach(([rivalId, val]) => {
             supports[rivalId] = (val / preseededSum) * remaining;
           });
         } else {
-          // Rivals share the remaining support based on their base support quotients
-          const totalRivalBase = targetCountry.rivals.reduce((sum, r) => sum + r.baseSupport, 0);
+          // Rivals share the remaining support based on their base support quotients with wider randomized variation
+          const regionalRatios: Record<string, number> = {};
+          targetCountry.rivals.forEach((rival) => {
+            const randomFactor = 0.50 + Math.random() * 1.0; // Random factor between 0.50 and 1.50
+            regionalRatios[rival.id] = rival.baseSupport * randomFactor;
+          });
+
+          const totalRivalBase = Object.values(regionalRatios).reduce((sum, v) => sum + v, 0);
           let sharedRemaining = 100 - playerStart;
 
           targetCountry.rivals.forEach((rival) => {
-            const share = rival.baseSupport / totalRivalBase;
+            const share = (regionalRatios[rival.id] || rival.baseSupport) / totalRivalBase;
             supports[rival.id] = share * sharedRemaining;
           });
         }
@@ -177,9 +317,20 @@ export default function App() {
           });
         }
 
+        // Determine the rival with the highest starting support in this region on startup to set as the owner dynamically
+        let highestRivalId = '';
+        let maxSupport = -1;
+        Object.entries(supports).forEach(([rivalId, supportVal]) => {
+          if (rivalId !== 'player_party' && supportVal > maxSupport) {
+            maxSupport = supportVal;
+            highestRivalId = rivalId;
+          }
+        });
+
         return {
           ...region,
           supports,
+          ownerPartyId: highestRivalId || region.ownerPartyId,
           campaignLevel: 0
         };
       });
@@ -855,8 +1006,11 @@ export default function App() {
   };
 
   // Election simulator end callback
-  const handleElectionFinished = (success: boolean, finalSeats?: Record<string, number>) => {
+  const handleElectionFinished = (success: boolean, finalSeats?: Record<string, number>, newCoalition?: any) => {
     if (success && selectedCountry && playerParty) {
+      if (finalSeats) {
+        setElectionSeats(finalSeats);
+      }
       // Add and save completed country
       if (!completedCountries.includes(selectedCountry.id)) {
         setCompletedCountries([...completedCountries, selectedCountry.id]);
@@ -927,9 +1081,9 @@ export default function App() {
             });
           }
 
-          setCoalitions(generated);
+          const finalCoals = [...(coalitions || []), ...generated]; if(newCoalition && !finalCoals.find(c => c.name === newCoalition.name)) finalCoals.push(newCoalition); setCoalitions(finalCoals);
         } else {
-          setCoalitions([]);
+          if (newCoalition) setCoalitions([...(coalitions || []), newCoalition]); else setCoalitions([...(coalitions || [])]);
         }
       }
 
@@ -949,6 +1103,7 @@ export default function App() {
     setActiveScreen('MAP');
     setSelectedCountry(null);
     setPlayerParty(null);
+    setElectionSeats(null);
   };
 
   const handleFormCabinet = () => {
@@ -972,6 +1127,7 @@ export default function App() {
     setActiveScreen('MAP');
     setSelectedCountry(null);
     setPlayerParty(null);
+    setElectionSeats(null);
     setShowElectionSuccessModal(false);
   };
 
@@ -1080,17 +1236,11 @@ export default function App() {
         </div>
         <div className="w-full relative overflow-hidden flex items-center h-full">
           <div className="whitespace-nowrap flex gap-16 absolute animate-marquee">
-            <span>🔥 ELECTION DAY SPECIAL: Paths to Power simulations forecast heavy voter turnout in {selectedCountry ? selectedCountry.name : 'major sovereign nations'}!</span>
-            <span>🌐 DIPLOMATIC BRIEF: UN Security Council convenes an emergency session regarding the ongoing war in Ukraine.</span>
-            <span>📈 ECONOMIC FEED: Global markets fluctuate amid soaring energy prices and supply chain disruptions.</span>
-            <span>⚡ GEOPOLITICAL MONITOR: Tensions rise in the Asia-Pacific region as new naval exercises are announced.</span>
-            <span>📣 GLOBAL WATCH: Democratic scores and freedom indexes adjust dynamically across eight regional capitals.</span>
-            {isRuling && (
-              <>
-                <span className="text-amber-300">🏛️ CABINET UPDATE: Chief executive convenes emergency assembly. Public support and civil war risk are being monitored live.</span>
-                <span className="text-amber-300">📜 LEGISLATIVE TICKER: Major Yes/No voting sessions scheduled in parliament chambers.</span>
-              </>
-            )}
+            {newsTickerItems.map((item, index) => (
+              <span key={index} className={item.includes("🏛️") || item.includes("📜") ? "text-amber-300" : ""}>
+                {item}
+              </span>
+            ))}
           </div>
         </div>
       </div>
@@ -1631,6 +1781,7 @@ export default function App() {
                 darkMode={darkMode}
                 coalitions={coalitions}
                 onUpdateCoalitions={setCoalitions}
+                electionSeats={electionSeats}
               />
             )}
 

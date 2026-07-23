@@ -81,6 +81,74 @@ export const CABINET_POSITIONS_BY_COUNTRY: Record<string, CabinetPosition[]> = {
     { id: 'justice', name: 'Minister of Justice', description: 'Coordinates judicial councils, legislation drafts, and courthouse safety.' },
     { id: 'health', name: 'Minister of Health & Population', description: 'Maintains national health insurance and rural medical centers.' },
     { id: 'education', name: 'Minister of Education', description: 'Supervises the K-12 schooling system and curriculum modernization.' }
+  ],
+  IT: [
+    { id: 'vice_pm', name: 'Deputy Prime Minister', description: 'Assists the Prime Minister and manages public administration reforms.' },
+    { id: 'foreign_affairs', name: 'Minister of Foreign Affairs', description: 'Leads the Farnesina and handles European and Mediterranean diplomacy.' },
+    { id: 'interior', name: 'Minister of the Interior', description: 'Responsible for public security, border control, and migration policies.' },
+    { id: 'finance', name: 'Minister of Economy and Finance', description: 'Oversees the national budget, tax reforms, and Eurozone compliance.' },
+    { id: 'defence', name: 'Minister of Defence', description: 'Commands the Italian Armed Forces and NATO defense operations.' },
+    { id: 'justice', name: 'Minister of Justice', description: 'Oversees judicial processes, prison security, and anti-corruption policies.' },
+    { id: 'health', name: 'Minister of Health', description: 'Manages the National Health Service (SSN) and public health initiatives.' },
+    { id: 'education', name: 'Minister of Education and Merit', description: 'Formulates school standards, curriculum, and academic development.' }
+  ],
+  ES: [
+    { id: 'deputy_pm', name: 'First Deputy Prime Minister', description: 'Assists the Prime Minister and coordinates general government policy.' },
+    { id: 'foreign_affairs', name: 'Minister of Foreign Affairs', description: 'Leads international diplomacy, EU relations, and global cooperation.' },
+    { id: 'interior', name: 'Minister of the Interior', description: 'Directs national security forces, policing, and civil protection.' },
+    { id: 'finance', name: 'Minister of Finance', description: 'Directs public treasury, budget policy, and public spending controls.' },
+    { id: 'defence', name: 'Minister of Defence', description: 'Directs defense policies and coordinates the Spanish Armed Forces.' },
+    { id: 'justice', name: 'Minister of Justice', description: 'Oversees judicial administration, royal decrees, and court logistics.' },
+    { id: 'health', name: 'Minister of Health', description: 'Coordinates with regional health systems and handles public safety.' },
+    { id: 'education', name: 'Minister of Education', description: 'Sets educational guidelines and professional training development.' }
+  ],
+  IN: [
+    { id: 'deputy_pm', name: 'Deputy Prime Minister', description: 'Assists the Prime Minister and coordinates major national portfolios.' },
+    { id: 'foreign_affairs', name: 'Minister of External Affairs', description: 'Leads the Ministry of External Affairs and handles international diplomacy.' },
+    { id: 'interior', name: 'Minister of Home Affairs', description: 'Controls internal security, police forces, and border management.' },
+    { id: 'finance', name: 'Minister of Finance', description: 'Presents the Union Budget and governs corporate affairs.' },
+    { id: 'defence', name: 'Minister of Defence', description: 'Exercises administrative control over the Indian Armed Forces.' },
+    { id: 'justice', name: 'Minister of Law and Justice', description: 'Oversees the national legal system and judicial policies.' },
+    { id: 'health', name: 'Minister of Health & Family Welfare', description: 'Oversees national health policies, vaccination drives, and healthcare.' },
+    { id: 'education', name: 'Minister of Education', description: 'Formulates educational development and research policies.' }
+  ],
+  ID: [
+    { id: 'coordinating_minister', name: 'Coordinating Minister for Political Affairs', description: 'Coordinates ministries of defense, foreign affairs, and justice.' },
+    { id: 'foreign_affairs', name: 'Minister of Foreign Affairs', description: 'Directs international diplomacy, ASEAN affairs, and trade negotiations.' },
+    { id: 'interior', name: 'Minister of Home Affairs', description: 'Manages regional development, local elections, and civil registries.' },
+    { id: 'finance', name: 'Minister of Finance', description: 'Coordinates state budget planning, taxation, and fiscal stability.' },
+    { id: 'defence', name: 'Minister of Defence', description: 'Directs military planning, procurement, and national defense forces.' },
+    { id: 'justice', name: 'Minister of Law and Human Rights', description: 'Oversees legislation, immigration control, and legal compliance.' },
+    { id: 'health', name: 'Minister of Health', description: 'Directs national medical infrastructure, health insurance, and safety.' },
+    { id: 'education', name: 'Minister of Education & Culture', description: 'Formulates basic and higher education, research, and cultural preserves.' }
+  ],
+  MX: [
+    { id: 'interior', name: 'Secretary of the Interior', description: 'Coordinates federal policies, security measures, and domestic peace.' },
+    { id: 'foreign_affairs', name: 'Secretary of Foreign Affairs', description: 'Directs Mexican diplomacy, trade relations, and international treaties.' },
+    { id: 'finance', name: 'Secretary of Finance & Public Credit', description: 'Develops national budgets, tax policy, and coordinates central banks.' },
+    { id: 'defence', name: 'Secretary of National Defense', description: 'Commands the Mexican Army and coordinates domestic security.' },
+    { id: 'justice', name: 'Attorney General', description: 'Heads the prosecutor general office and enforces federal law.' },
+    { id: 'health', name: 'Secretary of Health', description: 'Directs federal healthcare systems, social welfare, and disease prevention.' },
+    { id: 'education', name: 'Secretary of Public Education', description: 'Standardizes state educational curricula and public school funding.' },
+    { id: 'energy', name: 'Secretary of Energy', description: 'Controls state-owned oil (PEMEX) and electricity operations (CFE).' }
+  ],
+  KR: [
+    { id: 'prime_minister', name: 'Prime Minister', description: 'Assists the President and directs state executive departments.' },
+    { id: 'foreign_affairs', name: 'Minister of Foreign Affairs', description: 'Leads bilateral alliances, global treaties, and economic cooperation.' },
+    { id: 'finance', name: 'Minister of Economy and Finance', description: 'Directs the fiscal budget, national planning, and tax policy.' },
+    { id: 'defence', name: 'Minister of National Defense', description: 'Commands armed forces and maintains joint military alliances.' },
+    { id: 'justice', name: 'Minister of Justice', description: 'Manages the prosecution system, legal affairs, and immigration.' },
+    { id: 'health', name: 'Minister of Health and Welfare', description: 'Coordinates healthcare, national pension plans, and social safety nets.' },
+    { id: 'education', name: 'Minister of Education', description: 'Oversees primary, secondary, and higher university education standards.' }
+  ],
+  AU: [
+    { id: 'deputy_pm', name: 'Deputy Prime Minister', description: 'Assists the Prime Minister and leads key infrastructure portfolios.' },
+    { id: 'foreign_affairs', name: 'Minister for Foreign Affairs', description: 'Leads international diplomacy and regional trade agreements.' },
+    { id: 'finance', name: 'Minister for Finance & Treasurer', description: 'Drafts the federal budget, economic reforms, and fiscal planning.' },
+    { id: 'defence', name: 'Minister for Defence', description: 'Coordinates defense capabilities, procurement, and armed forces.' },
+    { id: 'interior', name: 'Minister for Home Affairs', description: 'Controls domestic security, border protection, and emergency response.' },
+    { id: 'health', name: 'Minister for Health', description: 'Oversees Medicare, national hospital funding, and aged care.' },
+    { id: 'education', name: 'Minister for Education', description: 'Sets funding standards for schools, universities, and research.' }
   ]
 };
 
@@ -175,5 +243,85 @@ export const POLITICIAN_CANDIDATES_POOL: Record<string, MinisterCandidate[]> = {
     { name: 'Abdel Majeed Saqr', party: 'Ulusal Vatan Hareketi', loyalty: 95, competence: 84, popularity: 60 },
     { name: 'Khaled Abdel Ghaffar', party: 'Ulusal Vatan Hareketi', loyalty: 85, competence: 86, popularity: 70 },
     { name: 'Mohamed Abdel Latif', party: 'Ulusal Vatan Hareketi', loyalty: 82, competence: 80, popularity: 58 }
+  ],
+  IT: [
+    { name: 'Giorgia Meloni', party: 'FDI', loyalty: 95, competence: 90, popularity: 88 },
+    { name: 'Elly Schlein', party: 'PD', loyalty: 88, competence: 85, popularity: 82 },
+    { name: 'Giuseppe Conte', party: 'M5S', loyalty: 70, competence: 86, popularity: 80 },
+    { name: 'Matteo Salvini', party: 'LEGA', loyalty: 75, competence: 82, popularity: 76 },
+    { name: 'Antonio Tajani', party: 'FDI', loyalty: 92, competence: 88, popularity: 78 },
+    { name: 'Giancarlo Giorgetti', party: 'LEGA', loyalty: 80, competence: 93, popularity: 74 },
+    { name: 'Guido Crosetto', party: 'FDI', loyalty: 94, competence: 91, popularity: 80 },
+    { name: 'Matteo Piantedosi', party: 'FDI', loyalty: 89, competence: 85, popularity: 70 },
+    { name: 'Carlo Nordio', party: 'FDI', loyalty: 91, competence: 88, popularity: 72 },
+    { name: 'Orazio Schillaci', party: 'FDI', loyalty: 85, competence: 90, popularity: 65 },
+    { name: 'Giuseppe Valditara', party: 'FDI', loyalty: 82, competence: 80, popularity: 60 }
+  ],
+  ES: [
+    { name: 'Alberto Núñez Feijóo', party: 'PP', loyalty: 95, competence: 90, popularity: 85 },
+    { name: 'Pedro Sánchez', party: 'PSOE', loyalty: 92, competence: 91, popularity: 88 },
+    { name: 'Santiago Abascal', party: 'VOX', loyalty: 80, competence: 82, popularity: 78 },
+    { name: 'Yolanda Díaz', party: 'SUMAR', loyalty: 85, competence: 86, popularity: 80 },
+    { name: 'María Jesús Montero', party: 'PSOE', loyalty: 94, competence: 92, popularity: 78 },
+    { name: 'Fernando Grande-Marlaska', party: 'PSOE', loyalty: 90, competence: 85, popularity: 70 },
+    { name: 'Margarita Robles', party: 'PSOE', loyalty: 93, competence: 89, popularity: 82 },
+    { name: 'José Manuel Albares', party: 'PSOE', loyalty: 91, competence: 88, popularity: 72 },
+    { name: 'Felix Bolaños', party: 'PSOE', loyalty: 95, competence: 87, popularity: 74 },
+    { name: 'Mónica García', party: 'SUMAR', loyalty: 82, competence: 85, popularity: 75 }
+  ],
+  IN: [
+    { name: 'Narendra Modi', party: 'BJP', loyalty: 98, competence: 92, popularity: 95 },
+    { name: 'Rahul Gandhi', party: 'INC', loyalty: 85, competence: 80, popularity: 86 },
+    { name: 'Mamata Banerjee', party: 'TMC', loyalty: 70, competence: 84, popularity: 82 },
+    { name: 'Amit Shah', party: 'BJP', loyalty: 97, competence: 90, popularity: 88 },
+    { name: 'S. Jaishankar', party: 'BJP', loyalty: 95, competence: 96, popularity: 91 },
+    { name: 'Nirmala Sitharaman', party: 'BJP', loyalty: 92, competence: 94, popularity: 78 },
+    { name: 'Rajnath Singh', party: 'BJP', loyalty: 94, competence: 88, popularity: 84 },
+    { name: 'Mallikarjun Kharge', party: 'INC', loyalty: 90, competence: 85, popularity: 76 },
+    { name: 'Shashi Tharoor', party: 'INC', loyalty: 75, competence: 92, popularity: 83 },
+    { name: 'Piyush Goyal', party: 'BJP', loyalty: 90, competence: 91, popularity: 75 }
+  ],
+  ID: [
+    { name: 'Prabowo Subianto', party: 'GERINDRA', loyalty: 95, competence: 90, popularity: 92 },
+    { name: 'Megawati Sukarnoputri', party: 'PDIP', loyalty: 90, competence: 82, popularity: 85 },
+    { name: 'Airlangga Hartarto', party: 'GOLKAR', loyalty: 88, competence: 89, popularity: 78 },
+    { name: 'Muhaimin Iskandar', party: 'PKB', loyalty: 80, competence: 84, popularity: 76 },
+    { name: 'Sri Mulyani Indrawati', party: 'PDIP', loyalty: 92, competence: 98, popularity: 89 },
+    { name: 'Retno Marsudi', party: 'PDIP', loyalty: 94, competence: 95, popularity: 86 },
+    { name: 'Luhut Binsar Pandjaitan', party: 'GOLKAR', loyalty: 85, competence: 93, popularity: 75 },
+    { name: 'Puan Maharani', party: 'PDIP', loyalty: 89, competence: 75, popularity: 70 },
+    { name: 'Budi Gunadi Sadikin', party: 'PDIP', loyalty: 90, competence: 92, popularity: 80 },
+    { name: 'Nadiem Makarim', party: 'PDIP', loyalty: 82, competence: 88, popularity: 75 }
+  ],
+  MX: [
+    { name: 'Claudia Sheinbaum', party: 'MORENA', loyalty: 96, competence: 91, popularity: 90 },
+    { name: 'Marko Cortés', party: 'PAN', loyalty: 85, competence: 80, popularity: 75 },
+    { name: 'Alejandro Moreno', party: 'PRI', loyalty: 70, competence: 78, popularity: 72 },
+    { name: 'Rogério Ramírez de la O', party: 'MORENA', loyalty: 92, competence: 95, popularity: 78 },
+    { name: 'Marcelo Ebrard', party: 'MORENA', loyalty: 80, competence: 92, popularity: 85 },
+    { name: 'Juan Ramón de la Fuente', party: 'MORENA', loyalty: 94, competence: 90, popularity: 76 },
+    { name: 'Rosa Icela Rodríguez', party: 'MORENA', loyalty: 93, competence: 85, popularity: 72 },
+    { name: 'Xóchitl Gálvez', party: 'PAN', loyalty: 75, competence: 84, popularity: 81 },
+    { name: 'Lázaro Cárdenas Batel', party: 'MORENA', loyalty: 88, competence: 86, popularity: 70 }
+  ],
+  KR: [
+    { name: 'Lee Jae-myung', party: 'DP', loyalty: 92, competence: 88, popularity: 90 },
+    { name: 'Han Dong-hoon', party: 'PPP', loyalty: 94, competence: 89, popularity: 86 },
+    { name: 'Cho Kuk', party: 'DP', loyalty: 80, competence: 82, popularity: 78 },
+    { name: 'Choi Sang-mok', party: 'PPP', loyalty: 90, competence: 94, popularity: 72 },
+    { name: 'Shin Won-sik', party: 'PPP', loyalty: 92, competence: 88, popularity: 70 },
+    { name: 'Cho Tae-yul', party: 'PPP', loyalty: 91, competence: 90, popularity: 74 },
+    { name: 'Park Sung-jae', party: 'PPP', loyalty: 88, competence: 85, popularity: 65 },
+    { name: 'Kim Young-ho', party: 'PPP', loyalty: 85, competence: 82, popularity: 60 }
+  ],
+  AU: [
+    { name: 'Anthony Albanese', party: 'ALP', loyalty: 95, competence: 88, popularity: 86 },
+    { name: 'Peter Dutton', party: 'LNP', loyalty: 90, competence: 85, popularity: 82 },
+    { name: 'Richard Marles', party: 'ALP', loyalty: 92, competence: 86, popularity: 74 },
+    { name: 'Penny Wong', party: 'ALP', loyalty: 94, competence: 92, popularity: 88 },
+    { name: 'Jim Chalmers', party: 'ALP', loyalty: 91, competence: 90, popularity: 80 },
+    { name: 'Adam Bandt', party: 'GRN', loyalty: 75, competence: 84, popularity: 78 },
+    { name: 'Clare O\'Neil', party: 'ALP', loyalty: 88, competence: 85, popularity: 72 },
+    { name: 'Simon Birmingham', party: 'LNP', loyalty: 82, competence: 88, popularity: 75 }
   ]
 };

@@ -132,7 +132,91 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
   const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
   const [hoveredMapRegion, setHoveredMapRegion] = useState<Region | null>(null);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [worldGeoJsonData, setWorldGeoJsonData] = useState<any>(null);
+  useEffect(() => {
+    fetch("https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json")
+      .then(res => res.json())
+      .then(data => setWorldGeoJsonData(data))
+      .catch(err => console.error("Failed to load world geojson", err));
+  }, []);
   const [districtGeoJsonData, setDistrictGeoJsonData] = useState<any>(null);
+  // Check for missing regions in geojson and add them dynamically
+  useEffect(() => {
+    if (!geoJsonData || !geoJsonData.features) return;
+    
+    let hasChanges = false;
+    const newRegions = [...country.regions];
+    
+    const playerStart = 2;
+
+    geoJsonData.features.forEach((feature: any) => {
+       if (feature.properties?.isDistrict) return;
+
+       const fName = getFeatureName(feature);
+       if (!fName) return;
+       
+       const normName = normalizeName(fName);
+       const regionId = getRegionIdFromNormalizedName(normName, country.id) || normName;
+       
+       const exists = newRegions.find(r => r.id === regionId || normalizeName(r.id) === normName || normalizeName(r.name) === normName);
+       
+       if (!exists) {
+         hasChanges = true;
+         
+         const supports: Record<string, number> = {};
+         supports[party.id] = playerStart;
+         
+         const totalRivalBase = country.rivals.reduce((sum, r) => sum + r.baseSupport, 0);
+         let sharedRemaining = 100 - playerStart;
+         country.rivals.forEach((rival) => {
+           const share = rival.baseSupport / totalRivalBase;
+           supports[rival.id] = share * sharedRemaining;
+         });
+         
+         // Normalize sum to 100
+         const currentSum = Object.values(supports).reduce((s, v) => s + v, 0);
+         if (Math.abs(currentSum - 100) > 0.1) {
+           const factor = 100 / currentSum;
+           Object.keys(supports).forEach(k => {
+             supports[k] = supports[k] * factor;
+           });
+         }
+
+         let leadingPartyId = party.id;
+         let maxSupport = supports[party.id];
+         Object.entries(supports).forEach(([pid, val]) => {
+           if (val > maxSupport) {
+             maxSupport = val;
+             leadingPartyId = pid;
+           }
+         });
+
+         newRegions.push({
+            id: regionId,
+            name: fName,
+            seats: 5, // Default generic seat count
+            voterDistribution: {
+                "Working Class": 20,
+                "Middle Class": 20,
+                "Upper Class": 20,
+                "Youth": 20,
+                "Elderly": 10,
+                "Rural": 10
+            },
+            supports: supports,
+            infrastructure: 1,
+            campaignLevel: 0,
+            ownerPartyId: leadingPartyId,
+            mayorName: ""
+         });
+       }
+    });
+
+    if (hasChanges) {
+      onUpdateCountry({ ...country, regions: newRegions });
+    }
+  }, [geoJsonData]);
+
   const [loadingDistrictGeoJson, setLoadingDistrictGeoJson] = useState<boolean>(false);
   const [customAlert, setCustomAlert] = useState<{ title: string; message: string; type: 'success' | 'warning' | 'info' } | null>(null);
 
@@ -1398,15 +1482,28 @@ const getPolygonCenter = (feat: any) => {
     tryFetchUS();
   }, [country.id]);
 
-  // Fetch online GeoJSON for BR, JP, EG, GB on component load
+  // Fetch online GeoJSON for various countries on component load
   useEffect(() => {
-    if (!['BR', 'JP', 'EG', 'GB'].includes(country.id)) return;
+        const geojsonMapUrls: Record<string, string> = {
+      BR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson',
+      JP: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson',
+      EG: '/egypt-provinces.geojson',
+      GB: 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json',
+      CA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson',
+      ZA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson',
+      IN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/india.geojson',
+      MX: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/mexico.geojson',
+      ES: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson',
+      AU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/australia.geojson',
+      IT: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson',
+      ID: 'https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson',
+      KR: 'https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json',
+      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson'
+    };
+
+    if (!geojsonMapUrls[country.id]) return;
     
-    let url = '';
-    if (country.id === 'BR') url = 'https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson';
-    else if (country.id === 'JP') url = 'https://cdn.jsdelivr.net/gh/dataofjapan/land@master/japan.geojson';
-    else if (country.id === 'EG') url = '/egypt-provinces.geojson';
-    else if (country.id === 'GB') url = 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json';
+    const url = geojsonMapUrls[country.id];
 
     const tryFetch = async () => {
       try {
@@ -1486,10 +1583,13 @@ const getPolygonCenter = (feat: any) => {
   const turkeyMapRef = React.useRef<HTMLDivElement>(null);
   const turkeyMapInstanceRef = React.useRef<L.Map | null>(null);
   const turkeyTileLayerRef = React.useRef<L.TileLayer | null>(null);
+  const turkeyTerrainLayerRef = React.useRef<L.TileLayer | null>(null);
+  const turkeyOceanLayerRef = React.useRef<L.TileLayer | null>(null);
   const turkeyMarkersRef = React.useRef<L.CircleMarker[]>([]);
   const turkeyGeoJsonLayerRef = React.useRef<L.Layer | null>(null);
   const provinceOverlayLayerRef = React.useRef<L.Layer | null>(null);
   const lastCountryIdRef = React.useRef<string | null>(null);
+  const hasFitBoundsForCountryRef = React.useRef<string | null>(null);
 
   // Cleanup on component unmount or when leaving Turkey
   const cleanupTurkeyMap = () => {
@@ -1523,17 +1623,15 @@ const getPolygonCenter = (feat: any) => {
       try {
         map.off();
       } catch (e) {}
-      try {
-        const container = map.getContainer() as any;
-        if (container) {
-          map.remove();
-          container._leaflet_id = null;
-        }
-      } catch (e) {}
+      
+      try { if(map.stop) map.stop(); map.off(); map.remove(); } catch(e) {}
+
       turkeyMapInstanceRef.current = null;
       turkeyTileLayerRef.current = null;
+      turkeyTerrainLayerRef.current = null;
       turkeyGeoJsonLayerRef.current = null;
       provinceOverlayLayerRef.current = null;
+    worldBgLayerRef.current = null;
       turkeyMarkersRef.current = [];
     }
   };
@@ -1548,15 +1646,33 @@ const getPolygonCenter = (feat: any) => {
   useEffect(() => {
     if (turkeyTileLayerRef.current) {
       const newUrl = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
       turkeyTileLayerRef.current.setUrl(newUrl);
+    }
+    if (turkeyTerrainLayerRef.current && turkeyMapInstanceRef.current) {
+      turkeyTerrainLayerRef.current.setOpacity(darkMode ? 0.35 : 0.35);
+      const pane = turkeyMapInstanceRef.current.getPane('terrainPane');
+      if (pane) {
+        pane.style.mixBlendMode = 'overlay';
+      }
+      
+      const terrainImg = turkeyTerrainLayerRef.current.getContainer();
+      if (terrainImg) {
+        if (darkMode) {
+          terrainImg.classList.remove('terrain-tile');
+          terrainImg.classList.add('terrain-tile-dark');
+        } else {
+          terrainImg.classList.remove('terrain-tile-dark');
+          terrainImg.classList.add('terrain-tile');
+        }
+      }
     }
   }, [darkMode]);
 
   // Main Turkey/Germany Leaflet map builder and sync
   useEffect(() => {
-    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB'];
+    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR'];
     if (!supportedCountries.includes(country.id) || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
@@ -1571,25 +1687,45 @@ const getPolygonCenter = (feat: any) => {
       else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
       else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
       else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
-      const map = L.map(turkeyMapRef.current, {
-        center: initialCenter,
-        zoom: initialZoom,
-        minZoom: 2,
-        maxZoom: 18,
+      
+      let mapOptions: any = {
+        zoomSnap: 0.1,
+        zoomDelta: 0.5,
         zoomControl: false,
         attributionControl: false,
-      });
+        maxBoundsViscosity: 1.0,
+        maxBounds: [[-90, -180], [90, 180]],
+        worldCopyJump: false,
+      };
+      const map = L.map(turkeyMapRef.current, mapOptions);
 
       const tileUrl = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
       const tiles = L.tileLayer(tileUrl, {
         subdomains: 'abcd',
         maxZoom: 18,
+        noWrap: true,
+        className: 'base-map-tile'
       }).addTo(map);
-
       turkeyTileLayerRef.current = tiles;
+
+      const terrainPane = map.createPane('terrainPane');
+      terrainPane.style.zIndex = '450';
+      terrainPane.style.pointerEvents = 'none';
+      terrainPane.style.mixBlendMode = 'overlay';
+
+      const terrainUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
+      const terrain = L.tileLayer(terrainUrl, {
+        opacity: darkMode ? 0.35 : 0.35,
+        maxZoom: 18,
+        noWrap: true,
+        pane: 'terrainPane',
+        className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
+      }).addTo(map);
+      turkeyTerrainLayerRef.current = terrain;
+
       turkeyMapInstanceRef.current = map;
     }
 
@@ -1610,12 +1746,32 @@ const getPolygonCenter = (feat: any) => {
         map.setView([26.8206, 30.8025], 5);
       } else if (country.id === 'GB') {
         map.setView([54.3781, -3.4360], 5);
+      } else if (country.id === 'CA') {
+        map.setView([56.1304, -106.3468], 3);
+      } else if (country.id === 'ZA') {
+        map.setView([-30.5595, 22.9375], 5);
+      } else if (country.id === 'IN') {
+        map.setView([20.5937, 78.9629], 4);
+      } else if (country.id === 'MX') {
+        map.setView([23.6345, -102.5528], 5);
+      } else if (country.id === 'ES') {
+        map.setView([40.4637, -3.7492], 5);
+      } else if (country.id === 'AU') {
+        map.setView([-25.2744, 133.7751], 4);
+      } else if (country.id === 'AR') {
+        map.setView([-38.4161, -63.6167], 4);
+      } else if (country.id === 'IT') {
+        map.setView([41.8719, 12.5674], 5);
+      } else if (country.id === 'ID') {
+        map.setView([-0.7893, 113.9213], 5);
+      } else if (country.id === 'KR') {
+        map.setView([35.9078, 127.7669], 6);
       } else {
         map.setView([38.9637, 35.2433], 6);
       }
     }
-
-        // Clear old layers/markers robustly
+    
+    // Clear old layers/markers robustly
     try {
       map.closeTooltip();
     } catch (e) {}
@@ -1633,6 +1789,7 @@ const getPolygonCenter = (feat: any) => {
     } catch (e) {}
     turkeyGeoJsonLayerRef.current = null;
     provinceOverlayLayerRef.current = null;
+    worldBgLayerRef.current = null;
     turkeyMarkersRef.current = [];
 
     // Check if we have loaded the full province shapes (GeoJSON)
@@ -1748,6 +1905,13 @@ const getPolygonCenter = (feat: any) => {
         }
       }
 
+      if (worldGeoJsonData) {
+        worldBgLayerRef.current = L.geoJSON(worldGeoJsonData, {
+          style: (feature) => {
+            return { fillColor: darkMode ? "#1e293b" : "#e2e8f0", color: "#ffffff", weight: 1.0, opacity: 1.0, fillOpacity: 0.88, interactive: false };
+          }
+        }).addTo(map);
+      }
       const geoLayer = L.geoJSON(displayGeoJson, {
         style: (feature) => {
           if (!feature || !feature.properties) return {};
@@ -1770,7 +1934,7 @@ const getPolygonCenter = (feat: any) => {
                 fillColor: col,
                 fillOpacity: 0.95,
                 color: '#ffffff',
-                opacity: 0.95,
+                opacity: 1.0,
                 weight: 2.5
               };
             }
@@ -1779,7 +1943,8 @@ const getPolygonCenter = (feat: any) => {
               fillColor: isSelectedProvince ? col : '#888',
               fillOpacity: isSelectedProvince ? 0.75 : 0.15,
               color: '#ffffff',
-              weight: isSelectedProvince ? 1.2 : 0.4,
+              opacity: 1.0,
+              weight: isSelectedProvince ? 1.2 : 0.5,
             };
           }
 
@@ -1814,7 +1979,8 @@ const getPolygonCenter = (feat: any) => {
                 fillColor: col,
                 fillOpacity: isSelected ? 0.95 : 0.82,
                 color: '#ffffff',
-                weight: isSelected ? 3.8 : 1.5,
+                opacity: 1.0,
+                weight: isSelected ? 3.5 : 1.2,
               };
             }
 
@@ -1823,6 +1989,7 @@ const getPolygonCenter = (feat: any) => {
             fillColor: darkMode ? '#111827' : '#f3f4f6',
             fillOpacity: 0.5,
             color: '#ffffff',
+            opacity: 1.0,
             weight: 1.0,
           };
         },
@@ -2058,9 +2225,17 @@ const getPolygonCenter = (feat: any) => {
       }).addTo(map);
 
       turkeyGeoJsonLayerRef.current = geoLayer;
+      
+      if (hasFitBoundsForCountryRef.current !== country.id) {
+        try {
+          map.fitBounds(geoLayer.getBounds(), { padding: [20, 20], animate: false });
+          hasFitBoundsForCountryRef.current = country.id;
+        } catch(e) {}
+      }
 
       // In DISTRICTS mode we hide the province outlines layer entirely — only the district layer is drawn
       provinceOverlayLayerRef.current = null;
+    worldBgLayerRef.current = null;
     } else {
       // Fallback: Render point check markers if geoJsonData hasn't finished loading over network yet
       TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.forEach((prov) => {
@@ -2151,16 +2326,18 @@ const getPolygonCenter = (feat: any) => {
       lastSelectedRegionIdRef.current = null;
     }
 
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
+    setTimeout(() => { try { if (turkeyMapInstanceRef.current) turkeyMapInstanceRef.current.invalidateSize(); } catch(e) {} }, 250);
 
-  }, [country, selectedRegion, darkMode, geoJsonData, districtGeoJsonData, activeViewLevel, selectedDistrict]);
+  }, [country, selectedRegion, darkMode, worldGeoJsonData, geoJsonData, districtGeoJsonData, activeViewLevel, selectedDistrict]);
 
-  const currency = country.id === 'TR' ? '₺' : country.id === 'DE' ? '€' : '$';
-
+  const currency = country.id === 'TR' ? '₺' 
+    : ['DE', 'IT', 'ES'].includes(country.id) ? '€' 
+    : country.id === 'ZA' ? 'R' 
+    : country.id === 'IN' ? '₹' 
+    : country.id === 'ID' ? 'Rp' 
+    : country.id === 'KR' ? '₩' 
+    : '$';
   const handleLaunchDistrictCampaign = (type: 'townhall' | 'flyers') => {
-    if (!selectedDistrict) return;
     const finalCost = type === 'townhall' ? 15000 : 5000;
     if (party.budget < finalCost) {
       setCustomAlert({
@@ -2214,8 +2391,16 @@ const getPolygonCenter = (feat: any) => {
     // Update parent region support
     const updatedRegion = boostRegionPlayerSupport(selectedRegion, provinceBoost);
 
-    // Update state
-    const updatedRegions = country.regions.map(r => r.id === selectedRegion.id ? updatedRegion : r);
+    // Update state with nationwide spillover to other regions
+    const updatedRegions = country.regions.map(r => {
+      if (r.id === selectedRegion.id) {
+        return updatedRegion;
+      } else {
+        // Flyer spillover: +0.08%, Townhall spillover: +0.25%
+        const spillover = type === 'townhall' ? 0.25 : 0.08;
+        return boostRegionPlayerSupport(r, spillover);
+      }
+    });
     const updatedCountry = { ...country, regions: updatedRegions };
     onUpdateCountry(updatedCountry);
 
@@ -2226,7 +2411,7 @@ const getPolygonCenter = (feat: any) => {
       members: party.members + Math.floor(districtBoost * 15)
     };
     onUpdateParty(updatedParty);
-    onSpendTurn();
+    
 
     // Sync selectedRegion & selectedDistrict
     setSelectedRegion(updatedRegion);
@@ -2278,7 +2463,15 @@ const getPolygonCenter = (feat: any) => {
     const boost = 3.5 + Math.floor(Math.random() * 3) + (party.traits.eloquence * 0.4);
     const updatedRegion = boostRegionPlayerSupport(region, boost);
 
-    const updatedRegions = country.regions.map(r => r.id === region.id ? updatedRegion : r);
+    // Online ads have nationwide reach: +0.8% to +1.2% to all other regions
+    const updatedRegions = country.regions.map(r => {
+      if (r.id === region.id) {
+        return updatedRegion;
+      } else {
+        const spillover = 0.8 + (party.traits.eloquence * 0.1);
+        return boostRegionPlayerSupport(r, spillover);
+      }
+    });
     const updatedCountry = { ...country, regions: updatedRegions };
     onUpdateCountry(updatedCountry);
 
@@ -2288,7 +2481,7 @@ const getPolygonCenter = (feat: any) => {
       influence: party.influence + 4 
     };
     onUpdateParty(updatedParty);
-    onSpendTurn();
+    
     setSelectedRegion(updatedRegion);
   };
 
@@ -2322,7 +2515,14 @@ const getPolygonCenter = (feat: any) => {
     const extraBoost = 4;
     const finalRegion = boostRegionPlayerSupport(updatedRegion, extraBoost);
 
-    const updatedRegions = country.regions.map(r => r.id === region.id ? finalRegion : r);
+    // Establishing a headquarters shows organic party scaling: +0.5% nationwide spillover
+    const updatedRegions = country.regions.map(r => {
+      if (r.id === region.id) {
+        return finalRegion;
+      } else {
+        return boostRegionPlayerSupport(r, 0.5);
+      }
+    });
     const updatedCountry = { ...country, regions: updatedRegions };
     onUpdateCountry(updatedCountry);
 
@@ -2333,7 +2533,7 @@ const getPolygonCenter = (feat: any) => {
       influence: party.influence + 12
     };
     onUpdateParty(updatedParty);
-    onSpendTurn();
+    
     setSelectedRegion(finalRegion);
   };
 
@@ -2395,7 +2595,15 @@ const getPolygonCenter = (feat: any) => {
     supports[party.id] = nextSupport;
     updatedRegion.supports = supports;
 
-    const updatedRegions = country.regions.map(r => r.id === selectedRegion.id ? updatedRegion : r);
+    // Rallies are high-profile national media events: +1.0% to +1.6% to all other regions
+    const updatedRegions = country.regions.map(r => {
+      if (r.id === selectedRegion.id) {
+        return updatedRegion;
+      } else {
+        const spillover = 1.0 + (party.traits.eloquence * 0.15);
+        return boostRegionPlayerSupport(r, spillover);
+      }
+    });
     const updatedCountry = { ...country, regions: updatedRegions };
     onUpdateCountry(updatedCountry);
 
@@ -2410,7 +2618,7 @@ const getPolygonCenter = (feat: any) => {
       members: finalMembers,
     };
     onUpdateParty(updatedParty);
-    onSpendTurn();
+    
 
     finalFeedback += ` Your regional support changed by %${finalChange >= 0 ? '+' : ''}${finalChange.toFixed(1)} under this demographic wave.`;
     setSpeechFeedback(finalFeedback);
@@ -2435,6 +2643,18 @@ const getPolygonCenter = (feat: any) => {
 
   return (
     <div className="flex flex-col gap-6 w-full py-2">
+      <div className="flex justify-between items-center p-4 md:p-6 rounded-3xl border bg-slate-900/60 border-slate-800 shadow-sm">
+        <div>
+          <h2 className="text-xl font-black text-white">Campaign & Operations</h2>
+          <p className="text-xs text-slate-400 mt-1 font-medium">Strategize, manage budget, and increase your local support.</p>
+        </div>
+        <button
+          onClick={onSpendTurn}
+          className="px-6 py-3 rounded-2xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all uppercase tracking-wide"
+        >
+          Advance Turn ⏩
+        </button>
+      </div>
       <style>{`
         /* Remove browser default focus outline rectangles on interactive SVG layers in Leaflet */
         .leaflet-container *,
@@ -2475,7 +2695,7 @@ const getPolygonCenter = (feat: any) => {
         }
       `}</style>
       {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY, GERMANY, OR USA) */}
-      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB'].includes(country.id)) && (
+      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR'].includes(country.id)) && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>

@@ -14,7 +14,7 @@ import {
 interface ElectionSimulatorProps {
   country: Country;
   party: Party;
-  onElectionFinished: (success: boolean, finalSeats?: Record<string, number>) => void;
+  onElectionFinished: (success: boolean, finalSeats?: Record<string, number>, newCoalition?: any) => void;
   darkMode: boolean;
   coalitions?: Coalition[];
 }
@@ -36,7 +36,16 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [userSpeed, setUserSpeed] = useState<number>(2000); // ms per region
 
   // Coalition Negotiation States
-  const [selectedCoalitionParties, setSelectedCoalitionParties] = useState<string[]>([]);
+  const [selectedCoalitionParties, setSelectedCoalitionParties] = useState<string[]>(() => {
+    // If we are already in a coalition with any rival parties, pre-select them!
+    const activeCoalition = coalitions?.find(c => c.parties.includes(party.name));
+    if (activeCoalition) {
+      return country.rivals
+        .filter(r => activeCoalition.parties.includes(r.name) && r.name !== party.name)
+        .map(r => r.id);
+    }
+    return [];
+  });
   const [coalitionNegotiated, setCoalitionNegotiated] = useState<boolean>(false);
   const [coalitionSuccess, setCoalitionSuccess] = useState<boolean | null>(null);
   const [coalitionMessage, setCoalitionMessage] = useState<string>('');
@@ -213,63 +222,76 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   // Find player's winning coalition if any
   const getWinningCoalition = () => {
     if (!coalitions || coalitions.length === 0) return null;
-    return coalitions.find(coal => {
-      const hasPlayer = coal.parties.includes(party.name);
-      if (!hasPlayer) return false;
-
-      const combinedSeats = coal.parties.reduce((sum, partyName) => {
-        if (partyName === party.name) {
-          return sum + (seatsWon[party.id] || 0);
-        }
-        const rival = country.rivals.find(r => r.name === partyName);
-        if (rival) {
-          return sum + (seatsWon[rival.id] || 0);
-        }
-        return sum;
-      }, 0);
-
-      // Check if this coalition has an absolute majority of seats in parliament
-      if (combinedSeats > country.seats / 2) {
-        return true;
+    
+    // Find all parties the player is allied with across all their coalitions
+    const playerAllies = new Set<string>();
+    coalitions.forEach(coal => {
+      if (coal.parties.includes(party.name)) {
+        coal.parties.forEach(p => playerAllies.add(p));
       }
+    });
+    
+    if (playerAllies.size === 0) return null;
+    
+    const combinedSeats = Array.from(playerAllies).reduce((sum, partyName) => {
+      if (partyName === party.name) {
+        return sum + (seatsWon[party.id] || 0);
+      }
+      const rival = country.rivals.find(r => r.name === partyName);
+      if (rival) {
+        return sum + (seatsWon[rival.id] || 0);
+      }
+      return sum;
+    }, 0);
 
-      // Or check if this coalition's combined seats are higher than any single party outside of this coalition
-      let isLargestBloc = true;
-      
-      // Check other individual parties
-      const playerPartyId = party.id;
-      if (seatsWon[playerPartyId] && !coal.parties.includes(party.name)) {
-        if ((seatsWon[playerPartyId] || 0) >= combinedSeats) {
+    if (combinedSeats > country.seats / 2) {
+      return {
+        name: "Player Coalition Alliance",
+        parties: Array.from(playerAllies),
+        totalSeats: combinedSeats,
+        ideologyAvg: "Broad Alliance"
+      };
+    }
+
+    let isLargestBloc = true;
+    const playerPartyId = party.id;
+    if (seatsWon[playerPartyId] && !playerAllies.has(party.name)) {
+      if ((seatsWon[playerPartyId] || 0) >= combinedSeats) {
+        isLargestBloc = false;
+      }
+    }
+    
+    country.rivals.forEach(r => {
+      if (!playerAllies.has(r.name)) {
+        const rSeats = seatsWon[r.id] || 0;
+        if (rSeats >= combinedSeats) {
           isLargestBloc = false;
         }
       }
-      country.rivals.forEach(r => {
-        if (!coal.parties.includes(r.name)) {
-          const rSeats = seatsWon[r.id] || 0;
-          if (rSeats >= combinedSeats) {
-            isLargestBloc = false;
-          }
-        }
-      });
-
-      // Also check other rival coalitions
-      coalitions.forEach(otherCoal => {
-        // If it is another coalition and doesn't contain the player
-        if (otherCoal.name !== coal.name && !otherCoal.parties.includes(party.name)) {
-          const otherCombined = otherCoal.parties.reduce((sum, pName) => {
-            if (pName === party.name) return sum + (seatsWon[party.id] || 0);
-            const r = country.rivals.find(riv => riv.name === pName);
-            return sum + (r ? (seatsWon[r.id] || 0) : 0);
-          }, 0);
-
-          if (otherCombined >= combinedSeats) {
-            isLargestBloc = false;
-          }
-        }
-      });
-
-      return isLargestBloc;
     });
+
+    coalitions.forEach(otherCoal => {
+      if (!otherCoal.parties.includes(party.name)) {
+        const otherCombined = otherCoal.parties.reduce((sum, pName) => {
+          if (pName === party.name) return sum + (seatsWon[party.id] || 0);
+          const r = country.rivals.find(riv => riv.name === pName);
+          return sum + (r ? (seatsWon[r.id] || 0) : 0);
+        }, 0);
+        if (otherCombined >= combinedSeats) {
+          isLargestBloc = false;
+        }
+      }
+    });
+
+    if (isLargestBloc) {
+       return {
+        name: "Player Coalition Alliance",
+        parties: Array.from(playerAllies),
+        totalSeats: combinedSeats,
+        ideologyAvg: "Broad Alliance"
+      };
+    }
+    return null;
   };
 
   // Determine Overall Victor Status
@@ -422,7 +444,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                 </div>
 
                 {/* Rival parties list seats */}
-                {country.rivals.map((rival) => {
+                {country.rivals.filter(rival => !(coalitions?.some(c => c.parties.includes(party.name) && c.parties.includes(rival.name)))).map((rival) => {
                   const seats = seatsWon[rival.id] || 0;
                   return (
                     <div key={rival.id} className="space-y-1">
@@ -604,7 +626,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
 
                     <button
                       id="save-success-return-btn"
-                      onClick={() => onElectionFinished(true, seatsWon)}
+                      onClick={() => onElectionFinished(true, seatsWon, winningCoalition)}
                       className="px-8 py-3.5 rounded-2xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer mt-2 group animate-pulse"
                     >
                       Color the Map & Expand Globally! <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -701,7 +723,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                           </div>
 
                           {/* Proposal trigger */}
-                          {((seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0)) > country.seats / 2 ? (
+                          {((seatsWon[party.id] || 0) + (coalitions?.filter(c => c.parties.includes(party.name)).flatMap(c => c.parties).filter((v, i, a) => a.indexOf(v) === i && v !== party.name).reduce((sum, p) => sum + (seatsWon[country.rivals.find(r=>r.name===p)?.id || ''] || 0), 0) || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0)) > country.seats / 2 ? (
                             <button
                               type="button"
                               disabled={coalitionSuccess === true}

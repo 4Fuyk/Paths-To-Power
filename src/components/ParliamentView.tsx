@@ -19,6 +19,7 @@ interface ParliamentViewProps {
   darkMode: boolean;
   coalitions?: Coalition[];
   onUpdateCoalitions?: (updatedCoalitions: Coalition[]) => void;
+  electionSeats?: Record<string, number> | null;
 }
 
 export const ParliamentView: React.FC<ParliamentViewProps> = ({
@@ -29,13 +30,15 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   darkMode,
   coalitions = [],
   onUpdateCoalitions,
+  electionSeats,
 }) => {
   const [selectedBill, setSelectedBill] = useState<Bill>(country.bills[0]);
   const [votingAnimation, setVotingAnimation] = useState<boolean>(false);
   const [votingScoreboard, setVotingScoreboard] = useState<{ yes: number; no: number; current: number } | null>(null);
   const [lobbyAlert, setLobbyAlert] = useState<{ title: string; message: string } | null>(null);
   const [showCoalitionModal, setShowCoalitionModal] = useState<boolean>(false);
-  const [selectedPartner, setSelectedPartner] = useState<RivalParty | null>(null);
+  const [selectedPartners, setSelectedPartners] = useState<RivalParty[]>([]);
+  const [coalitionStep, setCoalitionStep] = useState<'select' | 'negotiate'>('select');
   const [offeredMinistries, setOfferedMinistries] = useState<string[]>([]);
   const [clashFactor, setClashFactor] = useState<number>(0);
 
@@ -55,14 +58,16 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   const countRegions = country.regions.length;
   const averagePlayerSupport = country.regions.reduce((acc, r) => acc + (r.supports[party.id] || 0), 0) / countRegions;
 
-  // Parliament Seats Distribution based on current global support averages
-  let playerSeatsCount = Math.round((averagePlayerSupport / 100) * country.seats);
-  if (country.id === 'DE') {
-    if (averagePlayerSupport < 5.0) {
+  // Parliament Seats Distribution based on current global support averages (with election results override if present)
+  let playerSeatsCount = electionSeats ? (electionSeats[party.id] || 0) : Math.round((averagePlayerSupport / 100) * country.seats);
+  if (!electionSeats) {
+    if (country.id === 'DE') {
+      if (averagePlayerSupport < 5.0) {
+        playerSeatsCount = 0;
+      }
+    } else if (averagePlayerSupport <= 2.2) {
       playerSeatsCount = 0;
     }
-  } else if (averagePlayerSupport <= 2.2) {
-    playerSeatsCount = 0;
   }
   let remainingSeats = country.seats - playerSeatsCount;
 
@@ -73,76 +78,69 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   }, 0);
 
   const rivalsSeatsData = country.rivals.map((rival) => {
+    if (electionSeats && electionSeats[rival.id] !== undefined) {
+      return { ...rival, seats: electionSeats[rival.id] };
+    }
     const rivalWeight = hasStartingSeats ? (rival.startingSeats || 0) : rival.baseSupport;
     const share = totalRivalBase > 0 ? rivalWeight / totalRivalBase : 0;
     const seats = Math.round(share * remainingSeats);
     return { ...rival, seats };
   });
 
-  const handleSelectPartner = (partnerName: string) => {
+  const handleTogglePartner = (partnerName: string) => {
     const partner = country.rivals.find(r => r.name === partnerName);
     if (!partner) return;
-    
+
+    setSelectedPartners(prev => {
+      const exists = prev.some(p => p.id === partner.id);
+      if (exists) {
+        return prev.filter(p => p.id !== partner.id);
+      } else {
+        return [...prev, partner];
+      }
+    });
+
     // Generate a fixed random relations factor for this proposal session (-15% to +15%)
     const randomFactor = Math.floor(Math.random() * 31) - 15;
     setClashFactor(randomFactor);
-    setSelectedPartner(partner);
     setOfferedMinistries([]);
     playSound('click');
   };
 
   const handleConfirmCoalitionProposal = () => {
-    if (!selectedPartner) return;
-    const partner = selectedPartner;
+    if (selectedPartners.length === 0) return;
 
-    // Reject coalition if they are polar opposites
-    const isOpposite = (party.ideology.includes("Socialist") && partner.ideology.includes("Nationalist")) ||
-                       (party.ideology.includes("Nationalist") && partner.ideology.includes("Socialist")) ||
-                       (party.ideology.includes("Left") && partner.ideology.includes("Right")) ||
-                       (party.ideology.includes("Right") && partner.ideology.includes("Left")) ||
-                       (party.ideology.includes("Marxist") && partner.ideology.includes("Nationalist")) ||
-                       (party.ideology.includes("Nationalist") && partner.ideology.includes("Marxist")) ||
-                       (party.ideology.includes("Marxist") && partner.ideology.includes("Conservative")) ||
-                       (party.ideology.includes("Conservative") && partner.ideology.includes("Marxist")) ||
-                       (party.ideology.includes("Socialist") && partner.ideology.includes("Conservative")) ||
-                       (party.ideology.includes("Conservative") && partner.ideology.includes("Socialist"));
+    // Reject coalition if any are polar opposites
+    const oppositePartner = selectedPartners.find(partner => 
+      (party.ideology.includes("Socialist") && partner.ideology.includes("Nationalist")) ||
+      (party.ideology.includes("Nationalist") && partner.ideology.includes("Socialist")) ||
+      (party.ideology.includes("Left") && partner.ideology.includes("Right")) ||
+      (party.ideology.includes("Right") && partner.ideology.includes("Left")) ||
+      (party.ideology.includes("Marxist") && partner.ideology.includes("Nationalist")) ||
+      (party.ideology.includes("Nationalist") && partner.ideology.includes("Marxist")) ||
+      (party.ideology.includes("Marxist") && partner.ideology.includes("Conservative")) ||
+      (party.ideology.includes("Conservative") && partner.ideology.includes("Marxist")) ||
+      (party.ideology.includes("Socialist") && partner.ideology.includes("Conservative")) ||
+      (party.ideology.includes("Conservative") && partner.ideology.includes("Socialist"))
+    );
 
-    if (isOpposite) {
+    if (oppositePartner) {
       playSound('error');
       setLobbyAlert({
         title: 'COALITION REJECTED',
-        message: `"${partner.name}" (${partner.ideology}) has rejected the coalition proposal from "${party.name}" (${party.ideology}) due to severe ideological incompatibility. Their executive committee stated: "Our core principles are irreconcilable. A coalition is impossible."`
+        message: `"${oppositePartner.name}" (${oppositePartner.ideology}) has rejected the coalition proposal from "${party.name}" (${party.ideology}) due to severe ideological incompatibility. Their executive committee stated: "Our core principles are irreconcilable. A coalition is impossible."`
       });
-      setSelectedPartner(null);
+      setSelectedPartners([]);
+      setCoalitionStep('select');
       setShowCoalitionModal(false);
       return;
     }
 
-    const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
-    const leverage = partnerSeats / (playerSeatsCount || 1);
+    let leveragePenaltySum = 0;
+    let baseChanceSum = 0;
+    let failingPartner: RivalParty | null = null;
+    let failedReason = '';
 
-    // Calculate acceptance probability
-    let baseChance = 30;
-
-    // Ideology alignment
-    const isSameIdeologyGroup = 
-      (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
-      (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
-      (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
-      (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
-      (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
-      (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"));
-
-    if (isSameIdeologyGroup) {
-      baseChance += 30;
-    } else {
-      baseChance += 10;
-    }
-
-    // Ministry points
-    // Heavy: finance, foreign, interior -> +25% each
-    // Medium: education -> +15%
-    // Light: culture -> +8%
     let ministryScore = 0;
     let heavyCount = 0;
     if (offeredMinistries.includes('finance')) { ministryScore += 25; heavyCount++; }
@@ -151,52 +149,69 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
     if (offeredMinistries.includes('education')) { ministryScore += 15; }
     if (offeredMinistries.includes('culture')) { ministryScore += 8; }
 
-    // Leverage rules
-    let leveragePenalty = 0;
-    if (leverage > 2.0) {
-      // Much bigger
-      leveragePenalty = 45;
-      if (heavyCount < 2) {
-        // Must have at least 2 heavy ministries
-        playSound('error');
-        setLobbyAlert({
-          title: 'COALITION REJECTED',
-          message: `"${partner.name}" has rejected your terms. Their leadership remarked: "Your tiny faction expects us to enter government without offering at least two major portfolios (Finance, Foreign Affairs, or Interior). This is disrespectful of our parliamentary weight."`
-        });
-        setSelectedPartner(null);
-        setShowCoalitionModal(false);
-        return;
+    selectedPartners.forEach(partner => {
+      const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
+      const leverage = partnerSeats / (playerSeatsCount || 1);
+
+      // Same ideology group check
+      const isSameIdeologyGroup = 
+        (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
+        (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
+        (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
+        (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
+        (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
+        (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"));
+
+      const partnerBaseChance = 30 + (isSameIdeologyGroup ? 30 : 10);
+      baseChanceSum += partnerBaseChance;
+
+      let partnerLeveragePenalty = 0;
+      if (leverage > 2.0) {
+        partnerLeveragePenalty = 45;
+        if (heavyCount < 2) {
+          failingPartner = partner;
+          failedReason = `Your tiny faction expects us to enter government without offering at least two major portfolios (Finance, Foreign Affairs, or Interior). This is disrespectful of our parliamentary weight.`;
+        }
+      } else if (leverage > 1.2) {
+        partnerLeveragePenalty = 20;
+        if (heavyCount < 1) {
+          failingPartner = partner;
+          failedReason = `They require at least one Heavy portfolio (Finance, Foreign Affairs, or Interior) to consider a coalition partnership.`;
+        }
+      } else if (leverage < 0.6) {
+        partnerLeveragePenalty = -15;
       }
-    } else if (leverage > 1.2) {
-      // Larger
-      leveragePenalty = 20;
-      if (heavyCount < 1) {
-        playSound('error');
-        setLobbyAlert({
-          title: 'COALITION REJECTED',
-          message: `"${partner.name}" has rejected your offer. They require at least one Heavy portfolio (Finance, Foreign Affairs, or Interior) to consider a coalition partnership.`
-        });
-        setSelectedPartner(null);
-        setShowCoalitionModal(false);
-        return;
-      }
-    } else if (leverage < 0.6) {
-      // You are much larger
-      baseChance += 15;
+      leveragePenaltySum += partnerLeveragePenalty;
+    });
+
+    if (failingPartner) {
+      playSound('error');
+      setLobbyAlert({
+        title: 'COALITION REJECTED',
+        message: `"${failingPartner.name}" has rejected your terms. Their leadership remarked: "${failedReason}"`
+      });
+      setSelectedPartners([]);
+      setCoalitionStep('select');
+      setShowCoalitionModal(false);
+      return;
     }
 
-    const finalProbability = Math.min(95, Math.max(5, baseChance + ministryScore - leveragePenalty + clashFactor));
+    const avgBaseChance = baseChanceSum / selectedPartners.length;
+    const avgLeveragePenalty = leveragePenaltySum / selectedPartners.length;
+
+    const finalProbability = Math.min(95, Math.max(5, avgBaseChance + ministryScore - avgLeveragePenalty + clashFactor));
     const randomRoll = Math.floor(Math.random() * 101);
 
     if (randomRoll <= finalProbability) {
       // Accepted!
       playSound('success');
-      const combinedSeats = playerSeatsCount + partnerSeats;
+      const combinedSeats = playerSeatsCount + selectedPartners.reduce((sum, p) => sum + (rivalsSeatsData.find(r => r.id === p.id)?.seats || 0), 0);
+      const partnerNamesSuffix = selectedPartners.map(p => p.name.substring(0, 5)).join('-');
       const newCoalition: Coalition = {
-        name: `Grand ${party.name.substring(0, 5)}-${partner.name.substring(0, 5)} Pact`,
-        parties: [party.name, partner.name],
+        name: `Grand ${party.name.substring(0, 5)}-${partnerNamesSuffix} Pact`,
+        parties: [party.name, ...selectedPartners.map(p => p.name)],
         totalSeats: combinedSeats,
-        ideologyAvg: `${party.ideology} / ${partner.ideology}`
+        ideologyAvg: `${party.ideology} / Alliance`
       };
 
       if (onUpdateCoalitions) {
@@ -204,7 +219,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
       }
       setLobbyAlert({
         title: 'COALITION FORMED SUCCESSFULLY',
-        message: `With an acceptance probability of ${finalProbability}%, "${partner.name}" has formally accepted your coalition cabinet proposal! The "${newCoalition.name}" coalition now controls ${newCoalition.totalSeats} seats.`
+        message: `With an acceptance probability of ${finalProbability}%, the selected parties have formally accepted your coalition cabinet proposal! The "${newCoalition.name}" coalition now controls ${newCoalition.totalSeats} seats.`
       });
     } else {
       // Rejected by random probability
@@ -220,11 +235,12 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
       setLobbyAlert({
         title: 'PROPOSAL REJECTED',
-        message: `With an acceptance probability of ${finalProbability}%, "${partner.name}" has rejected your coalition cabinet offer. Reason: ${rejectionReason}`
+        message: `With an acceptance probability of ${finalProbability}%, they have rejected your coalition cabinet offer. Reason: ${rejectionReason}`
       });
     }
 
-    setSelectedPartner(null);
+    setSelectedPartners([]);
+    setCoalitionStep('select');
     setShowCoalitionModal(false);
   };
 
@@ -451,9 +467,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   const getStatusBadge = (status: Bill['status']) => {
     switch (status as string) {
       case 'Passed':
-      case 'Passed':
         return <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">PASSED</span>;
-      case 'Rejected':
       case 'Rejected':
         return <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-bold border border-rose-500/20">REJECTED</span>;
       default:
@@ -797,7 +811,8 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                 type="button"
                 onClick={() => {
                   setShowCoalitionModal(false);
-                  setSelectedPartner(null);
+                  setSelectedPartners([]);
+                  setCoalitionStep('select');
                 }}
                 className="p-1 rounded hover:bg-slate-500/10 text-slate-450 cursor-pointer"
               >
@@ -805,19 +820,22 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
               </button>
             </div>
 
-            {!selectedPartner ? (
+            {coalitionStep === 'select' ? (
               <>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Forming a coalition increases your joint legislative power, improving the probability of passing heavy reforms. Select a compatible party to invite to the alliance:
+                  Forming a coalition increases your joint legislative power, improving the probability of passing heavy reforms. Select one or more compatible parties to invite:
                 </p>
 
                 <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
                   {country.rivals.map((rival) => {
                     const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
+                    const isAdded = selectedPartners.some(p => p.id === rival.id);
                     return (
                       <div
                         key={rival.id}
-                        className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex items-center justify-between gap-3"
+                        className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                          isAdded ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-slate-500/5 border-slate-500/10'
+                        }`}
                       >
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -831,37 +849,71 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
                         <button
                           type="button"
-                          onClick={() => handleSelectPartner(rival.name)}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 text-white text-[10px] font-bold uppercase cursor-pointer"
+                          onClick={() => handleTogglePartner(rival.name)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer transition-all ${
+                            isAdded ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-650 hover:bg-indigo-600 text-white'
+                          }`}
                         >
-                          Invite
+                          {isAdded ? 'Remove' : 'Add'}
                         </button>
                       </div>
                     );
                   })}
                 </div>
+
+                <div className="pt-3 border-t border-slate-500/10 mt-2">
+                  <div className="flex justify-between items-center text-xs mb-3">
+                    <span className="text-slate-400 font-mono">Combined Seats:</span>
+                    <strong className="text-indigo-400 font-mono text-sm">
+                      {playerSeatsCount + selectedPartners.reduce((sum, p) => sum + (rivalsSeatsData.find(r => r.id === p.id)?.seats || 0), 0)} / {country.seats}
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={selectedPartners.length === 0}
+                    onClick={() => {
+                      playSound('click');
+                      setCoalitionStep('negotiate');
+                    }}
+                    className={`w-full py-2.5 rounded-xl font-bold text-xs text-center transition-all ${
+                      selectedPartners.length > 0
+                        ? 'bg-indigo-650 hover:bg-indigo-600 text-white cursor-pointer shadow-md'
+                        : 'bg-slate-800 text-slate-550 cursor-not-allowed'
+                    }`}
+                  >
+                    Proceed to Portfolio Negotiation ➔
+                  </button>
+                </div>
               </>
             ) : (
               <div className="space-y-4 animate-scale-up text-left">
-                {/* Selected Partner Intro */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedPartner.color }}></span>
-                      <strong className="text-xs font-bold uppercase">{selectedPartner.name}</strong>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">{selectedPartner.ideology}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-450 block font-mono">SEATS</span>
-                    <strong className="text-xs text-indigo-450">{rivalsSeatsData.find(r => r.id === selectedPartner.id)?.seats || 0} Seats</strong>
+                {/* Selected Partners Intro */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                    Proposed Coalition Partners:
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+                    {selectedPartners.map(p => (
+                      <div key={p.id} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 text-xs flex-1 min-w-[120px]">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></span>
+                            <strong className="text-[10px] uppercase">{p.name}</strong>
+                          </div>
+                          <span className="text-[8px] text-slate-400 block font-mono">{p.ideology}</span>
+                        </div>
+                        <div className="text-right">
+                          <strong className="text-[10px] text-indigo-400">{rivalsSeatsData.find(r => r.id === p.id)?.seats || 0} Seats</strong>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Portfolios Checkboxes */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
-                    Offer Cabinet Portfolios to Partner:
+                    Offer Cabinet Portfolios to Partners:
                   </label>
                   <div className="grid grid-cols-1 gap-2">
                     
@@ -965,38 +1017,56 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
                 {/* Political Dynamics Summary */}
                 {(() => {
-                  const partnerSeats = rivalsSeatsData.find(r => r.id === selectedPartner.id)?.seats || 0;
-                  const ratio = partnerSeats / (playerSeatsCount || 1);
-                  const isClose = (party.ideology.includes("Social") && selectedPartner.ideology.includes("Social")) ||
-                                  (party.ideology.includes("Left") && selectedPartner.ideology.includes("Left")) ||
-                                  (party.ideology.includes("Conservative") && selectedPartner.ideology.includes("Conservative")) ||
-                                  (party.ideology.includes("Right") && selectedPartner.ideology.includes("Right")) ||
-                                  (party.ideology.includes("Liberal") && selectedPartner.ideology.includes("Liberal")) ||
-                                  (party.ideology.includes("Centrist") && selectedPartner.ideology.includes("Centrist"));
-                  
+                  let leveragePenaltySum = 0;
+                  let baseChanceSum = 0;
+
+                  let ministryScore = 0;
                   let heavyCount = 0;
-                  if (offeredMinistries.includes('finance')) heavyCount++;
-                  if (offeredMinistries.includes('foreign')) heavyCount++;
-                  if (offeredMinistries.includes('interior')) heavyCount++;
-                  
-                  let mScore = 0;
-                  if (offeredMinistries.includes('finance')) mScore += 25;
-                  if (offeredMinistries.includes('foreign')) mScore += 25;
-                  if (offeredMinistries.includes('interior')) mScore += 25;
-                  if (offeredMinistries.includes('education')) mScore += 15;
-                  if (offeredMinistries.includes('culture')) mScore += 8;
+                  if (offeredMinistries.includes('finance')) { ministryScore += 25; heavyCount++; }
+                  if (offeredMinistries.includes('foreign')) { ministryScore += 25; heavyCount++; }
+                  if (offeredMinistries.includes('interior')) { ministryScore += 25; heavyCount++; }
+                  if (offeredMinistries.includes('education')) { ministryScore += 15; }
+                  if (offeredMinistries.includes('culture')) { ministryScore += 8; }
 
-                  let levPenalty = 0;
-                  if (ratio > 2.0) levPenalty = 45;
-                  else if (ratio > 1.2) levPenalty = 20;
-                  else if (ratio < 0.6) levPenalty = -15;
+                  selectedPartners.forEach(partner => {
+                    const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
+                    const leverage = partnerSeats / (playerSeatsCount || 1);
 
-                  const finalChance = Math.min(95, Math.max(5, 30 + (isClose ? 30 : 10) + mScore - levPenalty + clashFactor));
+                    const isSameIdeologyGroup = 
+                      (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
+                      (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
+                      (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
+                      (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
+                      (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
+                      (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"));
+
+                    const partnerBaseChance = 30 + (isSameIdeologyGroup ? 30 : 10);
+                    baseChanceSum += partnerBaseChance;
+
+                    let partnerLeveragePenalty = 0;
+                    if (leverage > 2.0) {
+                      partnerLeveragePenalty = 45;
+                    } else if (leverage > 1.2) {
+                      partnerLeveragePenalty = 20;
+                    } else if (leverage < 0.6) {
+                      partnerLeveragePenalty = -15;
+                    }
+                    leveragePenaltySum += partnerLeveragePenalty;
+                  });
+
+                  const avgBaseChance = baseChanceSum / selectedPartners.length;
+                  const avgLeveragePenalty = leveragePenaltySum / selectedPartners.length;
+                  const finalChance = Math.min(95, Math.max(5, avgBaseChance + ministryScore - avgLeveragePenalty + clashFactor));
+
+                  const isMajorLeverage = selectedPartners.some(p => {
+                    const seats = rivalsSeatsData.find(r => r.id === p.id)?.seats || 0;
+                    return (seats / (playerSeatsCount || 1)) > 1.2;
+                  });
 
                   return (
                     <div className="p-3 rounded-xl bg-slate-950 border border-slate-850 text-[10px] space-y-1.5 text-slate-400">
                       <span className="font-bold text-slate-300 block font-mono">🛡️ ALLIANCE DYNAMICS:</span>
-                      <div>• {ratio > 1.2 ? "⚠️ They hold significant seat leverage over your faction." : "✅ You hold the upper hand in seats distribution."}</div>
+                      <div>• {isMajorLeverage ? "⚠️ Some partners hold significant seat leverage." : "✅ You hold overall upper hand in seats distribution."}</div>
                       <div>• {clashFactor < 0 ? `⚠️ Media Relations: Tense Clashes (${clashFactor}%)` : `✅ Media Relations: Friendly Dialogue (+${clashFactor}%)`}</div>
                       <div className="pt-2 border-t border-slate-850 flex justify-between items-center text-xs">
                         <span className="font-bold">Calculated Acceptance Chance:</span>
@@ -1012,7 +1082,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                     type="button"
                     onClick={() => {
                       playSound('click');
-                      setSelectedPartner(null);
+                      setCoalitionStep('select');
                     }}
                     className="flex-1 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-900 font-bold text-xs text-slate-300 cursor-pointer text-center"
                   >

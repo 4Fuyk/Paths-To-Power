@@ -200,22 +200,22 @@ export const getTurkeyRegions = (): Region[] => {
 };
 
 const GERMANY_STATES_SPEC = [
-  { name: 'Baden-Württemberg', seats: 83, winner: 'CDU' },
-  { name: 'Bayern', seats: 99, winner: 'CDU' },
-  { name: 'Berlin', seats: 28, winner: 'CDU' },
-  { name: 'Brandenburg', seats: 19, winner: 'AfD' },
-  { name: 'Bremen', seats: 5, winner: 'SPD' },
-  { name: 'Hamburg', seats: 14, winner: 'SPD' },
-  { name: 'Hessen', seats: 47, winner: 'CDU' },
-  { name: 'Mecklenburg-Vorpommern', seats: 13, winner: 'AfD' },
-  { name: 'Niedersachsen', seats: 60, winner: 'CDU' },
-  { name: 'Nordrhein-Westfalen', seats: 136, winner: 'CDU' },
-  { name: 'Rheinland-Pfalz', seats: 31, winner: 'CDU' },
-  { name: 'Saarland', seats: 8, winner: 'CDU' },
-  { name: 'Sachsen', seats: 31, winner: 'AfD' },
-  { name: 'Sachsen-Anhalt', seats: 17, winner: 'AfD' },
-  { name: 'Schleswig-Holstein', seats: 22, winner: 'CDU' },
-  { name: 'Thüringen', seats: 17, winner: 'AfD' }
+  { name: 'Baden-Württemberg', seats: 83, winner: 'CDU', mayorName: 'Winfried Kretschmann' },
+  { name: 'Bayern', seats: 99, winner: 'CDU', mayorName: 'Markus Söder' },
+  { name: 'Berlin', seats: 28, winner: 'CDU', mayorName: 'Kai Wegner' },
+  { name: 'Brandenburg', seats: 19, winner: 'AfD', mayorName: 'Dietmar Woidke' },
+  { name: 'Bremen', seats: 5, winner: 'SPD', mayorName: 'Andreas Bovenschulte' },
+  { name: 'Hamburg', seats: 14, winner: 'SPD', mayorName: 'Peter Tschentscher' },
+  { name: 'Hessen', seats: 47, winner: 'CDU', mayorName: 'Boris Rhein' },
+  { name: 'Mecklenburg-Vorpommern', seats: 13, winner: 'AfD', mayorName: 'Manuela Schwesig' },
+  { name: 'Niedersachsen', seats: 60, winner: 'CDU', mayorName: 'Stephan Weil' },
+  { name: 'Nordrhein-Westfalen', seats: 136, winner: 'CDU', mayorName: 'Hendrik Wüst' },
+  { name: 'Rheinland-Pfalz', seats: 31, winner: 'CDU', mayorName: 'Alexander Schweitzer' },
+  { name: 'Saarland', seats: 8, winner: 'CDU', mayorName: 'Anke Rehlinger' },
+  { name: 'Sachsen', seats: 31, winner: 'AfD', mayorName: 'Michael Kretschmer' },
+  { name: 'Sachsen-Anhalt', seats: 17, winner: 'AfD', mayorName: 'Reiner Haseloff' },
+  { name: 'Schleswig-Holstein', seats: 22, winner: 'CDU', mayorName: 'Daniel Günther' },
+  { name: 'Thüringen', seats: 17, winner: 'AfD', mayorName: 'Bodo Ramelow' }
 ];
 
 export const getGermanyRegions = (): Region[] => {
@@ -299,7 +299,7 @@ export const getGermanyRegions = (): Region[] => {
       infrastructure,
       campaignLevel: 0,
       ownerPartyId: spec.winner,
-      mayorName: spec.winner === 'CDU' ? 'Christian Schmidt' : spec.winner === 'AfD' ? 'Uwe Schulz' : 'Lukas Schneider'
+      mayorName: spec.mayorName
     };
   });
 };
@@ -440,6 +440,284 @@ const makeVoterGroup = (
   'Shopkeepers': shopkeepers,
 });
 
+// Helper to generate regions dynamically based on local party specs and actual historical wins
+const generateRegionsFromSpec = (
+  countryId: string,
+  specs: { name: string; seats: number; winner: string; mayorName?: string }[],
+  partyIds: string[],
+  baseSupports: Record<string, number>
+): Region[] => {
+  return specs.map((spec) => {
+    // Generate a randomized but balanced support map
+    const base: Record<string, number> = {};
+    partyIds.forEach((pId) => {
+      base[pId] = baseSupports[pId] || 10;
+    });
+
+    if (spec.winner && base[spec.winner] !== undefined) {
+      // Give a boost to the winner in this region
+      const boost = 12 + Math.floor(Math.random() * 8);
+      base[spec.winner] += boost;
+      
+      // Reduce the other parties a bit, keep them above 1
+      partyIds.forEach((pId) => {
+        if (pId !== spec.winner) {
+          base[pId] = Math.max(1, base[pId] - (1 + Math.floor(Math.random() * 4)));
+        }
+      });
+    }
+
+    // Normalize supports to sum to exactly 100%
+    const total = Object.values(base).reduce((s, v) => s + v, 0);
+    const scale = 100 / total;
+    const supports: Record<string, number> = {};
+    Object.entries(base).forEach(([pId, val]) => {
+      supports[pId] = parseFloat((val * scale).toFixed(1));
+    });
+
+    // Make sure it sums to exactly 100 by adjusting the winner
+    const sum = Object.values(supports).reduce((s, v) => s + v, 0);
+    if (sum !== 100) {
+      const diff = parseFloat((100 - sum).toFixed(1));
+      if (spec.winner && supports[spec.winner] !== undefined) {
+        supports[spec.winner] = parseFloat((supports[spec.winner] + diff).toFixed(1));
+      } else {
+        const firstId = partyIds[0];
+        supports[firstId] = parseFloat((supports[firstId] + diff).toFixed(1));
+      }
+    }
+
+    // Seed demographic distribution based on seats and random variance
+    const workers = 15 + Math.floor(Math.random() * 15);
+    const youth = 15 + Math.floor(Math.random() * 15);
+    const nationalists = 10 + Math.floor(Math.random() * 15);
+    const liberals = 10 + Math.floor(Math.random() * 12);
+    const traditionalists = 10 + Math.floor(Math.random() * 15);
+    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
+
+    const voterDistribution = makeVoterGroup(
+      workers,
+      youth,
+      nationalists,
+      liberals,
+      traditionalists,
+      Math.max(2, shopkeepers)
+    );
+
+    const infrastructure = spec.seats >= 30 ? 5 : spec.seats >= 15 ? 4 : 3;
+    const normalized = spec.name.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z]/g, '');
+    const id = `${countryId}_${normalized}`;
+
+    return {
+      id,
+      name: spec.name,
+      seats: spec.seats,
+      voterDistribution,
+      supports,
+      infrastructure,
+      campaignLevel: 0,
+      ownerPartyId: spec.winner,
+      mayorName: spec.mayorName || getDeterministicMayorName(spec.name, countryId)
+    };
+  });
+};
+
+const CANADA_SPEC = [
+  { name: 'Ontario', seats: 121, winner: 'LIB', mayorName: 'Doug Ford' },
+  { name: 'Quebec', seats: 78, winner: 'BQ', mayorName: 'François Legault' },
+  { name: 'British Columbia', seats: 42, winner: 'CON', mayorName: 'David Eby' },
+  { name: 'Alberta', seats: 34, winner: 'CON', mayorName: 'Danielle Smith' },
+  { name: 'Manitoba', seats: 14, winner: 'CON', mayorName: 'Wab Kinew' },
+  { name: 'Saskatchewan', seats: 14, winner: 'CON', mayorName: 'Scott Moe' },
+  { name: 'Nova Scotia', seats: 11, winner: 'LIB', mayorName: 'Tim Houston' },
+  { name: 'New Brunswick', seats: 10, winner: 'LIB', mayorName: 'Susan Holt' },
+  { name: 'Newfoundland and Labrador', seats: 7, winner: 'LIB', mayorName: 'Andrew Furey' },
+  { name: 'Prince Edward Island', seats: 4, winner: 'LIB', mayorName: 'Dennis King' }
+];
+
+const ARGENTINA_SPEC = [
+  { name: 'Buenos Aires', seats: 70, winner: 'UP', mayorName: 'Axel Kicillof' },
+  { name: 'Córdoba', seats: 18, winner: 'LLA', mayorName: 'Martín Llaryora' },
+  { name: 'Santa Fe', seats: 19, winner: 'LLA', mayorName: 'Maximiliano Pullaro' },
+  { name: 'Mendoza', seats: 10, winner: 'JXC', mayorName: 'Alfredo Cornejo' },
+  { name: 'Tucumán', seats: 9, winner: 'UP', mayorName: 'Osvaldo Jaldo' },
+  { name: 'Entre Ríos', seats: 9, winner: 'JXC', mayorName: 'Rogelio Frigerio' },
+  { name: 'Salta', seats: 7, winner: 'LLA', mayorName: 'Gustavo Sáenz' },
+  { name: 'Misiones', seats: 7, winner: 'UP', mayorName: 'Hugo Passalacqua' },
+  { name: 'Chaco', seats: 7, winner: 'UP', mayorName: 'Leandro Zdero' },
+  { name: 'Corrientes', seats: 7, winner: 'JXC', mayorName: 'Gustavo Valdés' },
+  { name: 'Santiago del Estero', seats: 7, winner: 'UP', mayorName: 'Gerardo Zamora' },
+  { name: 'Jujuy', seats: 6, winner: 'JXC', mayorName: 'Carlos Sadir' },
+  { name: 'Formosa', seats: 5, winner: 'UP', mayorName: 'Gildo Insfrán' },
+  { name: 'Catamarca', seats: 5, winner: 'UP', mayorName: 'Raúl Jalil' },
+  { name: 'La Pampa', seats: 5, winner: 'UP', mayorName: 'Sergio Ziliotto' },
+  { name: 'La Rioja', seats: 5, winner: 'UP', mayorName: 'Ricardo Quintela' },
+  { name: 'San Juan', seats: 6, winner: 'JXC', mayorName: 'Marcelo Orrego' },
+  { name: 'San Luis', seats: 5, winner: 'JXC', mayorName: 'Claudio Poggi' },
+  { name: 'Neuquén', seats: 5, winner: 'LLA', mayorName: 'Rolando Figueroa' },
+  { name: 'Río Negro', seats: 5, winner: 'LLA', mayorName: 'Alberto Weretilneck' },
+  { name: 'Chubut', seats: 5, winner: 'JXC', mayorName: 'Ignacio Torres' },
+  { name: 'Santa Cruz', seats: 5, winner: 'UP', mayorName: 'Claudio Vidal' },
+  { name: 'Tierra del Fuego', seats: 3, winner: 'UP', mayorName: 'Gustavo Melella' },
+  { name: 'Capital Federal', seats: 25, winner: 'JXC', mayorName: 'Jorge Macri' }
+];
+
+const SOUTH_AFRICA_SPEC = [
+  { name: 'Gauteng', seats: 73, winner: 'ANC', mayorName: 'Panyaza Lesufi' },
+  { name: 'KwaZulu-Natal', seats: 41, winner: 'MK', mayorName: 'Thami Ntuli' },
+  { name: 'Western Cape', seats: 30, winner: 'DA', mayorName: 'Alan Winde' },
+  { name: 'Eastern Cape', seats: 25, winner: 'ANC', mayorName: 'Oscar Mabuyane' },
+  { name: 'Limpopo', seats: 19, winner: 'ANC', mayorName: 'Phophi Ramathuba' },
+  { name: 'Mpumalanga', seats: 15, winner: 'ANC', mayorName: 'Mandla Ndlovu' },
+  { name: 'North West', seats: 13, winner: 'ANC', mayorName: 'Lazarus Mokgosi' },
+  { name: 'Free State', seats: 10, winner: 'ANC', mayorName: 'Maqueen Letsoha-Mathae' },
+  { name: 'Northern Cape', seats: 5, winner: 'ANC', mayorName: 'Zamani Saul' }
+];
+
+const INDIA_SPEC = [
+  { name: 'Uttar Pradesh', seats: 80, winner: 'BJP', mayorName: 'Yogi Adityanath' },
+  { name: 'Maharashtra', seats: 48, winner: 'INC', mayorName: 'Eknath Shinde' },
+  { name: 'West Bengal', seats: 42, winner: 'TMC', mayorName: 'Mamata Banerjee' },
+  { name: 'Bihar', seats: 40, winner: 'BJP', mayorName: 'Nitish Kumar' },
+  { name: 'Tamil Nadu', seats: 39, winner: 'INC', mayorName: 'M. K. Stalin' },
+  { name: 'Madhya Pradesh', seats: 29, winner: 'BJP', mayorName: 'Mohan Yadav' },
+  { name: 'Karnataka', seats: 28, winner: 'INC', mayorName: 'Siddaramaiah' },
+  { name: 'Gujarat', seats: 26, winner: 'BJP', mayorName: 'Bhupendrabhai Patel' },
+  { name: 'Andhra Pradesh', seats: 25, winner: 'BJP', mayorName: 'N. Chandrababu Naidu' },
+  { name: 'Rajasthan', seats: 25, winner: 'BJP', mayorName: 'Bhajan Lal Sharma' },
+  { name: 'Odisha', seats: 21, winner: 'BJP', mayorName: 'Mohan Charan Majhi' },
+  { name: 'Kerala', seats: 20, winner: 'INC', mayorName: 'Pinarayi Vijayan' },
+  { name: 'Telangana', seats: 17, winner: 'INC', mayorName: 'A. Revanth Reddy' },
+  { name: 'Assam', seats: 14, winner: 'BJP', mayorName: 'Himanta Biswa Sarma' },
+  { name: 'Jharkhand', seats: 14, winner: 'BJP', mayorName: 'Hemant Soren' },
+  { name: 'Punjab', seats: 13, winner: 'INC', mayorName: 'Bhagwant Mann' },
+  { name: 'Chhattisgarh', seats: 11, winner: 'BJP', mayorName: 'Vishnu Deo Sai' },
+  { name: 'Haryana', seats: 10, winner: 'BJP', mayorName: 'Nayab Singh Saini' },
+  { name: 'Jammu and Kashmir', seats: 5, winner: 'INC', mayorName: 'Omar Abdullah' },
+  { name: 'Uttarakhand', seats: 5, winner: 'BJP', mayorName: 'Pushkar Singh Dhami' },
+  { name: 'Himachal Pradesh', seats: 4, winner: 'BJP', mayorName: 'Sukhvinder Singh Sukhu' },
+  { name: 'Tripura', seats: 2, winner: 'BJP', mayorName: 'Manik Saha' },
+  { name: 'Manipur', seats: 2, winner: 'INC', mayorName: 'N. Biren Singh' },
+  { name: 'Meghalaya', seats: 2, winner: 'INC', mayorName: 'Conrad Sangma' },
+  { name: 'Nagaland', seats: 1, winner: 'INC', mayorName: 'Neiphiu Rio' },
+  { name: 'Goa', seats: 2, winner: 'BJP', mayorName: 'Pramod Sawant' },
+  { name: 'Arunachal Pradesh', seats: 2, winner: 'BJP', mayorName: 'Pema Khandu' },
+  { name: 'Mizoram', seats: 1, winner: 'INC', mayorName: 'Lalduhoma' },
+  { name: 'Sikkim', seats: 1, winner: 'BJP', mayorName: 'Prem Singh Tamang' },
+  { name: 'Delhi', seats: 7, winner: 'BJP', mayorName: 'Atishi Marlena' }
+];
+
+const ITALY_SPEC = [
+  { name: 'Lombardy', seats: 64, winner: 'FDI', mayorName: 'Attilio Fontana' },
+  { name: 'Lazio', seats: 36, winner: 'FDI', mayorName: 'Francesco Rocca' },
+  { name: 'Campania', seats: 29, winner: 'M5S', mayorName: 'Vincenzo De Luca' },
+  { name: 'Sicily', seats: 28, winner: 'FDI', mayorName: 'Renato Schifani' },
+  { name: 'Veneto', seats: 27, winner: 'LEGA', mayorName: 'Luca Zaia' },
+  { name: 'Emilia-Romagna', seats: 24, winner: 'PD', mayorName: 'Michele De Pascale' },
+  { name: 'Piedmont', seats: 22, winner: 'FDI', mayorName: 'Alberto Cirio' },
+  { name: 'Apulia', seats: 20, winner: 'M5S', mayorName: 'Michele Emiliano' },
+  { name: 'Tuscany', seats: 18, winner: 'PD', mayorName: 'Eugenio Giani' },
+  { name: 'Calabria', seats: 10, winner: 'FDI', mayorName: 'Roberto Occhiuto' }
+];
+
+const INDONESIA_SPEC = [
+  { name: 'West Java', seats: 91, winner: 'GERINDRA', mayorName: 'Ridwan Kamil' },
+  { name: 'East Java', seats: 87, winner: 'PKB', mayorName: 'Khofifah Indar Parawansa' },
+  { name: 'Central Java', seats: 77, winner: 'PDIP', mayorName: 'Ganjar Pranowo' },
+  { name: 'North Sumatra', seats: 30, winner: 'GOLKAR', mayorName: 'Edy Rahmayadi' },
+  { name: 'Banten', seats: 22, winner: 'GERINDRA', mayorName: 'Al Muktabar' },
+  { name: 'Jakarta', seats: 21, winner: 'PDIP', mayorName: 'Anies Baswedan' },
+  { name: 'South Sulawesi', seats: 24, winner: 'GOLKAR', mayorName: 'Andi Sudirman Sulaiman' },
+  { name: 'Lampung', seats: 20, winner: 'GOLKAR', mayorName: 'Arinal Djunaidi' },
+  { name: 'South Sumatra', seats: 17, winner: 'GERINDRA', mayorName: 'Herman Deru' },
+  { name: 'Riau', seats: 13, winner: 'GOLKAR', mayorName: 'Syamsuar' }
+];
+
+const MEXICO_SPEC = [
+  { name: 'State of Mexico', seats: 40, winner: 'MORENA', mayorName: 'Delfina Gómez Álvarez' },
+  { name: 'Mexico City', seats: 30, winner: 'MORENA', mayorName: 'Clara Brugada' },
+  { name: 'Jalisco', seats: 19, winner: 'PAN', mayorName: 'Enrique Alfaro Ramírez' },
+  { name: 'Veracruz', seats: 19, winner: 'MORENA', mayorName: 'Rocío Nahle García' },
+  { name: 'Puebla', seats: 15, winner: 'MORENA', mayorName: 'Alejandro Armenta Mier' },
+  { name: 'Guanajuato', seats: 14, winner: 'PAN', mayorName: 'Libia Dennise García' },
+  { name: 'Nuevo León', seats: 12, winner: 'PAN', mayorName: 'Samuel García' },
+  { name: 'Chiapas', seats: 12, winner: 'MORENA', mayorName: 'Eduardo Ramírez Aguilar' },
+  { name: 'Michoacán', seats: 11, winner: 'MORENA', mayorName: 'Alfredo Ramírez Bedolla' },
+  { name: 'Oaxaca', seats: 10, winner: 'MORENA', mayorName: 'Salomón Jara Cruz' },
+  { name: 'Chihuahua', seats: 9, winner: 'PAN', mayorName: 'Maru Campos' },
+  { name: 'Guerrero', seats: 9, winner: 'MORENA', mayorName: 'Evelyn Salgado Pineda' },
+  { name: 'Tamaulipas', seats: 8, winner: 'MORENA', mayorName: 'Américo Villarreal Anaya' },
+  { name: 'Baja California', seats: 8, winner: 'MORENA', mayorName: 'Marina del Pilar Ávila' },
+  { name: 'Sinaloa', seats: 7, winner: 'MORENA', mayorName: 'Rubén Rocha Moya' },
+  { name: 'San Luis Potosí', seats: 7, winner: 'MORENA', mayorName: 'Ricardo Gallardo Cardona' },
+  { name: 'Tabasco', seats: 6, winner: 'MORENA', mayorName: 'Javier May Rodríguez' },
+  { name: 'Sonora', seats: 7, winner: 'MORENA', mayorName: 'Alfonso Durazo' },
+  { name: 'Hidalgo', seats: 7, winner: 'MORENA', mayorName: 'Julio Menchaca' },
+  { name: 'Coahuila', seats: 7, winner: 'PRI', mayorName: 'Manolo Jiménez Salinas' },
+  { name: 'Querétaro', seats: 5, winner: 'PAN', mayorName: 'Mauricio Kuri' },
+  { name: 'Yucatán', seats: 5, winner: 'MORENA', mayorName: 'Joaquín Díaz Mena' },
+  { name: 'Durango', seats: 4, winner: 'PRI', mayorName: 'Esteban Villegas' },
+  { name: 'Zacatecas', seats: 4, winner: 'MORENA', mayorName: 'David Monreal Ávila' },
+  { name: 'Quintana Roo', seats: 4, winner: 'MORENA', mayorName: 'Mara Lezama Espinosa' },
+  { name: 'Nayarit', seats: 3, winner: 'MORENA', mayorName: 'Miguel Ángel Navarro' },
+  { name: 'Tlaxcala', seats: 3, winner: 'MORENA', mayorName: 'Lorena Cuéllar' },
+  { name: 'Campeche', seats: 2, winner: 'MORENA', mayorName: 'Layda Sansores' },
+  { name: 'Aguascalientes', seats: 3, winner: 'PAN', mayorName: 'Tere Jiménez Esquivel' },
+  { name: 'Baja California Sur', seats: 2, winner: 'MORENA', mayorName: 'Víctor Manuel Castro' },
+  { name: 'Colima', seats: 2, winner: 'MORENA', mayorName: 'Indira Vizcaíno' }
+];
+
+const SPAIN_SPEC = [
+  { name: 'Andalusia', seats: 61, winner: 'PP', mayorName: 'Juan Manuel Moreno' },
+  { name: 'Catalonia', seats: 48, winner: 'PSOE', mayorName: 'Salvador Illa' },
+  { name: 'Madrid', seats: 37, winner: 'PP', mayorName: 'Isabel Díaz Ayuso' },
+  { name: 'Valencia', seats: 33, winner: 'PP', mayorName: 'Carlos Mazón' },
+  { name: 'Galicia', seats: 23, winner: 'PP', mayorName: 'Alfonso Rueda' },
+  { name: 'Castile and León', seats: 31, winner: 'PP', mayorName: 'Alfonso Fernández Mañueco' },
+  { name: 'Basque Country', seats: 18, winner: 'PSOE', mayorName: 'Imanol Pradales' },
+  { name: 'Canary Islands', seats: 15, winner: 'PSOE', mayorName: 'Fernando Clavijo Batlle' },
+  { name: 'Castile-La Mancha', seats: 21, winner: 'PP', mayorName: 'Emiliano García-Page' },
+  { name: 'Murcia', seats: 10, winner: 'PP', mayorName: 'Fernando López Miras' }
+];
+
+const SOUTH_KOREA_SPEC = [
+  { name: 'Seoul', seats: 48, winner: 'DP', mayorName: 'Oh Se-hoon' },
+  { name: 'Gyeonggi', seats: 60, winner: 'DP', mayorName: 'Kim Dong-yeon' },
+  { name: 'Busan', seats: 18, winner: 'PPP', mayorName: 'Park Heong-joon' },
+  { name: 'Incheon', seats: 14, winner: 'DP', mayorName: 'Yoo Jeong-bok' },
+  { name: 'Daegu', seats: 12, winner: 'PPP', mayorName: 'Hong Joon-pyo' },
+  { name: 'Gyeongnam', seats: 16, winner: 'PPP', mayorName: 'Park Wan-su' },
+  { name: 'Gyeongbuk', seats: 13, winner: 'PPP', mayorName: 'Lee Cheol-woo' },
+  { name: 'Chungnam', seats: 11, winner: 'DP', mayorName: 'Kim Tae-heum' },
+  { name: 'Jeonnam', seats: 10, winner: 'DP', mayorName: 'Kim Yung-rok' },
+  { name: 'Jeonbuk', seats: 10, winner: 'DP', mayorName: 'Kim Kwan-young' }
+];
+
+const AUSTRALIA_SPEC = [
+  { name: 'New South Wales', seats: 47, winner: 'ALP', mayorName: 'Chris Minns' },
+  { name: 'Victoria', seats: 39, winner: 'ALP', mayorName: 'Jacinta Allan' },
+  { name: 'Queensland', seats: 30, winner: 'LNP', mayorName: 'Steven Miles' },
+  { name: 'Western Australia', seats: 15, winner: 'LNP', mayorName: 'Roger Cook' },
+  { name: 'South Australia', seats: 10, winner: 'ALP', mayorName: 'Peter Malinauskas' },
+  { name: 'Tasmania', seats: 5, winner: 'LNP', mayorName: 'Jeremy Rockliff' },
+  { name: 'Australian Capital Territory', seats: 3, winner: 'ALP', mayorName: 'Andrew Barr' },
+  { name: 'Northern Territory', seats: 2, winner: 'ALP', mayorName: 'Lia Finocchiaro' }
+];
+
+export const getCanadaRegions = () => generateRegionsFromSpec('CA', CANADA_SPEC, ['LIB', 'CON', 'NDP', 'BQ'], { LIB: 32, CON: 38, NDP: 18, BQ: 8 });
+export const getArgentinaRegions = () => generateRegionsFromSpec('AR', ARGENTINA_SPEC, ['LLA', 'UP', 'JXC'], { LLA: 30, UP: 36, JXC: 24 });
+export const getSouthAfricaRegions = () => generateRegionsFromSpec('ZA', SOUTH_AFRICA_SPEC, ['ANC', 'DA', 'EFF', 'MK'], { ANC: 40, DA: 21, EFF: 10, MK: 14 });
+export const getIndiaRegions = () => generateRegionsFromSpec('IN', INDIA_SPEC, ['BJP', 'INC', 'TMC'], { BJP: 40, INC: 25, TMC: 5 });
+export const getItalyRegions = () => generateRegionsFromSpec('IT', ITALY_SPEC, ['FDI', 'PD', 'M5S', 'LEGA'], { FDI: 28, PD: 20, M5S: 16, LEGA: 9 });
+export const getIndonesiaRegions = () => generateRegionsFromSpec('ID', INDONESIA_SPEC, ['PDIP', 'GOLKAR', 'GERINDRA', 'PKB'], { PDIP: 17, GOLKAR: 15, GERINDRA: 13, PKB: 10 });
+export const getMexicoRegions = () => generateRegionsFromSpec('MX', MEXICO_SPEC, ['MORENA', 'PAN', 'PRI'], { MORENA: 45, PAN: 18, PRI: 11 });
+export const getSpainRegions = () => generateRegionsFromSpec('ES', SPAIN_SPEC, ['PP', 'PSOE', 'VOX', 'SUMAR'], { PP: 33, PSOE: 31, VOX: 12, SUMAR: 12 });
+export const getSouthKoreaRegions = () => generateRegionsFromSpec('KR', SOUTH_KOREA_SPEC, ['DP', 'PPP'], { DP: 50, PPP: 35 });
+export const getAustraliaRegions = () => generateRegionsFromSpec('AU', AUSTRALIA_SPEC, ['ALP', 'LNP', 'GRN'], { ALP: 32, LNP: 35, GRN: 12 });
+
 // Mock Bills for countries
 const BILL_POOL = [
   {
@@ -543,7 +821,7 @@ const BILL_POOL = [
 const createBills = (countryId: string): Bill[] => {
   // Shuffle the pool and pick a random subset of bills
   const shuffled = [...BILL_POOL].sort(() => 0.5 - Math.random());
-  const selectedCount = Math.floor(Math.random() * 3) + 4; // Select 4 to 6 bills
+  const selectedCount = Math.min(8, shuffled.length);
   const selected = shuffled.slice(0, selectedCount);
   
   return selected.map((bill, index) => ({
@@ -560,6 +838,212 @@ const createBills = (countryId: string): Bill[] => {
 };
 
 export const PLAYABLE_COUNTRIES: Country[] = [
+
+  {
+    id: 'CA',
+    name: 'Canada',
+    description: 'A vast, diverse nation with a strong federal system and distinct provincial identities.',
+    flag: '🇨🇦',
+    seats: 338,
+    parliamentName: 'House of Commons',
+    system: 'Coalition Government',
+    population: '40 Million',
+    primaryColor: '#dc2626',
+    rivals: [
+      { id: 'LIB', name: 'Liberal Party', leader: 'Justin Trudeau', ideology: 'Liberal', symbol: 'Compass', color: '#EF4444', baseSupport: 32 },
+      { id: 'CON', name: 'Conservative', leader: 'Pierre Poilievre', ideology: 'Conservative', symbol: 'Building', color: '#1D4ED8', baseSupport: 38 },
+      { id: 'NDP', name: 'New Democratic', leader: 'Jagmeet Singh', ideology: 'Social Democrat', symbol: 'Users', color: '#F97316', baseSupport: 18 },
+      { id: 'BQ', name: 'Bloc Québécois', leader: 'Yves-François Blanchet', ideology: 'Nationalist', symbol: 'Landmark', color: '#38BDF8', baseSupport: 8 }
+    ],
+    regions: getCanadaRegions(),
+    bills: createBills('CA'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'AR',
+    name: 'Argentina',
+    description: 'A passionate nation experiencing economic challenges and intense political shifts.',
+    flag: '🇦🇷',
+    seats: 257,
+    parliamentName: 'Chamber of Deputies',
+    system: 'Presidential System',
+    population: '46 Million',
+    primaryColor: '#3b82f6',
+    rivals: [
+      { id: 'LLA', name: 'La Libertad Avanza', leader: 'Javier Milei', ideology: 'Liberal', symbol: 'Flame', color: '#8B5CF6', baseSupport: 30 },
+      { id: 'UP', name: 'Unión por la Patria', leader: 'Sergio Massa', ideology: 'Social Democrat', symbol: 'Users', color: '#3B82F6', baseSupport: 36 },
+      { id: 'JXC', name: 'Juntos por el Cambio', leader: 'Patricia Bullrich', ideology: 'Conservative', symbol: 'Building', color: '#FCD34D', baseSupport: 24 }
+    ],
+    regions: getArgentinaRegions(),
+    bills: createBills('AR'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'ZA',
+    name: 'South Africa',
+    description: 'A diverse "Rainbow Nation" navigating complex socioeconomic transformations.',
+    flag: '🇿🇦',
+    seats: 400,
+    parliamentName: 'National Assembly',
+    system: 'Coalition Government',
+    population: '60 Million',
+    primaryColor: '#22c55e',
+    rivals: [
+      { id: 'ANC', name: 'African National Congress', leader: 'Cyril Ramaphosa', ideology: 'Social Democrat', symbol: 'Users', color: '#16A34A', baseSupport: 40 },
+      { id: 'DA', name: 'Democratic Alliance', leader: 'John Steenhuisen', ideology: 'Liberal', symbol: 'Compass', color: '#2563EB', baseSupport: 21 },
+      { id: 'EFF', name: 'Economic Freedom Fighters', leader: 'Julius Malema', ideology: 'Socialist', symbol: 'Flame', color: '#DC2626', baseSupport: 10 },
+      { id: 'MK', name: 'uMkhonto we Sizwe', leader: 'Jacob Zuma', ideology: 'Nationalist', symbol: 'Shield', color: '#047857', baseSupport: 14 }
+    ],
+    regions: getSouthAfricaRegions(),
+    bills: createBills('ZA'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+  },
+  {
+    id: 'IN',
+    name: 'India',
+    description: 'The world\'s largest democracy, blending ancient traditions with rapid modernization.',
+    flag: '🇮🇳',
+    seats: 543,
+    parliamentName: 'Lok Sabha',
+    system: 'Coalition Government',
+    population: '1.4 Billion',
+    primaryColor: '#f97316',
+    rivals: [
+      { id: 'BJP', name: 'Bharatiya Janata Party', leader: 'Narendra Modi', ideology: 'Conservative', symbol: 'Building', color: '#F97316', baseSupport: 40 },
+      { id: 'INC', name: 'Indian National Congress', leader: 'Rahul Gandhi', ideology: 'Social Democrat', symbol: 'Users', color: '#14B8A6', baseSupport: 25 },
+      { id: 'TMC', name: 'All India Trinamool Congress', leader: 'Mamata Banerjee', ideology: 'Liberal', symbol: 'Compass', color: '#22C55E', baseSupport: 5 }
+    ],
+    regions: getIndiaRegions(),
+    bills: createBills('IN'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+  },
+  {
+    id: 'IT',
+    name: 'Italy',
+    description: 'A historic republic with a dynamic and often volatile multi-party political landscape.',
+    flag: '🇮🇹',
+    seats: 400,
+    parliamentName: 'Chamber of Deputies',
+    system: 'Coalition Government',
+    population: '59 Million',
+    primaryColor: '#16a34a',
+    rivals: [
+      { id: 'FDI', name: 'Brothers of Italy', leader: 'Giorgia Meloni', ideology: 'Conservative', symbol: 'Shield', color: '#1D4ED8', baseSupport: 28 },
+      { id: 'PD', name: 'Democratic Party', leader: 'Elly Schlein', ideology: 'Social Democrat', symbol: 'Users', color: '#DC2626', baseSupport: 20 },
+      { id: 'M5S', name: 'Five Star Movement', leader: 'Giuseppe Conte', ideology: 'Nationalist', symbol: 'Flame', color: '#EAB308', baseSupport: 16 },
+      { id: 'LEGA', name: 'Lega', leader: 'Matteo Salvini', ideology: 'Nationalist', symbol: 'Landmark', color: '#10B981', baseSupport: 9 }
+    ],
+    regions: getItalyRegions(),
+    bills: createBills('IT'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+  },
+  {
+    id: 'ID',
+    name: 'Indonesia',
+    description: 'An expansive archipelagic nation balancing diverse cultures with rapid growth.',
+    flag: '🇮🇩',
+    seats: 580,
+    parliamentName: 'People\'s Representative Council',
+    system: 'Presidential System',
+    population: '275 Million',
+    primaryColor: '#ef4444',
+    rivals: [
+      { id: 'PDIP', name: 'PDI-P', leader: 'Megawati Sukarnoputri', ideology: 'Nationalist', symbol: 'Landmark', color: '#DC2626', baseSupport: 17 },
+      { id: 'GOLKAR', name: 'Golkar', leader: 'Airlangga Hartarto', ideology: 'Conservative', symbol: 'Building', color: '#FACC15', baseSupport: 15 },
+      { id: 'GERINDRA', name: 'Gerindra', leader: 'Prabowo Subianto', ideology: 'Nationalist', symbol: 'Shield', color: '#991B1B', baseSupport: 13 },
+      { id: 'PKB', name: 'PKB', leader: 'Muhaimin Iskandar', ideology: 'Social Conservative', symbol: 'Users', color: '#15803D', baseSupport: 10 }
+    ],
+    regions: getIndonesiaRegions(),
+    bills: createBills('ID'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+  },
+  {
+    id: 'MX',
+    name: 'Mexico',
+    description: 'A vibrant North American nation with deep historical roots and complex social dynamics.',
+    flag: '🇲🇽',
+    seats: 500,
+    parliamentName: 'Chamber of Deputies',
+    system: 'Presidential System',
+    population: '128 Million',
+    primaryColor: '#059669',
+    rivals: [
+      { id: 'MORENA', name: 'MORENA', leader: 'Claudia Sheinbaum', ideology: 'Social Democrat', symbol: 'Users', color: '#991B1B', baseSupport: 45 },
+      { id: 'PAN', name: 'National Action Party', leader: 'Marko Cortés', ideology: 'Conservative', symbol: 'Building', color: '#1D4ED8', baseSupport: 18 },
+      { id: 'PRI', name: 'Institutional Revolutionary', leader: 'Alejandro Moreno', ideology: 'Centrist', symbol: 'Compass', color: '#16A34A', baseSupport: 11 }
+    ],
+    regions: getMexicoRegions(),
+    bills: createBills('MX'),
+    campaignTurns: 53,
+    electionCycleYears: 6,
+  },
+  {
+    id: 'ES',
+    name: 'Spain',
+    description: 'A culturally diverse European nation managing strong regional identities and modern progress.',
+    flag: '🇪🇸',
+    seats: 350,
+    parliamentName: 'Congress of Deputies',
+    system: 'Coalition Government',
+    population: '48 Million',
+    primaryColor: '#dc2626',
+    rivals: [
+      { id: 'PP', name: 'People\'s Party', leader: 'Alberto Núñez Feijóo', ideology: 'Conservative', symbol: 'Building', color: '#2563EB', baseSupport: 33, photo: 'https://avatars.mds.yandex.net/i?id=7cc5bd9e687dfe95d9f02f9ce7bdfd816b510b1a-5783456-images-thumbs&n=13' },
+      { id: 'PSOE', name: 'PSOE', leader: 'Pedro Sánchez', ideology: 'Social Democrat', symbol: 'Users', color: '#DC2626', baseSupport: 31, photo: 'https://avatars.mds.yandex.net/i?id=6eefd46c4771ad70535a6b945a5ac13e96bda6c9-13201380-images-thumbs&n=13' },
+      { id: 'VOX', name: 'Vox', leader: 'Santiago Abascal', ideology: 'Nationalist', symbol: 'Shield', color: '#16A34A', baseSupport: 12, photo: 'https://avatars.mds.yandex.net/i?id=4640dda215108faaada284a7be422fc295ddf9e7-5268626-images-thumbs&n=13' },
+      { id: 'SUMAR', name: 'Sumar', leader: 'Yolanda Díaz', ideology: 'Socialist', symbol: 'Flame', color: '#D946EF', baseSupport: 12, photo: 'https://avatars.mds.yandex.net/i?id=7b92246e643e95f876bdff1c0dbb1a0011ccdbc3-16308086-images-thumbs&n=13' }
+    ],
+    regions: getSpainRegions(),
+    bills: createBills('ES'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'KR',
+    name: 'South Korea',
+    description: 'A fast-paced, highly developed nation bridging deep traditions and technological dominance.',
+    flag: '🇰🇷',
+    seats: 300,
+    parliamentName: 'National Assembly',
+    system: 'Presidential System',
+    population: '51 Million',
+    primaryColor: '#2563eb',
+    rivals: [
+      { id: 'DP', name: 'Democratic Party', leader: 'Lee Jae-myung', ideology: 'Liberal', symbol: 'Compass', color: '#1D4ED8', baseSupport: 50, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Jung_Chung-rae%27s_Portrait_%282026.6%29.png/250px-Jung_Chung-rae%27s_Portrait_%282026.6%29.png' },
+      { id: 'PPP', name: 'People Power Party', leader: 'Han Dong-hoon', ideology: 'Conservative', symbol: 'Building', color: '#EF4444', baseSupport: 35, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Jang_Dong-hyeok%27s_Portrait_%282026.5%29.png/250px-Jang_Dong-hyeok%27s_Portrait_%282026.5%29.png' }
+    ],
+    regions: getSouthKoreaRegions(),
+    bills: createBills('KR'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'AU',
+    name: 'Australia',
+    description: 'A prosperous, resilient nation encompassing an entire continent.',
+    flag: '🇦🇺',
+    seats: 151,
+    parliamentName: 'House of Representatives',
+    system: 'Coalition Government',
+    population: '26 Million',
+    primaryColor: '#0369a1',
+    rivals: [
+      { id: 'ALP', name: 'Labor Party', leader: 'Anthony Albanese', ideology: 'Social Democrat', symbol: 'Users', color: '#DC2626', baseSupport: 32 },
+      { id: 'LNP', name: 'Liberal/National', leader: 'Peter Dutton', ideology: 'Conservative', symbol: 'Building', color: '#1D4ED8', baseSupport: 35 },
+      { id: 'GRN', name: 'The Greens', leader: 'Adam Bandt', ideology: 'Ecologist', symbol: 'Flame', color: '#16A34A', baseSupport: 12 }
+    ],
+    regions: getAustraliaRegions(),
+    bills: createBills('AU'),
+    campaignTurns: 53,
+    electionCycleYears: 3,
+  }
+,
   {
     id: 'TR',
     name: 'Turkey',
@@ -892,7 +1376,7 @@ export const SPEECH_CARDS_POOL: SpeechCard[] = [
   }
 ];
 
-export const generateName = (countryId: string): string => {
+export function generateName(countryId: string): string {
   const trFirst = ['Ahmet', 'Mehmet', 'Ayşe', 'Fatma', 'Mustafa', 'Ali', 'Zeynep', 'Hüseyin', 'Hatice', 'İbrahim'];
   const trLast = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir'];
   
@@ -913,6 +1397,24 @@ export const generateName = (countryId: string): string => {
 
   const gbFirst = ['Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Noah', 'Charlie', 'Muhammad', 'Thomas', 'Oscar'];
   const gbLast = ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright'];
+
+  const inFirst = ['Arjun', 'Aarav', 'Vihaan', 'Pranav', 'Rohan', 'Ananya', 'Diya', 'Ishaan', 'Aditya', 'Sanjay'];
+  const inLast = ['Sharma', 'Patel', 'Kumar', 'Singh', 'Gupta', 'Mehta', 'Joshi', 'Iyer', 'Reddy', 'Nair'];
+
+  const itFirst = ['Francesco', 'Alessandro', 'Leonardo', 'Lorenzo', 'Giuseppe', 'Sofia', 'Giulia', 'Aurora', 'Giorgia', 'Andrea'];
+  const itLast = ['Rossi', 'Ferrari', 'Russo', 'Bianchi', 'Esposito', 'Colombo', 'Romano', 'Ricci', 'Marini', 'Greco'];
+
+  const idFirst = ['Budi', 'Joko', 'Agus', 'Siti', 'Dewi', 'Putra', 'Rian', 'Rudi', 'Tri', 'Eko'];
+  const idLast = ['Wijaya', 'Santoso', 'Hidayat', 'Pratama', 'Kurniawan', 'Siregar', 'Sutrisno', 'Setiawan', 'Gunawan', 'Saputra'];
+
+  const esFirst = ['Mateo', 'Santiago', 'Matias', 'Sebastian', 'Sofia', 'Maria', 'Alejandro', 'Daniel', 'David', 'Javier'];
+  const esLast = ['Hernandez', 'Garcia', 'Martinez', 'Lopez', 'Gonzalez', 'Rodriguez', 'Perez', 'Sanchez', 'Ramirez', 'Torres'];
+
+  const krFirst = ['Min-jun', 'Seo-jun', 'Ye-jun', 'Do-yun', 'Si-woo', 'Ji-woo', 'Seo-yeon', 'Seo-hyeon', 'Min-seo', 'Ha-eun'];
+  const krLast = ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Chang', 'Lim'];
+
+  const zaFirst = ['Sipho', 'Thabo', 'Kagiso', 'Lethabo', 'Bandile', 'Melokuhle', 'Zama', 'Naledi', 'Buhle', 'Lerato'];
+  const zaLast = ['Dlamini', 'Ndlovu', 'Khumalo', 'Mthembu', 'Mokoena', 'Smit', 'Botha', 'Pretorius', 'Naidoo', 'Govender'];
 
   const sample = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -923,11 +1425,18 @@ export const generateName = (countryId: string): string => {
   if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
   if (countryId === 'EG') return `${sample(egFirst)} ${sample(egLast)}`;
   if (countryId === 'GB') return `${sample(gbFirst)} ${sample(gbLast)}`;
+  if (countryId === 'IN') return `${sample(inFirst)} ${sample(inLast)}`;
+  if (countryId === 'IT') return `${sample(itFirst)} ${sample(itLast)}`;
+  if (countryId === 'ID') return `${sample(idFirst)} ${sample(idLast)}`;
+  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR') return `${sample(esFirst)} ${sample(esLast)}`;
+  if (countryId === 'KR') return `${sample(krFirst)} ${sample(krLast)}`;
+  if (countryId === 'ZA') return `${sample(zaFirst)} ${sample(zaLast)}`;
+  if (countryId === 'CA' || countryId === 'AU') return `${sample(gbFirst)} ${sample(gbLast)}`;
 
   return `${sample(usFirst)} ${sample(usLast)}`;
-};
+}
 
-export const getDeterministicMayorName = (regionName: string, countryId: string): string => {
+export function getDeterministicMayorName(regionName: string, countryId: string): string {
   const trFirst = ['Ahmet', 'Mehmet', 'Ayşe', 'Fatma', 'Mustafa', 'Ali', 'Zeynep', 'Hüseyin', 'Hatice', 'İbrahim'];
   const trLast = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir'];
   
@@ -948,6 +1457,24 @@ export const getDeterministicMayorName = (regionName: string, countryId: string)
 
   const gbFirst = ['Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Noah', 'Charlie', 'Muhammad', 'Thomas', 'Oscar'];
   const gbLast = ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright'];
+
+  const inFirst = ['Arjun', 'Aarav', 'Vihaan', 'Pranav', 'Rohan', 'Ananya', 'Diya', 'Ishaan', 'Aditya', 'Sanjay'];
+  const inLast = ['Sharma', 'Patel', 'Kumar', 'Singh', 'Gupta', 'Mehta', 'Joshi', 'Iyer', 'Reddy', 'Nair'];
+
+  const itFirst = ['Francesco', 'Alessandro', 'Leonardo', 'Lorenzo', 'Giuseppe', 'Sofia', 'Giulia', 'Aurora', 'Giorgia', 'Andrea'];
+  const itLast = ['Rossi', 'Ferrari', 'Russo', 'Bianchi', 'Esposito', 'Colombo', 'Romano', 'Ricci', 'Marini', 'Greco'];
+
+  const idFirst = ['Budi', 'Joko', 'Agus', 'Siti', 'Dewi', 'Putra', 'Rian', 'Rudi', 'Tri', 'Eko'];
+  const idLast = ['Wijaya', 'Santoso', 'Hidayat', 'Pratama', 'Kurniawan', 'Siregar', 'Sutrisno', 'Setiawan', 'Gunawan', 'Saputra'];
+
+  const esFirst = ['Mateo', 'Santiago', 'Matias', 'Sebastian', 'Sofia', 'Maria', 'Alejandro', 'Daniel', 'David', 'Javier'];
+  const esLast = ['Hernandez', 'Garcia', 'Martinez', 'Lopez', 'Gonzalez', 'Rodriguez', 'Perez', 'Sanchez', 'Ramirez', 'Torres'];
+
+  const krFirst = ['Min-jun', 'Seo-jun', 'Ye-jun', 'Do-yun', 'Si-woo', 'Ji-woo', 'Seo-yeon', 'Seo-hyeon', 'Min-seo', 'Ha-eun'];
+  const krLast = ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Chang', 'Lim'];
+
+  const zaFirst = ['Sipho', 'Thabo', 'Kagiso', 'Lethabo', 'Bandile', 'Melokuhle', 'Zama', 'Naledi', 'Buhle', 'Lerato'];
+  const zaLast = ['Dlamini', 'Ndlovu', 'Khumalo', 'Mthembu', 'Mokoena', 'Smit', 'Botha', 'Pretorius', 'Naidoo', 'Govender'];
 
   let hash = 0;
   for (let i = 0; i < regionName.length; i++) {
@@ -964,6 +1491,13 @@ export const getDeterministicMayorName = (regionName: string, countryId: string)
   if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
   if (countryId === 'EG') return `${sample(egFirst)} ${sample(egLast)}`;
   if (countryId === 'GB') return `${sample(gbFirst)} ${sample(gbLast)}`;
+  if (countryId === 'IN') return `${sample(inFirst)} ${sample(inLast)}`;
+  if (countryId === 'IT') return `${sample(itFirst)} ${sample(itLast)}`;
+  if (countryId === 'ID') return `${sample(idFirst)} ${sample(idLast)}`;
+  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR') return `${sample(esFirst)} ${sample(esLast)}`;
+  if (countryId === 'KR') return `${sample(krFirst)} ${sample(krLast)}`;
+  if (countryId === 'ZA') return `${sample(zaFirst)} ${sample(zaLast)}`;
+  if (countryId === 'CA' || countryId === 'AU') return `${sample(gbFirst)} ${sample(gbLast)}`;
 
   return `${sample(usFirst)} ${sample(usLast)}`;
-};
+}

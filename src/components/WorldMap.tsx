@@ -9,7 +9,7 @@ import { PLAYABLE_COUNTRIES } from '../constants/countries';
 import { 
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -27,7 +27,17 @@ const countryCoords: Record<string, [number, number]> = {
   DE: [51.165, 10.451],
   TR: [38.963, 35.243],
   EG: [26.820, 30.802],
-  JP: [36.204, 138.252]
+  JP: [36.204, 138.252],
+  CA: [56.130, -106.346],
+  AR: [-38.416, -63.616],
+  ZA: [-30.559, 22.937],
+  IN: [20.593, 78.962],
+  IT: [41.871, 12.567],
+  ID: [-0.789, 113.921],
+  MX: [23.634, -102.552],
+  ES: [40.463, -3.749],
+  KR: [35.907, 127.766],
+  AU: [-25.274, 133.775]
 };
 
 const englishNames: Record<string, string> = {
@@ -37,7 +47,17 @@ const englishNames: Record<string, string> = {
   GB: "United Kingdom",
   BR: "Brazil",
   EG: "Egypt",
-  JP: "Japan"
+  JP: "Japan",
+  CA: "Canada",
+  AR: "Argentina",
+  ZA: "South Africa",
+  IN: "India",
+  IT: "Italy",
+  ID: "Indonesia",
+  MX: "Mexico",
+  ES: "Spain",
+  KR: "South Korea",
+  AU: "Australia"
 };
 
 const countryColors: Record<string, { default: string; completed: string; selected: string }> = {
@@ -47,7 +67,17 @@ const countryColors: Record<string, { default: string; completed: string; select
   DE: { default: '#7c3aed', completed: '#8b5cf6', selected: '#a78bfa' }, // Almanya: Parlak Mor -> Eflatun -> Daha Açık Mor
   GB: { default: '#0e7490', completed: '#06b6d4', selected: '#22d3ee' }, // Birleşik Krallık: Canlı Turkuaz -> Cyan -> Açık Cyan
   EG: { default: '#b45309', completed: '#f59e0b', selected: '#fbc02d' }, // Mısır: Altın Sarısı / Taba -> Turuncu -> Açık Sarı/Amber
-  JP: { default: '#be1c5a', completed: '#ec4899', selected: '#f472b6' }  // Japonya: Ahududu -> Pembe -> Açık Pembe
+  JP: { default: '#be1c5a', completed: '#ec4899', selected: '#f472b6' },
+  CA: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' },
+  AR: { default: '#1e3a8a', completed: '#3b82f6', selected: '#93c5fd' },
+  ZA: { default: '#166534', completed: '#22c55e', selected: '#86efac' },
+  IN: { default: '#c2410c', completed: '#ea580c', selected: '#fb923c' },
+  IT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
+  ID: { default: '#b91c1c', completed: '#ef4444', selected: '#f87171' },
+  MX: { default: '#064e3b', completed: '#059669', selected: '#34d399' },
+  ES: { default: '#b45309', completed: '#d97706', selected: '#fbbf24' },
+  KR: { default: '#1d4ed8', completed: '#2563eb', selected: '#60a5fa' },
+  AU: { default: '#0c4a6e', completed: '#0284c7', selected: '#38bdf8' }
 };
 
 const countryRadii: Record<string, number> = {
@@ -57,7 +87,17 @@ const countryRadii: Record<string, number> = {
   DE: 350000,
   TR: 480000,
   EG: 450000,
-  JP: 400000
+  JP: 400000,
+  CA: 950000,
+  AR: 600000,
+  ZA: 500000,
+  IN: 650000,
+  IT: 300000,
+  ID: 700000,
+  MX: 600000,
+  ES: 350000,
+  KR: 200000,
+  AU: 850000
 };
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -112,6 +152,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const terrainLayerRef = useRef<L.TileLayer | null>(null);
+  const oceanLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<any[]>([]);
 
   // Helper to determine the country ID from GeoJSON feature
@@ -128,6 +170,16 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (id3 === 'GBR' || id2 === 'GB' || name.includes('UNITED KINGDOM') || name === 'GREAT BRITAIN' || name === 'UK') return 'GB';
     if (id3 === 'EGY' || id2 === 'EG' || name.includes('EGYPT')) return 'EG';
     if (id3 === 'JPN' || id2 === 'JP' || name.includes('JAPAN')) return 'JP';
+    if (id3 === 'CAN' || id2 === 'CA' || name.includes('CANADA')) return 'CA';
+    if (id3 === 'ARG' || id2 === 'AR' || name.includes('ARGENTINA')) return 'AR';
+    if (id3 === 'ZAF' || id2 === 'ZA' || name.includes('SOUTH AFRICA')) return 'ZA';
+    if (id3 === 'IND' || id2 === 'IN' || name.includes('INDIA')) return 'IN';
+    if (id3 === 'ITA' || id2 === 'IT' || name.includes('ITALY')) return 'IT';
+    if (id3 === 'IDN' || id2 === 'ID' || name.includes('INDONESIA')) return 'ID';
+    if (id3 === 'MEX' || id2 === 'MX' || name.includes('MEXICO')) return 'MX';
+    if (id3 === 'ESP' || id2 === 'ES' || name.includes('SPAIN')) return 'ES';
+    if (id3 === 'KOR' || id2 === 'KR' || name.includes('SOUTH KOREA') || name === 'KOREA, REPUBLIC OF') return 'KR';
+    if (id3 === 'AUS' || id2 === 'AU' || name.includes('AUSTRALIA')) return 'AU';
 
     return null;
   };
@@ -170,20 +222,39 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       maxZoom: 18,
       zoomControl: false,
       attributionControl: false,
-      worldCopyJump: true,
+      worldCopyJump: false,
+      maxBounds: [[-90, -180], [90, 180]],
+      maxBoundsViscosity: 1.0,
     });
 
     const tileUrl = darkMode
-      ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
     const tiles = L.tileLayer(tileUrl, {
       subdomains: 'abcd',
       maxZoom: 18,
-      noWrap: false,
+      noWrap: true,
+      className: 'base-map-tile'
     }).addTo(map);
 
     tileLayerRef.current = tiles;
+
+    const terrainPane = map.createPane('terrainPane');
+    terrainPane.style.zIndex = '450';
+    terrainPane.style.pointerEvents = 'none';
+    terrainPane.style.mixBlendMode = 'overlay';
+
+    const terrainUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
+    const terrain = L.tileLayer(terrainUrl, {
+      opacity: darkMode ? 0.35 : 0.35,
+      maxZoom: 18,
+      noWrap: true,
+      pane: 'terrainPane',
+      className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
+    }).addTo(map);
+    terrainLayerRef.current = terrain;
+
     mapInstanceRef.current = map;
 
     // Capture coordinates under cursor on move over map
@@ -195,14 +266,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     });
 
     // Invalidate size to guarantee perfect layout inside container bounds
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 300);
+    setTimeout(() => { try { if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize(); } catch(e) {} }, 300);
 
     return () => {
-      map.remove();
+      try { map.off(); map.remove(); } catch(e) {}
       mapInstanceRef.current = null;
       tileLayerRef.current = null;
+      terrainLayerRef.current = null;
     };
   }, []);
 
@@ -210,9 +280,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   useEffect(() => {
     if (tileLayerRef.current) {
       const newUrl = darkMode
-        ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
       tileLayerRef.current.setUrl(newUrl);
+    }
+    if (terrainLayerRef.current && mapInstanceRef.current) {
+      terrainLayerRef.current.setOpacity(darkMode ? 0.35 : 0.35);
+      const pane = mapInstanceRef.current.getPane('terrainPane');
+      if (pane) {
+        pane.style.mixBlendMode = 'overlay';
+      }
+      
+      const terrainImg = terrainLayerRef.current.getContainer();
+      if (terrainImg) {
+        if (darkMode) {
+          terrainImg.classList.remove('terrain-tile');
+          terrainImg.classList.add('terrain-tile-dark');
+        } else {
+          terrainImg.classList.remove('terrain-tile-dark');
+          terrainImg.classList.add('terrain-tile');
+        }
+      }
     }
   }, [darkMode]);
 
@@ -253,11 +341,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       // 1. RENDER ACTUAL GEOGRAPHIC COUNTRY BORDER SURFACE POLYGONS!
       const geoLayer = L.geoJSON(geoJsonData, {
         filter: (feature) => {
-          return getPlayableCountryCode(feature) !== null;
+          return true;
         },
         style: (feature) => {
           const countryId = getPlayableCountryCode(feature);
-          if (!countryId) return {};
+          if (!countryId) return { fillColor: darkMode ? '#1e293b' : '#cbd5e1', color: '#ffffff', weight: 1.0, opacity: 1.0, fillOpacity: 0.88, interactive: false };
 
           const isCompleted = completedCountries.includes(countryId);
           const isSelected = selectedPreview?.id === countryId;
@@ -270,8 +358,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             fillColor: fillColor,
             fillOpacity: isSelected ? 0.95 : (isCompleted ? 0.90 : 0.82),
             color: color,
-            weight: isSelected ? 2.5 : 1.5,
-            opacity: isSelected ? 1.0 : 0.9
+            weight: isSelected ? 3.0 : 1.2,
+            opacity: 1.0
           };
         },
         onEachFeature: (feature, layer) => {
@@ -466,10 +554,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           font-family: inherit !important;
         }
         /* Colorize ocean tiles to gorgeous deep navy / dark blue (koyu mavi) */
-        .leaflet-tile {
+        .base-map-tile {
           filter: ${darkMode 
-            ? 'sepia(0.8) hue-rotate(195deg) saturate(1.8) brightness(0.6) contrast(1.1) !important;' 
-            : 'sepia(0.2) hue-rotate(200deg) saturate(1.2) brightness(0.8) contrast(1.0) !important;'}
+            ? 'brightness(0.4) contrast(1.3) saturate(1.2) !important;' 
+            : 'brightness(0.9) saturate(1.2) contrast(1.1) !important;'}
+        }
+        .terrain-tile-dark {
+          filter: invert(1) contrast(1.8) opacity(0.8) !important;
         }
         .custom-div-icon {
           background: transparent !important;
@@ -742,9 +833,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         <div className={`p-5 rounded-3xl border flex flex-col gap-3 h-full ${
           darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="pb-2 border-b border-slate-500/10">
-            <h2 className="text-lg font-bold tracking-tight">Global Operations Map</h2>
-            <p className="text-xs text-slate-400 mt-0.5 font-sans font-medium">Select a country to view properties and launch election campaigns directly from the list or the map.</p>
+          <div className="p-4 rounded-2xl shadow-lg border border-blue-400/20" style={{ backgroundColor: '#1f5ba7' }}>
+            <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              <MapIcon className="w-5 h-5 text-blue-200" />
+              Global Operations Map
+            </h2>
+            <p className="text-xs text-blue-100/80 mt-1 font-sans font-medium leading-relaxed">
+              Select a country to view properties and launch election campaigns directly from the list or the map.
+            </p>
           </div>
 
           {/* Search bar input filter */}

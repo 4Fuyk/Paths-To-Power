@@ -1,0 +1,2 @@
+#!/bin/bash
+sed -i '/const geoLayer = L.geoJSON(displayGeoJson, {/i \      if (worldGeoJsonData) {\n        worldBgLayerRef.current = L.geoJSON(worldGeoJsonData, {\n          style: (feature) => {\n            return { fillColor: darkMode ? "#334155" : "#e2e8f0", color: "#ffffff", weight: 0.5, fillOpacity: 0.9, interactive: false };\n          }\n        }).addTo(map);\n      }' src/components/CampaignView.tsx

@@ -1,7 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Country, Party } from '../types';
 import { playSound } from '../lib/sounds';
 import { Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, AlertTriangle, Swords, Flame, Check } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+const countryCoords: Record<string, [number, number]> = {
+  US: [38.0, -97.0],
+  BR: [-14.235, -51.925],
+  GB: [55.378, -3.436],
+  DE: [51.165, 10.451],
+  TR: [38.963, 35.243],
+  EG: [26.820, 30.802],
+  JP: [36.204, 138.252],
+  CA: [56.130, -106.346],
+  AR: [-38.416, -63.616],
+  ZA: [-30.559, 22.937],
+  IN: [20.593, 78.962],
+  IT: [41.871, 12.567],
+  ID: [-0.789, 113.921],
+  MX: [23.634, -102.552],
+  ES: [40.463, -3.749],
+  KR: [35.907, 127.766],
+  AU: [-25.274, 133.775]
+};
 
 interface DiplomacyViewProps {
   country: Country;
@@ -76,6 +98,242 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     return firstOther || 'TR';
   });
 
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [worldGeoJsonData, setWorldGeoJsonData] = useState<any>(null);
+  const worldBgLayerRef = useRef<any>(null);
+  useEffect(() => {
+    fetch("https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json")
+      .then(res => res.json())
+      .then(data => setWorldGeoJsonData(data))
+      .catch(err => console.error("Failed to load world geojson", err));
+  }, []);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const terrainLayerRef = useRef<L.TileLayer | null>(null);
+  const oceanLayerRef = useRef<L.TileLayer | null>(null);
+  const markersRef = useRef<L.LayerGroup | null>(null);
+
+  const cleanupMap = () => {
+    if (mapInstanceRef.current) {
+      const map = mapInstanceRef.current;
+      try { map.stop(); map.off(); map.remove(); } catch(e) {}
+      mapInstanceRef.current = null;
+      tileLayerRef.current = null;
+      terrainLayerRef.current = null;
+      oceanLayerRef.current = null;
+      markersRef.current = null;
+      worldBgLayerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: [15.0, 0.0],
+        zoom: 1.8,
+        minZoom: 1.2,
+        maxZoom: 7,
+        zoomControl: true,
+        attributionControl: false,
+        maxBounds: [[-85, -180], [85, 180]],
+        maxBoundsViscosity: 1.0,
+        worldCopyJump: false
+      });
+
+      const tileUrl = darkMode
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+
+      const tiles = L.tileLayer(tileUrl, {
+        subdomains: 'abcd',
+        maxZoom: 18,
+        noWrap: true,
+        className: 'base-map-tile'
+      }).addTo(map);
+      
+      tileLayerRef.current = tiles;
+
+      const terrainPane = map.createPane('terrainPane');
+      terrainPane.style.zIndex = '450';
+      terrainPane.style.pointerEvents = 'none';
+      terrainPane.style.mixBlendMode = 'overlay';
+
+      const terrainUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
+      const terrain = L.tileLayer(terrainUrl, {
+        opacity: darkMode ? 0.35 : 0.35,
+        maxZoom: 18,
+        noWrap: true,
+        pane: 'terrainPane',
+        className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
+      }).addTo(map);
+      terrainLayerRef.current = terrain;
+      if (worldGeoJsonData) {
+        worldBgLayerRef.current = L.geoJSON(worldGeoJsonData, {
+          style: (feature) => {
+            return { fillColor: darkMode ? "#1e293b" : "#e2e8f0", color: "#ffffff", weight: 1.0, opacity: 1.0, fillOpacity: 0.88, interactive: false };
+          }
+        }).addTo(map);
+      }
+
+      markersRef.current = L.layerGroup().addTo(map);
+      mapInstanceRef.current = map;
+    } else if (tileLayerRef.current && mapInstanceRef.current) {
+      const tileUrl = darkMode
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+      tileLayerRef.current.setUrl(tileUrl);
+      
+      if (terrainLayerRef.current) {
+        terrainLayerRef.current.setOpacity(darkMode ? 0.35 : 0.35);
+        const pane = mapInstanceRef.current.getPane('terrainPane');
+        if (pane) pane.style.mixBlendMode = 'overlay';
+        
+        const terrainImg = terrainLayerRef.current.getContainer();
+        if (terrainImg) {
+          if (darkMode) {
+            terrainImg.classList.remove('terrain-tile');
+            terrainImg.classList.add('terrain-tile-dark');
+          } else {
+            terrainImg.classList.remove('terrain-tile-dark');
+            terrainImg.classList.add('terrain-tile');
+          }
+        }
+      }
+    }
+
+    return () => cleanupMap();
+  }, [darkMode, worldGeoJsonData]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersRef.current;
+    if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
+    // 1. Draw connections from our HQ (player country) to all other countries
+    const playerCoords = countryCoords[country.id] || [38.963, 35.243];
+    
+    Object.entries(countryCoords).forEach(([id, coords]) => {
+      if (id === country.id) return;
+      
+      const rel = diplomaticRelations[id];
+      if (!rel) return;
+
+      const strokeColor = rel.status === 'At War' ? '#ef4444' : 
+                          rel.status === 'Alliance' ? '#10b981' : 
+                          rel.status === 'Defensive Pact' ? '#06b6d4' :
+                          'rgba(99, 102, 241, 0.2)';
+      const isDashed = rel.status !== 'Alliance' && rel.status !== 'At War';
+
+      const polyline = L.polyline([playerCoords, coords], {
+        color: strokeColor,
+        weight: rel.status === 'At War' || rel.status === 'Alliance' ? 2 : 1,
+        dashArray: isDashed ? '4, 4' : undefined,
+        opacity: 0.65
+      });
+      polyline.addTo(markersGroup);
+    });
+
+    // 2. Add marker nodes for each playable country
+    Object.entries(countryCoords).forEach(([id, coords]) => {
+      const isSelf = id === country.id;
+      const rel = diplomaticRelations[id];
+      const isSelected = selectedMapCountryId === id;
+
+      let color = '#64748b'; // Neutral
+      if (isSelf) {
+        color = '#3b82f6'; // Bright Blue HQ
+      } else if (rel) {
+        if (rel.status === 'At War') color = '#ef4444';
+        else if (rel.status === 'Alliance') color = '#10b981';
+        else if (rel.status === 'Defensive Pact') color = '#06b6d4';
+        else if (rel.status === 'Sanctioned') color = '#f59e0b';
+        else if (rel.status === 'Non-Aggression') color = '#eab308';
+      }
+
+      const flag = getCountryFlag(id);
+      const name = getCountryName(id);
+
+      const iconHtml = `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
+          ${isSelected ? `
+            <div style="position: absolute; width: 38px; height: 38px; border: 2px dashed #818cf8; border-radius: 50%; animation: spin 8s linear infinite;"></div>
+          ` : ''}
+          <div style="
+            position: absolute; 
+            width: 26px; 
+            height: 26px; 
+            background: ${darkMode ? '#0f172a' : '#ffffff'}; 
+            border: 2.5px solid ${color}; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 0 8px ${color}80;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          ">
+            <span style="font-size: 13px;">${flag}</span>
+          </div>
+          <div style="
+            position: absolute;
+            top: -20px;
+            font-family: monospace;
+            font-size: 8px;
+            font-weight: 900;
+            color: ${isSelected ? '#818cf8' : (darkMode ? '#94a3b8' : '#475569')};
+            background: ${darkMode ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)'};
+            padding: 1px 3px;
+            border-radius: 3px;
+            border: 0.5px solid ${color}40;
+            text-transform: uppercase;
+            white-space: nowrap;
+          ">
+            ${id}
+          </div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'custom-diplomacy-icon',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+
+      const marker = L.marker(coords, { icon: customIcon });
+
+      marker.bindTooltip(`
+        <div style="font-family: sans-serif; padding: 2px 4px;">
+          <b style="font-size: 11px;">${flag} ${name}</b>
+          ${isSelf ? '<br/><i style="font-size: 9px; color: #3b82f6;">Your Sovereign HQ</i>' : `
+            <br/><span style="font-size: 9px; color: #64748b;">Opinion: <b>${rel?.opinion || 50}/100</b></span>
+            <br/><span style="font-size: 9px; color: #64748b;">Status: <b>${rel?.status || 'Neutral'}</b></span>
+          `}
+        </div>
+      `, {
+        direction: 'top',
+        opacity: 0.95
+      });
+
+      marker.on('click', () => {
+        if (isSelf) {
+          playSound('click');
+          setSuccessMessage(`Sovereign Headquarters: ${name} is your ruling nation! Select other global nations on the map to manage diplomacy.`);
+          setErrorMessage(null);
+        } else {
+          playSound('click');
+          setSelectedMapCountryId(id);
+        }
+      });
+
+      marker.addTo(markersGroup);
+    });
+  }, [diplomaticRelations, selectedMapCountryId, country.id, darkMode]);
+
   // Current active global conflict
   const [globalConflict, setGlobalConflict] = useState<{
     countryA: string;
@@ -137,7 +395,17 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       DE: 'Germany',
       TR: 'Turkey',
       EG: 'Egypt',
-      JP: 'Japan'
+      JP: 'Japan',
+      CA: 'Canada',
+      AR: 'Argentina',
+      ZA: 'South Africa',
+      IN: 'India',
+      IT: 'Italy',
+      ID: 'Indonesia',
+      MX: 'Mexico',
+      ES: 'Spain',
+      KR: 'South Korea',
+      AU: 'Australia'
     };
     return list[id] || id;
   };
@@ -150,7 +418,17 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       DE: '🇩🇪',
       TR: '🇹🇷',
       EG: '🇪🇬',
-      JP: '🇯🇵'
+      JP: '🇯🇵',
+      CA: '🇨🇦',
+      AR: '🇦🇷',
+      ZA: '🇿🇦',
+      IN: '🇮🇳',
+      IT: '🇮🇹',
+      ID: '🇮🇩',
+      MX: '🇲🇽',
+      ES: '🇪🇸',
+      KR: '🇰🇷',
+      AU: '🇦🇺'
     };
     return list[id] || '🌐';
   };
@@ -386,189 +664,14 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               </span>
             </div>
 
-            {/* Schematic SVG Map */}
-            <div className="relative w-full rounded-2xl overflow-hidden border border-slate-500/5 bg-slate-950/60 p-1">
-              <svg viewBox="0 0 800 340" className="w-full h-auto select-none bg-slate-950">
-                {/* Visual Grid Lines */}
-                <defs>
-                  <pattern id="tactical-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(148, 163, 184, 0.03)" strokeWidth="1" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#tactical-grid)" />
-
-                {/* Highly Simplified Schematic Continents for high-tech holographic war-map styling */}
-                {/* North America */}
-                <rect x="40" y="50" width="180" height="120" rx="20" fill="rgba(30, 41, 59, 0.2)" stroke="rgba(148, 163, 184, 0.05)" strokeDasharray="4 4" />
-                <text x="50" y="70" className="text-[9px] font-mono fill-slate-500 font-bold uppercase tracking-widest">N. America</text>
-                
-                {/* South America */}
-                <rect x="160" y="200" width="120" height="110" rx="20" fill="rgba(30, 41, 59, 0.2)" stroke="rgba(148, 163, 184, 0.05)" strokeDasharray="4 4" />
-                <text x="170" y="220" className="text-[9px] font-mono fill-slate-500 font-bold uppercase tracking-widest">S. America</text>
-
-                {/* Eurasia */}
-                <rect x="340" y="40" width="380" height="140" rx="25" fill="rgba(30, 41, 59, 0.2)" stroke="rgba(148, 163, 184, 0.05)" strokeDasharray="4 4" />
-                <text x="360" y="60" className="text-[9px] font-mono fill-slate-500 font-bold uppercase tracking-widest">Eurasia</text>
-
-                {/* Africa */}
-                <rect x="390" y="190" width="140" height="110" rx="20" fill="rgba(30, 41, 59, 0.2)" stroke="rgba(148, 163, 184, 0.05)" strokeDasharray="4 4" />
-                <text x="400" y="210" className="text-[9px] font-mono fill-slate-500 font-bold uppercase tracking-widest">Africa</text>
-
-                {/* Oceania */}
-                <rect x="630" y="230" width="110" height="80" rx="15" fill="rgba(30, 41, 59, 0.2)" stroke="rgba(148, 163, 184, 0.05)" strokeDasharray="4 4" />
-                <text x="640" y="250" className="text-[9px] font-mono fill-slate-500 font-bold uppercase tracking-widest">Oceania</text>
-
-                {/* Connecting Web Lines from HQ */}
-                {(() => {
-                  const hqCoords: Record<string, {x: number, y: number}> = {
-                    US: {x: 130, y: 110},
-                    BR: {x: 220, y: 255},
-                    GB: {x: 395, y: 95},
-                    DE: {x: 445, y: 105},
-                    TR: {x: 505, y: 130},
-                    EG: {x: 485, y: 185},
-                    JP: {x: 695, y: 125}
-                  };
-                  const hq = hqCoords[country.id] || {x: 505, y: 130};
-                  
-                  return Object.entries(hqCoords)
-                    .filter(([id]) => id !== country.id)
-                    .map(([id, pt]) => {
-                      const rel = diplomaticRelations[id];
-                      const strokeColor = rel?.status === 'At War' ? 'rgba(239, 68, 68, 0.25)' : 
-                                          rel?.status === 'Alliance' ? 'rgba(16, 185, 129, 0.25)' : 
-                                          'rgba(99, 102, 241, 0.1)';
-                      const isDashed = rel?.status !== 'Alliance' && rel?.status !== 'At War';
-
-                      return (
-                        <line
-                          key={`line-${id}`}
-                          x1={hq.x}
-                          y1={hq.y}
-                          x2={pt.x}
-                          y2={pt.y}
-                          stroke={strokeColor}
-                          strokeWidth="1.5"
-                          strokeDasharray={isDashed ? "3 3" : undefined}
-                        />
-                      );
-                    });
-                })()}
-
-                {/* Interactive Node Renderers */}
-                {(() => {
-                  const countryPoints: { id: string, name: string, x: number, y: number, flag: string }[] = [
-                    { id: 'US', name: 'United States', x: 130, y: 110, flag: '🇺🇸' },
-                    { id: 'BR', name: 'Brazil', x: 220, y: 255, flag: '🇧🇷' },
-                    { id: 'GB', name: 'United Kingdom', x: 395, y: 95, flag: '🇬🇧' },
-                    { id: 'DE', name: 'Germany', x: 445, y: 105, flag: '🇩🇪' },
-                    { id: 'TR', name: 'Turkey', x: 505, y: 130, flag: '🇹🇷' },
-                    { id: 'EG', name: 'Egypt', x: 485, y: 185, flag: '🇪🇬' },
-                    { id: 'JP', name: 'Japan', x: 695, y: 125, flag: '🇯🇵' }
-                  ];
-
-                  return countryPoints.map((pt) => {
-                    const isSelf = pt.id === country.id;
-                    const rel = diplomaticRelations[pt.id];
-                    const isSelected = selectedMapCountryId === pt.id;
-
-                    // Compute node colors & rings based on geopolitical relation status
-                    let color = '#64748b'; // default Gray/Neutral
-                    let glowClass = '';
-                    if (isSelf) {
-                      color = '#3b82f6'; // Bright blue HQ
-                    } else if (rel) {
-                      if (rel.status === 'At War') {
-                        color = '#ef4444';
-                        glowClass = 'animate-pulse';
-                      } else if (rel.status === 'Alliance') {
-                        color = '#10b981';
-                      } else if (rel.status === 'Defensive Pact') {
-                        color = '#06b6d4';
-                      } else if (rel.status === 'Sanctioned') {
-                        color = '#f59e0b';
-                      } else if (rel.status === 'Non-Aggression') {
-                        color = '#eab308';
-                      }
-                    }
-
-                    return (
-                      <g 
-                        key={pt.id} 
-                        className="cursor-pointer transition-transform duration-200 hover:scale-110"
-                        onClick={() => {
-                          if (isSelf) {
-                            playSound('click');
-                            setSuccessMessage(`Sovereign Headquarters: ${pt.name} is your ruling nation! Select other global nations on the map to manage diplomacy.`);
-                            setErrorMessage(null);
-                          } else {
-                            playSound('click');
-                            setSelectedMapCountryId(pt.id);
-                          }
-                        }}
-                      >
-                        {/* Selected Indicator Outer Ring */}
-                        {isSelected && (
-                          <circle 
-                            cx={pt.x} 
-                            cy={pt.y} 
-                            r="18" 
-                            fill="none" 
-                            stroke="#818cf8" 
-                            strokeWidth="1.5" 
-                            strokeDasharray="3 2"
-                            className="animate-[spin_8s_linear_infinite]"
-                          />
-                        )}
-
-                        {/* Status Glowing Ring */}
-                        <circle 
-                          cx={pt.x} 
-                          cy={pt.y} 
-                          r={isSelected ? 13 : 10} 
-                          fill="none" 
-                          stroke={color} 
-                          strokeWidth="2.5" 
-                          opacity="0.6"
-                          className={glowClass}
-                        />
-
-                        {/* Solid Central Hub Node */}
-                        <circle 
-                          cx={pt.x} 
-                          cy={pt.y} 
-                          r="6" 
-                          fill={color} 
-                        />
-
-                        {/* Flag bubble on top/right */}
-                        <text 
-                          x={pt.x + 8} 
-                          y={pt.y + 4} 
-                          className="text-[12px] font-bold"
-                        >
-                          {pt.flag}
-                        </text>
-
-                        {/* Label */}
-                        <text 
-                          x={pt.x} 
-                          y={pt.y - 14} 
-                          textAnchor="middle"
-                          className={`text-[8.5px] font-mono font-black uppercase tracking-wider ${
-                            isSelected ? 'fill-indigo-300 font-bold' : 'fill-slate-400'
-                          }`}
-                        >
-                          {pt.id === 'TR' ? 'TÜRKİYE' : pt.id === 'US' ? 'USA' : pt.id === 'GB' ? 'UK' : pt.id}
-                        </text>
-                      </g>
-                    );
-                  });
-                })()}
-              </svg>
-              <div className="absolute bottom-2 right-2 text-[9px] font-mono bg-black/75 px-2 py-0.5 rounded text-slate-400 border border-slate-500/10 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                LIVE DIPLOMACY FEED
+            {/* Interactive Leaflet World Map */}
+            <div className="relative w-full rounded-2xl overflow-hidden border border-slate-500/20 shadow-lg min-h-[380px] h-[380px] z-10 bg-slate-950">
+              <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
+              <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
+                 <div className="bg-slate-900/95 backdrop-blur border border-slate-700/50 p-3 rounded-xl shadow-xl flex flex-col gap-1">
+                   <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-indigo-400 font-bold" /> Co-Op GIS Operations Map</span>
+                   <span className="text-[10px] text-slate-400 max-w-xs">Click on any Country Hub Node to manage bilateral foreign actions and defense treaties.</span>
+                 </div>
               </div>
             </div>
           </div>
