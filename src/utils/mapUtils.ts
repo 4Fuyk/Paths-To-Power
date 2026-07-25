@@ -356,7 +356,7 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
 export const getFeatureName = (feature: any): string => {
   if (!feature) return '';
   if (feature.properties) {
-    return feature.properties.NAME_1 || 
+    return feature.properties.shapeName || feature.properties.NAME_1 || 
            feature.properties.nombre || 
            feature.properties.NOMBRE || 
            feature.properties.name || 

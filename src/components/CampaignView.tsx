@@ -1413,8 +1413,8 @@ const getPolygonCenter = (feat: any) => {
     if (country.id !== 'TR') return;
     
     const provinceUrls = [
-      'https://cdn.jsdelivr.net/gh/alpers/Turkey-Maps-GeoJSON@master/tr-cities.json',
-      'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json'
+      'https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json',
+      'https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json'
     ];
 
     const tryFetchProvinces = async () => {
@@ -1588,6 +1588,7 @@ const getPolygonCenter = (feat: any) => {
   const turkeyMarkersRef = React.useRef<L.CircleMarker[]>([]);
   const turkeyGeoJsonLayerRef = React.useRef<L.Layer | null>(null);
   const provinceOverlayLayerRef = React.useRef<L.Layer | null>(null);
+  const worldBgLayerRef = React.useRef<L.Layer | null>(null);
   const lastCountryIdRef = React.useRef<string | null>(null);
   const hasFitBoundsForCountryRef = React.useRef<string | null>(null);
 

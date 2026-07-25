@@ -11,7 +11,7 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Afyonkarahisar', seats: 6, winner: 'CHP', mayorName: 'Burcu Köksal' },
   { name: 'Ağrı', seats: 4, winner: 'DEM', mayorName: 'Hazal Aras' },
   { name: 'Amasya', seats: 3, winner: 'CHP', mayorName: 'Turgay Sevindi' },
-  { name: 'Ankara', seats: 36, winner: 'CHP', mayorName: 'Mansur Yavaş', supports: { CHP: 60.44, AKP: 31.68, YRP: 3.12, ZAFER: 1.51, DEM: 1.01, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 0.5, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Ankara', seats: 36, winner: 'CHP', mayorName: 'Mansur Yavaş' },
   { name: 'Antalya', seats: 17, winner: 'CHP', mayorName: 'Muhittin Böcek' },
   { name: 'Artvin', seats: 2, winner: 'CHP', mayorName: 'Bilgehan Erdem' },
   { name: 'Aydın', seats: 8, winner: 'CHP', mayorName: 'Özlem Çerçioğlu' },
@@ -26,28 +26,28 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Çankırı', seats: 2, winner: 'MHP', mayorName: 'İsmail Hakkı Esen' },
   { name: 'Çorum', seats: 4, winner: 'AKP', mayorName: 'Halil İbrahim Aşgın' },
   { name: 'Denizli', seats: 7, winner: 'CHP', mayorName: 'Bülent Nuri Çavuşoğlu' },
-  { name: 'Diyarbakır', seats: 12, winner: 'DEM', mayorName: 'Ayşe Serra Bucak Küçük', supports: { CHP: 3.50, AKP: 16.85, YRP: 3.65, DEM: 64.09, ZAFER: 0.5, MHP: 0.1, TIP: 0.3, TKP: 0.1, SAADET: 0.8, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Diyarbakır', seats: 12, winner: 'DEM', mayorName: 'Ayşe Serra Bucak Küçük' },
   { name: 'Edirne', seats: 4, winner: 'CHP', mayorName: 'Filiz Gencan Akın' },
   { name: 'Elazığ', seats: 5, winner: 'AKP', mayorName: 'Şahin Şerifoğulları' },
   { name: 'Erzincan', seats: 2, winner: 'MHP', mayorName: 'Bekir Aksun' },
   { name: 'Erzurum', seats: 6, winner: 'AKP', mayorName: 'Mehmet Sekmen' },
-  { name: 'Eskişehir', seats: 7, winner: 'CHP', mayorName: 'Ayşe Ünlüce', supports: { CHP: 51.02, AKP: 37.85, YRP: 2.12, ZAFER: 2.45, DEM: 1.15, MHP: 0.1, TIP: 0.8, TKP: 0.2, SAADET: 0.6, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
-  { name: 'Gaziantep', seats: 14, winner: 'AKP', mayorName: 'Fatma Şahin', supports: { CHP: 28.12, AKP: 38.83, YRP: 17.22, DEM: 5.48, ZAFER: 2.45, MHP: 0.1, TIP: 0.2, TKP: 0.1, SAADET: 1.1, DEVA: 0.8, GELECEK: 0.3, VATAN: 0.1 } },
+  { name: 'Eskişehir', seats: 7, winner: 'CHP', mayorName: 'Ayşe Ünlüce' },
+  { name: 'Gaziantep', seats: 14, winner: 'AKP', mayorName: 'Fatma Şahin' },
   { name: 'Giresun', seats: 4, winner: 'CHP', mayorName: 'Fuat Köse' },
   { name: 'Gümüşhane', seats: 2, winner: 'MHP', mayorName: 'Vedat Soner Başer' },
   { name: 'Hakkari', seats: 3, winner: 'DEM', mayorName: 'Mehmet Sıddık Akış' },
-  { name: 'Hatay', seats: 11, winner: 'AKP', mayorName: 'Mehmet Öntürk', supports: { CHP: 44.02, AKP: 44.48, TIP: 2.01, DEM: 1.5, YRP: 2.1, ZAFER: 1.2, MHP: 0.1, TKP: 0.1, SAADET: 0.5, DEVA: 0.3, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'Hatay', seats: 11, winner: 'AKP', mayorName: 'Mehmet Öntürk' },
   { name: 'Isparta', seats: 4, winner: 'AKP', mayorName: 'Şükrü Başdeğirmen' },
   { name: 'Mersin', seats: 13, winner: 'CHP', mayorName: 'Vahap Seçer' },
-  { name: 'İstanbul', seats: 98, winner: 'CHP', mayorName: 'Ekrem İmamoğlu', supports: { CHP: 51.15, AKP: 39.59, YRP: 2.61, ZAFER: 2.25, DEM: 2.12, MHP: 0.1, TIP: 0.5, TKP: 0.2, SAADET: 0.8, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
-  { name: 'İzmir', seats: 28, winner: 'CHP', mayorName: 'Cemil Tugay', supports: { CHP: 48.97, AKP: 37.06, DEM: 4.19, ZAFER: 2.52, YRP: 0.9, MHP: 0.1, TIP: 1.5, TKP: 0.4, SAADET: 0.6, DEVA: 0.4, GELECEK: 0.1, VATAN: 0.1 } },
+  { name: 'İstanbul', seats: 98, winner: 'CHP', mayorName: 'Ekrem İmamoğlu' },
+  { name: 'İzmir', seats: 28, winner: 'CHP', mayorName: 'Cemil Tugay' },
   { name: 'Kars', seats: 3, winner: 'MHP', mayorName: 'Ötüken Senger' },
   { name: 'Kastamonu', seats: 3, winner: 'CHP', mayorName: 'Hasan Baltacı' },
   { name: 'Kayseri', seats: 10, winner: 'AKP', mayorName: 'Memduh Büyükkılıç' },
   { name: 'Kırklareli', seats: 3, winner: 'MHP', mayorName: 'Derya Bulut' },
   { name: 'Kırşehir', seats: 2, winner: 'CHP', mayorName: 'Selahattin Ekicioğlu' },
   { name: 'Kocaeli', seats: 14, winner: 'AKP', mayorName: 'Tahir Büyükakın' },
-  { name: 'Konya', seats: 15, winner: 'AKP', mayorName: 'Uğur İbrahim Altay', supports: { CHP: 12.86, AKP: 49.44, YRP: 23.44, ZAFER: 3.01, DEM: 3.42, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 2.1, DEVA: 0.5, GELECEK: 0.7, VATAN: 0.1 } },
+  { name: 'Konya', seats: 15, winner: 'AKP', mayorName: 'Uğur İbrahim Altay' },
   { name: 'Kütahya', seats: 5, winner: 'CHP', mayorName: 'Eyüp Kahveci' },
   { name: 'Malatya', seats: 6, winner: 'AKP', mayorName: 'Sami Er' },
   { name: 'Manisa', seats: 10, winner: 'CHP', mayorName: 'Ferdi Zeyrek' },
@@ -62,14 +62,14 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Rize', seats: 3, winner: 'AKP', mayorName: 'Rahmi Metin' },
   { name: 'Sakarya', seats: 8, winner: 'AKP', mayorName: 'Yusuf Alemdar' },
   { name: 'Samsun', seats: 9, winner: 'AKP', mayorName: 'Halit Doğan' },
-  { name: 'Şanlıurfa', seats: 14, winner: 'YRP', mayorName: 'Mehmet Kasım Gülpınar', supports: { CHP: 1.51, AKP: 33.64, YRP: 38.87, DEM: 21.16, ZAFER: 0.5, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 0.9, DEVA: 0.3, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Şanlıurfa', seats: 14, winner: 'YRP', mayorName: 'Mehmet Kasım Gülpınar' },
   { name: 'Siirt', seats: 3, winner: 'DEM', mayorName: 'Sofya Alağaş' },
   { name: 'Sinop', seats: 2, winner: 'CHP', mayorName: 'Metin Gürbüz' },
   { name: 'Şırnak', seats: 4, winner: 'AKP', mayorName: 'Mehmet Yarka' },
-  { name: 'Sivas', seats: 5, winner: 'MHP', mayorName: 'Adem Uzun', supports: { CHP: 7.35, AKP: 29.15, MHP: 43.32, YRP: 13.12, ZAFER: 1.5, DEM: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.2, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Sivas', seats: 5, winner: 'MHP', mayorName: 'Adem Uzun' },
   { name: 'Tekirdağ', seats: 8, winner: 'CHP', mayorName: 'Candan Yüceer' },
   { name: 'Tokat', seats: 5, winner: 'MHP', mayorName: 'Mehmet Kemal Yazıcıoğlu' },
-  { name: 'Trabzon', seats: 6, winner: 'AKP', mayorName: 'Ahmet Metin Genç', supports: { CHP: 28.46, AKP: 51.48, YRP: 9.14, ZAFER: 2.12, DEM: 0.15, MHP: 0.1, TIP: 0.1, TKP: 0.1, SAADET: 1.5, DEVA: 0.4, GELECEK: 0.2, VATAN: 0.1 } },
+  { name: 'Trabzon', seats: 6, winner: 'AKP', mayorName: 'Ahmet Metin Genç' },
   { name: 'Tunceli', seats: 1, winner: 'DEM', mayorName: 'Cevdet Konak' },
   { name: 'Uşak', seats: 3, winner: 'CHP', mayorName: 'Özkan Yalım' },
   { name: 'Van', seats: 8, winner: 'DEM', mayorName: 'Abdullah Zeydan' },
@@ -94,7 +94,8 @@ export const getTurkeyRegions = (): Region[] => {
     let supports: Record<string, number> | undefined = prov.supports;
     if (!supports) {
       const base: Record<string, number> = {
-        CHP: 18,
+        CHP: 11,
+        YENI: 7,
         AKP: 18,
         DEM: 2,
         MHP: 5,
@@ -109,23 +110,29 @@ export const getTurkeyRegions = (): Region[] => {
       };
 
       if (prov.winner === 'DEM') {
-        base.DEM = 58.5 + Math.floor(Math.random() * 6);
-        base.AKP = 20 + Math.floor(Math.random() * 4);
-        base.CHP = 3.5 + Math.floor(Math.random() * 2);
+        base.DEM = 55.5 + Math.floor(Math.random() * 6);
+        base.AKP = 15 + Math.floor(Math.random() * 4);
+        base.YENI = 8.5 + Math.floor(Math.random() * 3);
+        base.CHP = 4.0;
       } else if (prov.winner === 'CHP') {
-        base.CHP = 44.5 + Math.floor(Math.random() * 5);
-        base.AKP = 32 + Math.floor(Math.random() * 4);
+        let combinedChp = 45.5 + Math.floor(Math.random() * 10);
+        base.YENI = combinedChp * 0.65;
+        base.CHP = combinedChp * 0.35;
+        base.AKP = 28 + Math.floor(Math.random() * 4);
       } else if (prov.winner === 'AKP') {
-        base.AKP = 42.5 + Math.floor(Math.random() * 5);
-        base.CHP = 26 + Math.floor(Math.random() * 4);
+        let combinedChp = 32 + Math.floor(Math.random() * 6);
+        base.YENI = combinedChp * 0.65;
+        base.CHP = combinedChp * 0.35;
+        base.AKP = 40.5 + Math.floor(Math.random() * 5);
       } else if (prov.winner === 'MHP') {
-        base.MHP = 40.5 + Math.floor(Math.random() * 5);
+        base.MHP = 35.5 + Math.floor(Math.random() * 5);
+        let combinedChp = 20 + Math.floor(Math.random() * 4);
+        base.YENI = combinedChp * 0.65;
+        base.CHP = combinedChp * 0.35;
         base.AKP = 24 + Math.floor(Math.random() * 4);
-        base.CHP = 16 + Math.floor(Math.random() * 4);
       } else if (prov.winner === 'YRP') {
         base.YRP = 38.5 + Math.floor(Math.random() * 5);
-        base.AKP = 31 + Math.floor(Math.random() * 3);
-        base.CHP = 9 + Math.floor(Math.random() * 2);
+        base.AKP = 30 + Math.floor(Math.random() * 4);
       }
 
       const total = Object.values(base).reduce((s, v) => s + v, 0);
@@ -707,6 +714,29 @@ const AUSTRALIA_SPEC = [
   { name: 'Northern Territory', seats: 2, winner: 'ALP', mayorName: 'Lia Finocchiaro' }
 ];
 
+const FRANCE_SPEC = [
+  { name: 'Île-de-France', seats: 97, winner: 'RE', mayorName: 'Valérie Pécresse' },
+  { name: 'Auvergne-Rhône-Alpes', seats: 72, winner: 'RN', mayorName: 'Laurent Wauquiez' },
+  { name: 'Nouvelle-Aquitaine', seats: 49, winner: 'PS', mayorName: 'Alain Rousset' },
+  { name: 'Hauts-de-France', seats: 50, winner: 'RN', mayorName: 'Xavier Bertrand' },
+  { name: 'Occitanie', seats: 49, winner: 'LFI', mayorName: 'Carole Delga' }
+];
+
+const ROMANIA_SPEC = [
+  { name: 'Bucharest-Ilfov', seats: 46, winner: 'USR', mayorName: 'Nicusor Dan' },
+  { name: 'Nord-Vest', seats: 41, winner: 'PNL', mayorName: 'Emil Boc' },
+  { name: 'Centru', seats: 34, winner: 'PSD', mayorName: 'Lia Olguta Vasilescu' },
+  { name: 'Sud-Muntenia', seats: 43, winner: 'PSD', mayorName: 'Tudor Pendiuc' },
+  { name: 'Nord-Est', seats: 46, winner: 'AUR', mayorName: 'Mihai Chirica' }
+];
+
+const HUNGARY_SPEC = [
+  { name: 'Central Hungary', seats: 60, winner: 'TISZA', mayorName: 'Gergely Karácsony' },
+  { name: 'Transdanubia', seats: 50, winner: 'FIDESZ', mayorName: 'László Papp' },
+  { name: 'Great Plain', seats: 55, winner: 'FIDESZ', mayorName: 'László Botka' },
+  { name: 'North Hungary', seats: 34, winner: 'MHM', mayorName: 'Pál Veres' }
+];
+
 export const getCanadaRegions = () => generateRegionsFromSpec('CA', CANADA_SPEC, ['LIB', 'CON', 'NDP', 'BQ'], { LIB: 32, CON: 38, NDP: 18, BQ: 8 });
 export const getArgentinaRegions = () => generateRegionsFromSpec('AR', ARGENTINA_SPEC, ['LLA', 'UP', 'JXC'], { LLA: 30, UP: 36, JXC: 24 });
 export const getSouthAfricaRegions = () => generateRegionsFromSpec('ZA', SOUTH_AFRICA_SPEC, ['ANC', 'DA', 'EFF', 'MK'], { ANC: 40, DA: 21, EFF: 10, MK: 14 });
@@ -717,6 +747,9 @@ export const getMexicoRegions = () => generateRegionsFromSpec('MX', MEXICO_SPEC,
 export const getSpainRegions = () => generateRegionsFromSpec('ES', SPAIN_SPEC, ['PP', 'PSOE', 'VOX', 'SUMAR'], { PP: 33, PSOE: 31, VOX: 12, SUMAR: 12 });
 export const getSouthKoreaRegions = () => generateRegionsFromSpec('KR', SOUTH_KOREA_SPEC, ['DP', 'PPP'], { DP: 50, PPP: 35 });
 export const getAustraliaRegions = () => generateRegionsFromSpec('AU', AUSTRALIA_SPEC, ['ALP', 'LNP', 'GRN'], { ALP: 32, LNP: 35, GRN: 12 });
+export const getFranceRegions = () => generateRegionsFromSpec('FR', FRANCE_SPEC, ['RE', 'RN', 'LFI', 'PS'], { RE: 25, RN: 30, LFI: 15, PS: 15 });
+export const getRomaniaRegions = () => generateRegionsFromSpec('RO', ROMANIA_SPEC, ['PSD', 'PNL', 'AUR', 'USR'], { PSD: 30, PNL: 20, AUR: 20, USR: 15 });
+export const getHungaryRegions = () => generateRegionsFromSpec('HU', HUNGARY_SPEC, ['FIDESZ', 'TISZA', 'DK', 'MHM'], { FIDESZ: 45, TISZA: 30, DK: 8, MHM: 6 });
 
 // Mock Bills for countries
 const BILL_POOL = [
@@ -838,6 +871,69 @@ const createBills = (countryId: string): Bill[] => {
 };
 
 export const PLAYABLE_COUNTRIES: Country[] = [
+  {
+    id: 'FR',
+    name: 'France',
+    description: 'A major European power with a semi-presidential system.',
+    flag: '🇫🇷',
+    seats: 577,
+    parliamentName: 'National Assembly',
+    system: 'Semi-Presidential',
+    population: '68 Million',
+    primaryColor: '#002654',
+    rivals: [
+      { id: 'RE', name: 'Renaissance', leader: 'Emmanuel Macron', ideology: 'Centrist', symbol: 'Globe', color: '#facc15', baseSupport: 25 },
+      { id: 'RN', name: 'National Rally', leader: 'Marine Le Pen', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#0f172a', baseSupport: 30 },
+      { id: 'LFI', name: 'France Unbowed', leader: 'Jean-Luc Mélenchon', ideology: 'Socialist', symbol: 'Sparkles', color: '#ef4444', baseSupport: 15 },
+      { id: 'PS', name: 'Socialist Party', leader: 'Olivier Faure', ideology: 'Social Democrat', symbol: 'Heart', color: '#ec4899', baseSupport: 15 }
+    ],
+    regions: getFranceRegions(),
+    bills: createBills('FR'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+  },
+  {
+    id: 'RO',
+    name: 'Romania',
+    description: 'A rapidly developing Eastern European country.',
+    flag: '🇷🇴',
+    seats: 330,
+    parliamentName: 'Chamber of Deputies',
+    system: 'Semi-Presidential',
+    population: '19 Million',
+    primaryColor: '#fcd116',
+    rivals: [
+      { id: 'PSD', name: 'Social Democratic Party', leader: 'Marcel Ciolacu', ideology: 'Social Democrat', symbol: 'Heart', color: '#dc2626', baseSupport: 30 },
+      { id: 'PNL', name: 'National Liberal Party', leader: 'Nicolae Ciucă', ideology: 'Conservative', symbol: 'Building', color: '#facc15', baseSupport: 20 },
+      { id: 'AUR', name: 'Alliance for the Union', leader: 'George Simion', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#000000', baseSupport: 20 },
+      { id: 'USR', name: 'Save Romania Union', leader: 'Elena Lasconi', ideology: 'Liberal', symbol: 'Globe', color: '#3b82f6', baseSupport: 15 }
+    ],
+    regions: getRomaniaRegions(),
+    bills: createBills('RO'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'HU',
+    name: 'Hungary',
+    description: 'A Central European nation characterized by strong conservative policies.',
+    flag: '🇭🇺',
+    seats: 199,
+    parliamentName: 'National Assembly',
+    system: 'Parliamentary Republic',
+    population: '9.6 Million',
+    primaryColor: '#437a46',
+    rivals: [
+      { id: 'FIDESZ', name: 'Fidesz', leader: 'Viktor Orbán', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#ea580c', baseSupport: 45 },
+      { id: 'TISZA', name: 'Tisza Party', leader: 'Péter Magyar', ideology: 'Centrist', symbol: 'Building', color: '#3b82f6', baseSupport: 30 },
+      { id: 'DK', name: 'Democratic Coalition', leader: 'Ferenc Gyurcsány', ideology: 'Social Democrat', symbol: 'Globe', color: '#3b82f6', baseSupport: 8 },
+      { id: 'MHM', name: 'Our Homeland', leader: 'László Toroczkai', ideology: 'Nationalist', symbol: 'Flame', color: '#166534', baseSupport: 6 }
+    ],
+    regions: getHungaryRegions(),
+    bills: createBills('HU'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
 
   {
     id: 'CA',
@@ -1055,10 +1151,11 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     population: '85 Million',
     primaryColor: '#dc2626', // Turkish Red
     rivals: [
-      { id: 'CHP', name: 'CHP', leader: 'Özgür Özel', ideology: 'Social Democrat', symbol: 'Flame', color: '#e30613', baseSupport: 37, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
-      { id: 'AKP', name: 'AK Parti', leader: 'Recep Tayyip Erdoğan', ideology: 'Conservative', symbol: 'Scale', color: '#ff9e1b', baseSupport: 35, photo: 'https://thf.bing.com/th/id/OIP.OSuQe5LJxNif6UcSy0D9YAHaE7?w=242&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'CHP', name: 'CHP', leader: 'Kemal Kılıçdaroğlu', ideology: 'Social Democrat', symbol: 'Flame', color: '#e30613', baseSupport: 12, photo: 'https://th.bing.com/th/id/OIP.qfT2hC6ZpM9kP1M_aYyNkwHaEK' },
+      { id: 'YENI', name: 'Yeni Parti', leader: 'Özgür Özel', ideology: 'Social Democrat', symbol: 'Sun', color: '#0ea5e9', baseSupport: 24, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
+      { id: 'AKP', name: 'AK Parti', leader: 'Recep Tayyip Erdoğan', ideology: 'Conservative', symbol: 'Scale', color: '#ff9e1b', baseSupport: 31, photo: 'https://thf.bing.com/th/id/OIP.OSuQe5LJxNif6UcSy0D9YAHaE7?w=242&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'DEM', name: 'DEM Parti', leader: 'Tuncer Bakırhan', ideology: 'Socialist', symbol: 'Sparkles', color: '#8b5cf6', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.37I-MTcx4uo8vRif0r3DmgHaEO?w=278&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
-      { id: 'MHP', name: 'MHP', leader: 'Devlet Bahçeli', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#991b1b', baseSupport: 7, photo: 'https://thf.bing.com/th/id/OIP.uKLHt8YQ5W_ghAlMr7TR7AHaEK?w=280&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
+      { id: 'MHP', name: 'MHP', leader: 'Devlet Bahçeli', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#991b1b', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.uKLHt8YQ5W_ghAlMr7TR7AHaEK?w=280&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'YRP', name: 'Yeniden Refah Partisi (YRP)', leader: 'Fatih Erbakan', ideology: 'Conservative', symbol: 'Key', color: '#2563eb', baseSupport: 6, photo: 'https://thf.bing.com/th/id/OIP.jwt8F1waSse9KWS-sVyWKgHaEK?w=303&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'ZAFER', name: 'Zafer Partisi', leader: 'Ümit Özdağ', ideology: 'Nationalist', symbol: 'Anchor', color: '#c2410c', baseSupport: 4, photo: 'https://thf.bing.com/th/id/OIP.D6YUtsOdukEPYEv357621AHaEK?w=332&h=186&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'TIP', name: 'TİP', leader: 'Erkan Baş', ideology: 'Socialist', symbol: 'Heart', color: '#be123c', baseSupport: 2, photo: 'https://thf.bing.com/th/id/OIP.z4i5RbWcUnSCP01SVVXeNwHaE7?w=255&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
@@ -1176,33 +1273,33 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'PP', name: 'Progressistas', leader: 'Ciro Nogueira', ideology: 'Conservative', symbol: 'Landmark', color: '#0057A0', baseSupport: 5, photo: 'https://th.bing.com/th/id/OIP._3KxON20q7QIRaCUhbqqKAHaE8?w=277&h=185&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
     regions: [
-      { id: 'Acre', name: 'Acre', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":0.4,"PL":83.2,"UNIAO":0.9,"MDB":5.8,"PSD":1.7,"PP":8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Alagoas', name: 'Alagoas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":78.9,"PL":5.4,"UNIAO":7.4,"MDB":1.7,"PSD":3.9,"PP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Amapá', name: 'Amapá', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":2,"PL":78.6,"UNIAO":6.6,"MDB":0.3,"PSD":7.2,"PP":5.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Amazonas', name: 'Amazonas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":81.1,"PL":5.7,"UNIAO":0.1,"MDB":5,"PSD":7.4,"PP":0.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Bahia', name: 'Bahia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":74.8,"PL":6.4,"UNIAO":1.4,"MDB":6,"PSD":4.7,"PP":6.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Ceará', name: 'Ceará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":76.5,"PL":6.1,"UNIAO":1.8,"MDB":8,"PSD":2.3,"PP":5.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Distrito Federal', name: 'Distrito Federal', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":5.7,"PL":76,"UNIAO":6.4,"MDB":3.4,"PSD":0.5,"PP":7.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Espírito Santo', name: 'Espírito Santo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":39.3,"PL":19.3,"UNIAO":18.9,"MDB":3.6,"PSD":16.9,"PP":2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Goiás', name: 'Goiás', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":0.2,"PL":83.2,"UNIAO":5.5,"MDB":2.2,"PSD":8.5,"PP":0.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Maranhão', name: 'Maranhão', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":86.1,"PL":0.9,"UNIAO":2.3,"MDB":4.5,"PSD":3.3,"PP":3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Mato Grosso', name: 'Mato Grosso', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":5.8,"PL":72.8,"UNIAO":6.5,"MDB":7,"PSD":4.9,"PP":3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Mato Grosso do Sul', name: 'Mato Grosso do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":2.5,"PL":80.2,"UNIAO":3.9,"MDB":1.8,"PSD":7.1,"PP":4.5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Minas Gerais', name: 'Minas Gerais', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":30.6,"PL":15.9,"UNIAO":8.5,"MDB":16.3,"PSD":17.5,"PP":11.1}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Pará', name: 'Pará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":1,"PL":83,"UNIAO":3.8,"MDB":0.9,"PSD":4.2,"PP":7.1}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Paraíba', name: 'Paraíba', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":76.9,"PL":6.4,"UNIAO":0,"MDB":5.7,"PSD":4.3,"PP":6.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Paraná', name: 'Paraná', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":1.9,"PL":87.5,"UNIAO":0.6,"MDB":6.3,"PSD":1.3,"PP":2.5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Pernambuco', name: 'Pernambuco', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":86.1,"PL":4.3,"UNIAO":0.5,"MDB":4.8,"PSD":3.8,"PP":0.5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Piauí', name: 'Piauí', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":73.9,"PL":7.2,"UNIAO":3.4,"MDB":7.4,"PSD":3.9,"PP":4.1}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio de Janeiro', name: 'Rio de Janeiro', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":36.6,"PL":5.8,"UNIAO":4.1,"MDB":21.8,"PSD":17.6,"PP":14.1}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio Grande do Norte', name: 'Rio Grande do Norte', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":85.2,"PL":5.6,"UNIAO":0,"MDB":1.5,"PSD":0.6,"PP":7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio Grande do Sul', name: 'Rio Grande do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":48.5,"PL":3.8,"UNIAO":18.4,"MDB":14.7,"PSD":10,"PP":4.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rondônia', name: 'Rondônia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":4,"PL":86.2,"UNIAO":1.6,"MDB":1.7,"PSD":1.5,"PP":5.1}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Roraima', name: 'Roraima', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":5.9,"PL":83.2,"UNIAO":2.3,"MDB":3.2,"PSD":4.6,"PP":0.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Santa Catarina', name: 'Santa Catarina', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":7.9,"PL":81.9,"UNIAO":3.8,"MDB":1.3,"PSD":0.7,"PP":4.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'São Paulo', name: 'São Paulo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":34.4,"PL":19.3,"UNIAO":19.4,"MDB":18.9,"PSD":3.5,"PP":4.5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Sergipe', name: 'Sergipe', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":75.1,"PL":7.7,"UNIAO":4,"MDB":6.2,"PSD":2.7,"PP":4.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Tocantins', name: 'Tocantins', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"PT":1.5,"PL":76.2,"UNIAO":7.3,"MDB":0.8,"PSD":7.2,"PP":6.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' }
+      { id: 'Acre', name: 'Acre', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Alagoas', name: 'Alagoas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Amapá', name: 'Amapá', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Amazonas', name: 'Amazonas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Bahia', name: 'Bahia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Ceará', name: 'Ceará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Distrito Federal', name: 'Distrito Federal', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Espírito Santo', name: 'Espírito Santo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Goiás', name: 'Goiás', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Maranhão', name: 'Maranhão', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Mato Grosso', name: 'Mato Grosso', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Mato Grosso do Sul', name: 'Mato Grosso do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Minas Gerais', name: 'Minas Gerais', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Pará', name: 'Pará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Paraíba', name: 'Paraíba', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Paraná', name: 'Paraná', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Pernambuco', name: 'Pernambuco', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Piauí', name: 'Piauí', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio de Janeiro', name: 'Rio de Janeiro', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio Grande do Norte', name: 'Rio Grande do Norte', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rio Grande do Sul', name: 'Rio Grande do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Rondônia', name: 'Rondônia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Roraima', name: 'Roraima', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'Santa Catarina', name: 'Santa Catarina', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
+      { id: 'São Paulo', name: 'São Paulo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Sergipe', name: 'Sergipe', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
+      { id: 'Tocantins', name: 'Tocantins', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' }
     ],
     bills: createBills('BR'),
     campaignTurns: 48,
@@ -1227,53 +1324,53 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'JCP', name: 'JCP', leader: 'Tomoko Tamura', ideology: 'Communist', symbol: 'Star', color: '#DB001C', baseSupport: 6, photo: 'https://th.bing.com/th/id/OIP._SMDrNs9CjSBMW5Fl3-PbgHaF3?w=219&h=180&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
     regions: [
-      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.4,"CDP":1.5,"KOMEITO":1.7,"ISHIN":6.1,"DPFP":3.3,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.5,"CDP":5.2,"KOMEITO":2.3,"ISHIN":7.2,"DPFP":5.4,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":0.2,"KOMEITO":5,"ISHIN":4,"DPFP":2.9,"JCP":5.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.3,"CDP":2,"KOMEITO":2.6,"ISHIN":7.3,"DPFP":3.1,"JCP":1.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.5,"CDP":2.9,"KOMEITO":6.2,"ISHIN":5.4,"DPFP":1.3,"JCP":1.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.3,"CDP":5.5,"KOMEITO":3.8,"ISHIN":2.9,"DPFP":3.3,"JCP":0.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":3.8,"KOMEITO":3.5,"ISHIN":3.1,"DPFP":2.1,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.6,"CDP":4.6,"KOMEITO":1.5,"ISHIN":3.4,"DPFP":6.1,"JCP":0.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":70.7,"CDP":6.3,"KOMEITO":4.7,"ISHIN":6.2,"DPFP":5.9,"JCP":6.2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.4,"CDP":6.4,"KOMEITO":6,"ISHIN":4.2,"DPFP":0.2,"JCP":4.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.7,"CDP":6.5,"KOMEITO":6.6,"ISHIN":3.3,"DPFP":4,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.3,"CDP":77.6,"KOMEITO":2.9,"ISHIN":2.6,"DPFP":5.9,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":7.1,"CDP":5.3,"KOMEITO":3.3,"ISHIN":75.1,"DPFP":3.4,"JCP":5.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
-      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":80.9,"CDP":1.5,"KOMEITO":6.7,"ISHIN":4.4,"DPFP":6,"JCP":0.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.2,"CDP":3.6,"KOMEITO":5.7,"ISHIN":0.6,"DPFP":1.3,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.4,"CDP":87.6,"KOMEITO":3.8,"ISHIN":1,"DPFP":1.2,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76.1,"CDP":2.8,"KOMEITO":5.8,"ISHIN":7.6,"DPFP":6.2,"JCP":1.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84,"CDP":0.5,"KOMEITO":5.7,"ISHIN":4.5,"DPFP":2.7,"JCP":2.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.7,"CDP":3.9,"KOMEITO":3.4,"ISHIN":2.5,"DPFP":4.5,"JCP":6.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":77.1,"CDP":7.2,"KOMEITO":6.3,"ISHIN":3.9,"DPFP":3.6,"JCP":2}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":2.5,"KOMEITO":1.8,"ISHIN":2,"DPFP":0.5,"JCP":6.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":81,"CDP":3,"KOMEITO":0.7,"ISHIN":6.5,"DPFP":2,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83,"CDP":7.7,"KOMEITO":1.3,"ISHIN":0.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74,"CDP":3.8,"KOMEITO":5.9,"ISHIN":4.4,"DPFP":6.9,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":84.5,"CDP":2.8,"KOMEITO":5.7,"ISHIN":2.8,"DPFP":1.5,"JCP":2.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":6.8,"CDP":84.1,"KOMEITO":1.6,"ISHIN":0.1,"DPFP":0.7,"JCP":6.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":74.4,"CDP":3.4,"KOMEITO":6.6,"ISHIN":6.7,"DPFP":3.4,"JCP":5.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.1,"CDP":0.6,"KOMEITO":0.2,"ISHIN":6,"DPFP":3.4,"JCP":7.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85,"CDP":1,"KOMEITO":1.1,"ISHIN":5.5,"DPFP":5,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":73.3,"CDP":4.2,"KOMEITO":4.3,"ISHIN":6.1,"DPFP":5.5,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.9,"CDP":7.5,"KOMEITO":3,"ISHIN":5.1,"DPFP":2,"JCP":6.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":5.5,"CDP":78,"KOMEITO":0.9,"ISHIN":7.4,"DPFP":3.1,"JCP":5.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":1.9,"CDP":0.3,"KOMEITO":4.3,"ISHIN":84.8,"DPFP":0.8,"JCP":7.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
-      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.6,"KOMEITO":2.1,"ISHIN":0.8,"DPFP":1.9,"JCP":7.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"KOMEITO":7.6,"ISHIN":5.7,"DPFP":2.9,"JCP":1.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.3,"CDP":4,"KOMEITO":5,"ISHIN":7.6,"DPFP":1.6,"JCP":3.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":1.1,"KOMEITO":6.7,"ISHIN":3.1,"DPFP":3.7,"JCP":5.8}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":76,"CDP":6.2,"KOMEITO":2,"ISHIN":1.4,"DPFP":6.4,"JCP":8.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.3,"CDP":4.2,"KOMEITO":2.2,"ISHIN":2.4,"DPFP":7.1,"JCP":4.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":78.5,"CDP":3.5,"KOMEITO":6.2,"ISHIN":2.2,"DPFP":6.2,"JCP":3.3}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":83.8,"CDP":1.2,"KOMEITO":2.7,"ISHIN":7.7,"DPFP":1.8,"JCP":2.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":82.6,"CDP":3.7,"KOMEITO":1.5,"ISHIN":1.3,"DPFP":7.3,"JCP":3.7}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":85.9,"CDP":1.3,"KOMEITO":4.6,"ISHIN":1,"DPFP":4.8,"JCP":2.4}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":87,"CDP":3.6,"KOMEITO":2.7,"ISHIN":1.3,"DPFP":2,"JCP":3.5}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":79.6,"CDP":7.4,"KOMEITO":1.7,"ISHIN":5.6,"DPFP":1.6,"JCP":4.1}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":72.4,"CDP":5,"KOMEITO":6.8,"ISHIN":6.4,"DPFP":2.8,"JCP":6.6}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"LDP":75.8,"CDP":7.6,"KOMEITO":3.8,"ISHIN":6.2,"DPFP":2.7,"JCP":3.9}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
+      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
+      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
+      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
+      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
+      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
     ],
     bills: createBills('JP'),
     campaignTurns: 53,
@@ -1298,33 +1395,33 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'ESDP', name: 'ESDP', leader: 'Farid Zahran', ideology: 'Social Democrat', symbol: 'Compass', color: '#F97316', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Farid_Zahran.jpg/250px-Farid_Zahran.jpg' }
     ],
     regions: [
-      { id: 'Alexandria', name: 'Alexandria', mayorName: 'Mohamed Taher Al-Sherif', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":31.8,"RPP":4.6,"WAFD":17.3,"HDP":15.1,"MEP":14.4,"ESDP":16.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Aswan', name: 'Aswan', mayorName: 'Ashraf Attia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":84.4,"RPP":3.4,"WAFD":3.5,"HDP":5,"MEP":2.4,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Asyut', name: 'Asyut', mayorName: 'Essam Saad', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":2.2,"WAFD":5.3,"HDP":2.8,"MEP":0.1,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beheira', name: 'Beheira', mayorName: 'Hisham Amna', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":5.1,"WAFD":4.2,"HDP":6,"MEP":0.9,"ESDP":4.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beni Suef', name: 'Beni Suef', mayorName: 'Mohamed Hany Ghoneim', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":76.3,"RPP":3.3,"WAFD":5.8,"HDP":6.2,"MEP":3.6,"ESDP":4.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Cairo', name: 'Cairo', mayorName: 'Khaled Abdel Aal', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":34,"RPP":16.8,"WAFD":0.6,"HDP":13.6,"MEP":14.3,"ESDP":20.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Dakahlia', name: 'Dakahlia', mayorName: 'Ayman Mokhtar', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":3.6,"WAFD":5.3,"HDP":1.7,"MEP":3.6,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Damietta', name: 'Damietta', mayorName: 'Manal Awad Mikhail', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.8,"RPP":3.2,"WAFD":3.9,"HDP":6.2,"MEP":3,"ESDP":2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Faiyum', name: 'Faiyum', mayorName: 'Ahmed Al-Ansari', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":3.2,"WAFD":3,"HDP":6.1,"MEP":0.6,"ESDP":0.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Gharbia', name: 'Gharbia', mayorName: 'Tarek Rahmy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.5,"RPP":4.8,"WAFD":4.3,"HDP":3.6,"MEP":1.8,"ESDP":5}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Giza', name: 'Giza', mayorName: 'Ahmed Rashed', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":30.7,"RPP":18.7,"WAFD":1.9,"HDP":15,"MEP":14.1,"ESDP":19.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Ismailia', name: 'Ismailia', mayorName: 'Sherif Fahmy Bishara', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.9,"RPP":3.7,"WAFD":4.6,"HDP":2.3,"MEP":4.8,"ESDP":5.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Kafr El Sheikh', name: 'Kafr El Sheikh', mayorName: 'Gamal Nour El-Din', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":85.7,"RPP":5.7,"WAFD":0.4,"HDP":0.9,"MEP":1.3,"ESDP":5.9}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Luxor', name: 'Luxor', mayorName: 'Mustafa Al-Alham', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.5,"RPP":6.4,"WAFD":2.6,"HDP":1.6,"MEP":2.9,"ESDP":0}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Matrouh', name: 'Matrouh', mayorName: 'Khaled Shoaib', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":3,"WAFD":6.2,"HDP":3.4,"MEP":3.1,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Minya', name: 'Minya', mayorName: 'Osama Al-Qady', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":82.4,"RPP":1.8,"WAFD":1.4,"HDP":5.8,"MEP":6.3,"ESDP":2.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Monufia', name: 'Monufia', mayorName: 'Ibrahim Abu Limon', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.5,"RPP":6.6,"WAFD":0,"HDP":5.3,"MEP":0.3,"ESDP":4.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'New Valley', name: 'New Valley', mayorName: 'Mohamed Al-Zamlout', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":81.5,"RPP":1.5,"WAFD":3.4,"HDP":5.8,"MEP":4.1,"ESDP":3.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'North Sinai', name: 'North Sinai', mayorName: 'Mohamed Shousha', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":90.6,"RPP":0.7,"WAFD":0.6,"HDP":4.1,"MEP":2.4,"ESDP":1.6}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Port Said', name: 'Port Said', mayorName: 'Adel Ghadban', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":75.5,"RPP":5.9,"WAFD":4.7,"HDP":4.8,"MEP":3.3,"ESDP":5.8}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qalyubia', name: 'Qalyubia', mayorName: 'Abdel Hamid El-Haggan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83.6,"RPP":1.8,"WAFD":6.3,"HDP":5.3,"MEP":0.2,"ESDP":2.7}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qena', name: 'Qena', mayorName: 'Ashraf Daoudi', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.6,"RPP":2.4,"WAFD":5.5,"HDP":2.5,"MEP":0.6,"ESDP":1.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Red Sea', name: 'Red Sea', mayorName: 'Amr Hanafy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":86.9,"RPP":1.1,"WAFD":1.7,"HDP":0.3,"MEP":3.8,"ESDP":6.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sharqia', name: 'Sharqia', mayorName: 'Mamdouh Ghorab', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":87.4,"RPP":1.3,"WAFD":3.9,"HDP":1,"MEP":1.1,"ESDP":5.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sohag', name: 'Sohag', mayorName: 'Tarek El-Feki', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":80.4,"RPP":4,"WAFD":0.9,"HDP":5.1,"MEP":3.3,"ESDP":6.3}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'South Sinai', name: 'South Sinai', mayorName: 'Khaled Fouda', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":83,"RPP":3.1,"WAFD":4.6,"HDP":2.7,"MEP":1.4,"ESDP":5.2}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Suez', name: 'Suez', mayorName: 'Abdel Majeed Saqr', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), supports: {"NFP":78.8,"RPP":4.7,"WAFD":4.9,"HDP":0,"MEP":6.2,"ESDP":5.4}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
+      { id: 'Alexandria', name: 'Alexandria', mayorName: 'Mohamed Taher Al-Sherif', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Aswan', name: 'Aswan', mayorName: 'Ashraf Attia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Asyut', name: 'Asyut', mayorName: 'Essam Saad', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Beheira', name: 'Beheira', mayorName: 'Hisham Amna', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Beni Suef', name: 'Beni Suef', mayorName: 'Mohamed Hany Ghoneim', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Cairo', name: 'Cairo', mayorName: 'Khaled Abdel Aal', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Dakahlia', name: 'Dakahlia', mayorName: 'Ayman Mokhtar', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Damietta', name: 'Damietta', mayorName: 'Manal Awad Mikhail', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Faiyum', name: 'Faiyum', mayorName: 'Ahmed Al-Ansari', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Gharbia', name: 'Gharbia', mayorName: 'Tarek Rahmy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Giza', name: 'Giza', mayorName: 'Ahmed Rashed', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Ismailia', name: 'Ismailia', mayorName: 'Sherif Fahmy Bishara', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Kafr El Sheikh', name: 'Kafr El Sheikh', mayorName: 'Gamal Nour El-Din', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Luxor', name: 'Luxor', mayorName: 'Mustafa Al-Alham', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Matrouh', name: 'Matrouh', mayorName: 'Khaled Shoaib', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Minya', name: 'Minya', mayorName: 'Osama Al-Qady', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Monufia', name: 'Monufia', mayorName: 'Ibrahim Abu Limon', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'New Valley', name: 'New Valley', mayorName: 'Mohamed Al-Zamlout', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'North Sinai', name: 'North Sinai', mayorName: 'Mohamed Shousha', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Port Said', name: 'Port Said', mayorName: 'Adel Ghadban', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Qalyubia', name: 'Qalyubia', mayorName: 'Abdel Hamid El-Haggan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Qena', name: 'Qena', mayorName: 'Ashraf Daoudi', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Red Sea', name: 'Red Sea', mayorName: 'Amr Hanafy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Sharqia', name: 'Sharqia', mayorName: 'Mamdouh Ghorab', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Sohag', name: 'Sohag', mayorName: 'Tarek El-Feki', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'South Sinai', name: 'South Sinai', mayorName: 'Khaled Fouda', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
+      { id: 'Suez', name: 'Suez', mayorName: 'Abdel Majeed Saqr', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
     ],
     bills: createBills('EG'),
     campaignTurns: 53,

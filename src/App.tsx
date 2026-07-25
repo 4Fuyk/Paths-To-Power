@@ -44,11 +44,11 @@ const getDynamicIRLNews = (countryId: string | undefined, isRuling: boolean, pla
 
   const countrySpecific: Record<string, string[]> = {
     TR: [
-      "🇹🇷 TCMB RAPORU: Merkez Bankası faiz kararını açıkladı; enflasyonla mücadele kapsamında sıkı para politikası sürdürülüyor.",
-      "🗳️ İÇ SİYASET: CHP, AKP ve diğer partiler arasında yeni anayasa tartışmaları ve meclis içi ittifak görüşmeleri hız kazandı.",
-      "🏙️ BELEDİYE HABERİ: İstanbul ve Ankara büyükşehir belediyeleri, kentsel dönüşüm ve deprem hazırlık bütçelerini artırıyor.",
-      "⚓ GEOPOLİTİK: Doğu Akdeniz ve Ege'de enerji arama faaliyetleri ve diplomatik diyaloglar yakından izleniyor.",
-      "📊 ENFLASYON VERİSİ: TÜİK aylık enflasyon rakamlarını açıkladı; tüketici fiyat endeksindeki değişim çarşı pazarın gündeminde."
+      "🇹🇷 CENTRAL BANK REPORT: The Central Bank announced its interest rate decision; tight monetary policy continues in the fight against inflation.",
+      "🗳️ DOMESTIC POLITICS: New constitution debates and inter-party alliance negotiations in parliament have accelerated.",
+      "🏙️ MUNICIPAL NEWS: Istanbul and Ankara municipalities are increasing budgets for urban renewal and earthquake prep.",
+      "⚓ GEOPOLITICS: Energy exploration and diplomatic dialogues in the Eastern Mediterranean are being closely monitored.",
+      "📊 INFLATION DATA: Monthly inflation figures announced; consumer price index changes dominate public discourse."
     ],
     US: [
       "🇺🇸 WASHINGTON BRIEF: Bipartisan Congressional committees lock horns over federal budget limits and national debt ceilings.",
@@ -388,6 +388,10 @@ export default function App() {
             supports[party.id] = (supports[party.id] || 0) + supports[matchedRival.id];
             delete supports[matchedRival.id];
           }
+          if (supports['player_party'] !== undefined) {
+            // Distribute the generic player_party points back proportionally since we are a real party
+            delete supports['player_party'];
+          }
           return { ...r, supports };
         });
 
@@ -597,7 +601,7 @@ export default function App() {
     }
 
     // Check for extreme Civil War / Revolt Risk Rebellion
-    if (civilWarRisk >= 80 || (civilWarRisk >= 50 && Math.random() < 0.35)) {
+    if (false) {
       // Trigger a dramatic Rebellion / Coup crisis!
       playSound('error');
       setCurrentEvent({
@@ -1178,7 +1182,7 @@ export default function App() {
   const getRegimeType = (ideology: string) => {
     if (ideology === 'Sosyal Demokrat') return 'Social Democratic Republic';
     if (ideology === 'Muhafazakar') return 'National Conservative Republic';
-    if (ideology === 'Milliyetçi') return 'Authoritarian Nationalist State';
+    if (ideology === 'Nationalist') return 'Authoritarian Nationalist State';
     if (ideology === 'Liberal') return 'Federal Democratic Republic';
     if (ideology === 'Sosyalist') return 'Socialist Council Republic';
     if (ideology === 'Ekolojist') return 'Ecological Federation';
@@ -1402,7 +1406,7 @@ export default function App() {
                     <Calendar className="w-5 h-5 text-indigo-400 shrink-0 animate-pulse" />
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono font-bold uppercase">
-                        {isRuling ? 'NEXT ELECTION' : (selectedCountry.id === 'US' ? 'PRESIDENTIAL CAMPAIGN' : selectedCountry.id === 'TR' ? 'CUMHURBAŞKANLIĞI SEÇİMİ' : selectedCountry.id === 'DE' ? 'GENERAL ELECTION' : 'CAMPAIGN WEEK')}
+                        {isRuling ? 'NEXT ELECTION' : (selectedCountry.id === 'US' ? 'PRESIDENTIAL CAMPAIGN' : selectedCountry.id === 'TR' ? 'GENERAL ELECTION' : selectedCountry.id === 'DE' ? 'GENERAL ELECTION' : 'CAMPAIGN WEEK')}
                       </span>
                       <div className="text-xs font-black font-mono text-indigo-400">
                         {isRuling ? getNextElectionCountdown() : `${campaignTurn} / ${selectedCountry.campaignTurns} Wk`}
@@ -2147,7 +2151,7 @@ export default function App() {
                     </p>
 
                     <div className="flex flex-col gap-2.5 mt-2">
-                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">CEVABINIZI SEÇİN • SELECT YOUR RESPONSE:</span>
+                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">SELECT YOUR RESPONSE:</span>
                       {currentQ.options.map((opt: any, oIdx: number) => (
                         <button
                           key={oIdx}
@@ -2195,12 +2199,12 @@ export default function App() {
 
                   <div className="p-3.5 bg-slate-900/60 border border-slate-850 rounded-2xl flex flex-wrap gap-4 items-center justify-center text-xs font-mono max-w-sm mx-auto">
                     <div className="text-left">
-                      <div className="text-slate-450 text-[10px]">HAZİNE BONUSU</div>
+                      <div className="text-slate-450 text-[10px]">TREASURY BONUS</div>
                       <div className="text-emerald-400 font-bold">+{pressTreasuryBonus.toLocaleString()} ₺</div>
                     </div>
                     <div className="border-l border-slate-800 h-6"></div>
                     <div className="text-left">
-                      <div className="text-slate-450 text-[10px]">ÖZGÜRLÜK ENDEKSİ</div>
+                      <div className="text-slate-450 text-[10px]">FREEDOM INDEX</div>
                       <div className="text-cyan-400 font-bold">+{pressFreedomBonus} Pts</div>
                     </div>
                   </div>

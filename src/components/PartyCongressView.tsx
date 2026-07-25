@@ -40,7 +40,7 @@ export const PartyCongressView: React.FC<PartyCongressViewProps> = ({
   // Contestants
   const leaderName = party.leader || 'Current Leader';
   const rivalCandidateName = party.id === 'CHP' 
-    ? 'Kemal Kılıçdaroğlu' 
+    ? 'Ekrem İmamoğlu' 
     : party.id === 'AKP' 
     ? 'Mehmet Şimşek (Moderate Faction)' 
     : party.id === 'SPD'

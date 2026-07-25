@@ -168,6 +168,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (id3 === 'BRA' || id2 === 'BR' || name.includes('BRAZIL')) return 'BR';
     if (id3 === 'DEU' || id2 === 'DE' || name.includes('GERMANY')) return 'DE';
     if (id3 === 'GBR' || id2 === 'GB' || name.includes('UNITED KINGDOM') || name === 'GREAT BRITAIN' || name === 'UK') return 'GB';
+    if (id3 === 'FRA' || id2 === 'FR' || name.includes('FRANCE')) return 'FR';
+    if (id3 === 'ROU' || id2 === 'RO' || name.includes('ROMANIA')) return 'RO';
+    if (id3 === 'HUN' || id2 === 'HU' || name.includes('HUNGARY')) return 'HU';
     if (id3 === 'EGY' || id2 === 'EG' || name.includes('EGYPT')) return 'EG';
     if (id3 === 'JPN' || id2 === 'JP' || name.includes('JAPAN')) return 'JP';
     if (id3 === 'CAN' || id2 === 'CA' || name.includes('CANADA')) return 'CA';
@@ -193,7 +196,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         return res.json();
       })
       .catch(() => {
-        return fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+        return fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson')
           .then(res => res.json());
       })
       .then(data => {

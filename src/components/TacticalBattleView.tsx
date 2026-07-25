@@ -1,15 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity } from 'lucide-react';
+import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
 import { Country } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { playSound } from '../lib/sounds';
 
 interface RegionUnit {
   regionId: string;
   type: 'loyal' | 'rebel' | 'contested';
   hp: number;
   maxHp: number;
+}
+
+export interface PlayerArmy {
+  id: string;
+  name: string;
+  type: 'infantry' | 'armored' | 'specops' | 'artillery';
+  regionId: string;
+  hp: number;
+  maxHp: number;
+  attackPower: number;
+  status: 'idle' | 'marching' | 'sieging';
+  targetRegionId?: string;
 }
 
 interface TacticalBattleViewProps {
@@ -28,7 +41,14 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   onBattleFinished
 }) => {
   const [regionStatus, setRegionStatus] = useState<Record<string, RegionUnit>>({});
-  const [battleLogs, setBattleLogs] = useState<string[]>(['The conflict has begun! Rebel forces have captured several regions. Select a rebel-controlled region to deploy the military and attack.']);
+  const [armies, setArmies] = useState<PlayerArmy[]>([]);
+  const [militaryBudget, setMilitaryBudget] = useState<number>(120000);
+  const [selectedArmyId, setSelectedArmyId] = useState<string | null>(null);
+  const [recruitingProvinceId, setRecruitingProvinceId] = useState<string | null>(null);
+
+  const [battleLogs, setBattleLogs] = useState<string[]>([
+    'Tactical command center active! You can recruit new armies from provinces and issue attack or siege orders.'
+  ]);
   const [mapMode, setMapMode] = useState<'GIS' | 'CARDS'>(
     (country.id === 'TR' || country.id === 'DE' || country.id === 'US' || country.id === 'BR' || country.id === 'JP' || country.id === 'EG' || country.id === 'GB') ? 'GIS' : 'CARDS'
   );
@@ -41,11 +61,16 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const armyMarkersLayerRef = useRef<L.LayerGroup | null>(null);
   const regionCentersRef = useRef<Record<string, { lat: number; lng: number }>>({});
   const regionStatusRef = useRef<Record<string, RegionUnit>>({});
+  const armiesRef = useRef<PlayerArmy[]>([]);
   const [centersReady, setCentersReady] = useState(false);
   
   useEffect(() => {
     regionStatusRef.current = regionStatus;
   }, [regionStatus]);
+
+  useEffect(() => {
+    armiesRef.current = armies;
+  }, [armies]);
   
   const cleanupMap = () => {
     if (mapInstanceRef.current) {
@@ -74,18 +99,13 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     if (isInitialized) return;
     const regions = country.regions || [];
     
-    // In GIS mode, wait for centers to be calculated by Leaflet
     if (mapMode === 'GIS') {
-       if (!centersReady) {
-          // not ready yet
-          return;
-       }
+       if (!centersReady) return;
     }
 
     const initialStatus: Record<string, RegionUnit> = {};
     
     if (mapMode === 'GIS') {
-       // Pick a random epicenter (not the capital if possible)
        const epicenterIdx = Math.floor(Math.random() * (regions.length - 1)) + 1;
        const epicenterId = regions[epicenterIdx].id;
        const epiCenterCoords = regionCentersRef.current[epicenterId] || {lat: 0, lng: 0};
@@ -105,32 +125,71 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
          initialStatus[reg.id] = {
            regionId: reg.id,
            type: isRebel ? 'rebel' : 'loyal',
-           hp: isRebel ? 150 + Math.floor(Math.random() * 100) : 200,
+           hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
            maxHp: isRebel ? 250 : 200,
          };
        });
     } else {
-       // Distribute randomly for CARDS mode
        const rebelProportion = Math.max(0.1, Math.min(0.8, civilWarRisk / 120)); 
        regions.forEach((reg, idx) => {
          const isRebel = idx > 0 && Math.random() < rebelProportion;
          initialStatus[reg.id] = {
            regionId: reg.id,
            type: isRebel ? 'rebel' : 'loyal',
-           hp: isRebel ? 150 + Math.floor(Math.random() * 100) : 200,
+           hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
            maxHp: isRebel ? 250 : 200,
          };
        });
     }
 
-    // Ensure at least one rebel region
     const finalRebelCount = Object.values(initialStatus).filter(s => s.type === 'rebel').length;
     if (finalRebelCount === 0 && regions.length > 1) {
       initialStatus[regions[regions.length - 1].id].type = 'rebel';
-      initialStatus[regions[regions.length - 1].id].hp = 150;
+      initialStatus[regions[regions.length - 1].id].hp = 160;
     }
 
     setRegionStatus(initialStatus);
+
+    // Initial 2 standing national armies in loyal provinces
+    const loyalProvinces = regions.filter(r => initialStatus[r.id]?.type === 'loyal');
+    const initialArmies: PlayerArmy[] = [];
+    if (loyalProvinces.length > 0) {
+      initialArmies.push({
+        id: 'army-1',
+        name: '1st Infantry Division',
+        type: 'infantry',
+        regionId: loyalProvinces[0].id,
+        hp: 180,
+        maxHp: 180,
+        attackPower: 45,
+        status: 'idle'
+      });
+    }
+    if (loyalProvinces.length > 1) {
+      initialArmies.push({
+        id: 'army-2',
+        name: '1st Armored Brigade',
+        type: 'armored',
+        regionId: loyalProvinces[1].id,
+        hp: 280,
+        maxHp: 280,
+        attackPower: 75,
+        status: 'idle'
+      });
+    } else if (loyalProvinces.length === 1) {
+      initialArmies.push({
+        id: 'army-2',
+        name: 'Special Operations Forces',
+        type: 'specops',
+        regionId: loyalProvinces[0].id,
+        hp: 200,
+        maxHp: 200,
+        attackPower: 60,
+        status: 'idle'
+      });
+    }
+
+    setArmies(initialArmies);
     setIsInitialized(true);
   }, [country, isInitialized, mapMode, centersReady]); // run when centersReady changes
 
@@ -193,58 +252,135 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     setBattleLogs(prev => [msg, ...prev].slice(0, 8));
   };
 
-  const handleAttack = (regionId: string, isAuto: boolean = false) => {
-    const target = regionStatusRef.current[regionId];
+  const handleRecruitArmy = (regionId: string, unitType: 'infantry' | 'armored' | 'specops' | 'artillery') => {
+    const region = country.regions.find(r => r.id === regionId);
+    if (!region) return;
+
+    let cost = 15000;
+    let hp = 180;
+    let atk = 45;
+    let typeName = 'Infantry Division';
+
+    if (unitType === 'armored') {
+      cost = 35000; hp = 280; atk = 75; typeName = 'Armored Brigade';
+    } else if (unitType === 'specops') {
+      cost = 25000; hp = 200; atk = 60; typeName = 'Special Operations Forces';
+    } else if (unitType === 'artillery') {
+      cost = 30000; hp = 150; atk = 85; typeName = 'Artillery Regiment';
+    }
+
+    if (militaryBudget < cost) {
+      playSound('error');
+      addLog(`⚠️ Insufficient Military Budget! More funds required to recruit unit.`);
+      return;
+    }
+
+    setMilitaryBudget(prev => prev - cost);
+    const newArmy: PlayerArmy = {
+      id: `army-${Date.now()}`,
+      name: `${armies.length + 1}. ${typeName}`,
+      type: unitType,
+      regionId: regionId,
+      hp: hp,
+      maxHp: hp,
+      attackPower: atk,
+      status: 'idle'
+    };
+
+    setArmies(prev => [...prev, newArmy]);
+    playSound('success');
+    addLog(`🪖 ${region.name} New unit recruited and deployed!`);
+    setRecruitingProvinceId(null);
+  };
+
+  const handleOrderAssault = (armyId: string, targetRegionId: string) => {
+    const army = armies.find(a => a.id === armyId);
+    const target = regionStatus[targetRegionId];
+    if (!army || !target || target.type !== 'rebel') return;
+
+    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
+    const damageDealt = Math.floor(army.attackPower * (0.8 + Math.random() * 0.4));
+    const newHp = Math.max(0, target.hp - damageDealt);
+
+    playSound('battle');
+    addLog(`⚔️ ${army.name}, ${regName} launched an assault on rebel positions!`);
+
+    setRegionStatus(prev => {
+      const next = { ...prev };
+      if (newHp === 0) {
+        addLog(`🟢 ASSAULT SUCCESSFUL: Province liberated from rebel control!`);
+        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
+      } else {
+        next[targetRegionId] = { ...target, hp: newHp };
+      }
+      return next;
+    });
+
+    const rebelDamage = Math.floor(20 + Math.random() * 25);
+    const newArmyHp = Math.max(0, army.hp - rebelDamage);
+
+    setArmies(prev => prev.map(a => {
+      if (a.id === armyId) {
+        if (newArmyHp === 0) {
+          addLog(`💥 HEAVY LOSSES: Unit destroyed in rebel skirmish!`);
+          return null;
+        }
+        return { ...a, hp: newArmyHp, regionId: targetRegionId, status: 'idle' };
+      }
+      return a;
+    }).filter(Boolean) as PlayerArmy[]);
+  };
+
+  const handleOrderSiege = (armyId: string, targetRegionId: string) => {
+    const army = armies.find(a => a.id === armyId);
+    const target = regionStatus[targetRegionId];
+    if (!army || !target || target.type !== 'rebel') return;
+
+    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
+    setArmies(prev => prev.map(a => a.id === armyId ? { ...a, status: 'sieging', targetRegionId, regionId: targetRegionId } : a));
+    playSound('success');
+    addLog(`🛡️ ${army.name}, ${regName} initiated a strategic siege! Rebels are cut off from supplies.`);
+  };
+
+  const handleCallAirStrike = (targetRegionId: string) => {
+    const cost = 20000;
+    if (militaryBudget < cost) {
+      playSound('error');
+      addLog(`⚠️ Insufficient Military Budget! Funds required for Precision Air Strike.`);
+      return;
+    }
+
+    const target = regionStatus[targetRegionId];
     if (!target || target.type !== 'rebel') return;
 
-    // Player attacks
-    const damageDealt = 40 + Math.floor(Math.random() * 40);
-    const newHp = Math.max(0, target.hp - damageDealt);
-    
-    addLog(`💥 Our forces struck ${country.regions.find(r => r.id === regionId)?.name} dealing ${damageDealt} damage!`);
-    
-    setRegionStatus(prev => {
-      const next = { ...prev };
-      if (newHp === 0) {
-        addLog(`🟢 ${country.regions.find(r => r.id === regionId)?.name} has been liberated from rebel control!`);
-        next[regionId] = { ...target, hp: target.maxHp, type: 'loyal' };
-      } else {
-        next[regionId] = { ...target, hp: newHp };
-      }
-      return next;
-    });
+    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
+    setMilitaryBudget(prev => prev - cost);
+    const damage = 55;
+    const newHp = Math.max(0, target.hp - damage);
 
-    // Rebels counter-attack
-    setTimeout(() => {
-      rebelTurn();
-    }, 1000);
-  };
-  
-  const rebelTurn = () => {
+    playSound('explosion');
+    addLog(`🛩️ F-16 Fighters bombed the rebel headquarters!`);
+
     setRegionStatus(prev => {
       const next = { ...prev };
-      const rebels = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'rebel');
-      const loyals = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'loyal');
-      
-      if (rebels.length === 0 || loyals.length === 0) return next; // battle is over
-      
-      // Rebel randomly attacks a loyal region
-      const randomRebel = rebels[Math.floor(Math.random() * rebels.length)];
-      const targetLoyal = loyals[Math.floor(Math.random() * loyals.length)];
-      
-      const rebelDamage = 30 + Math.floor(Math.random() * 40);
-      const newHp = Math.max(0, targetLoyal.hp - rebelDamage);
-      
-      addLog(`⚠️ Rebels attacked ${country.regions.find(r => r.id === targetLoyal.regionId)?.name} dealing ${rebelDamage} damage!`);
-      
       if (newHp === 0) {
-        addLog(`💀 We lost control of ${country.regions.find(r => r.id === targetLoyal.regionId)?.name}! Rebels took over.`);
-        next[targetLoyal.regionId] = { ...targetLoyal, hp: 150, type: 'rebel' };
+        addLog(`🟢 AIR STRIKE VICTORY: Province liberated!`);
+        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
       } else {
-        next[targetLoyal.regionId] = { ...targetLoyal, hp: newHp };
+        next[targetRegionId] = { ...target, hp: newHp };
       }
       return next;
     });
+  };
+
+  const handleDisbandArmy = (armyId: string) => {
+    const army = armies.find(a => a.id === armyId);
+    if (!army) return;
+    setMilitaryBudget(prev => prev + 8000);
+    setArmies(prev => prev.filter(a => a.id !== armyId));
+    if (selectedArmyId === armyId) setSelectedArmyId(null);
+    playSound('click');
+    addLog(`🗑️ ${army.name} disbanded. Funds returned to military budget.`);
   };
 
   // Initialize Leaflet Map
@@ -281,7 +417,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   useEffect(() => {
     if (mapMode !== 'GIS') return;
     if (country.id === 'TR') {
-      fetch('https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json')
+      fetch('https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json')
         .then(res => res.json())
         .then(setGeoJsonData).catch(console.error);
     } else if (country.id === 'DE') {
@@ -543,20 +679,38 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     <div className={`h-full w-full flex flex-col ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       
       {/* HEADER */}
-      <div className={`p-4 border-b flex justify-between items-center ${darkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
+      <div className={`p-4 border-b flex flex-wrap justify-between items-center gap-4 ${darkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
             <Swords className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h1 className="font-bold text-sm">TACTICAL OPERATIONS</h1>
+            <h1 className="font-extrabold text-sm uppercase tracking-tight flex items-center gap-2">
+              ARMY AND TACTICAL OPERATIONS CENTER
+              <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-mono font-bold">
+                Open Conflict
+              </span>
+            </h1>
             <p className="text-[10px] uppercase font-mono tracking-wider opacity-60">
-              Crisis in {country?.name}
+              {country?.name} National Defense Headquarters
             </p>
           </div>
         </div>
         
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Military Budget & Standing Armies HUD */}
+          <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900/80 border border-slate-700/60 rounded-xl">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Military Operations Budget</span>
+              <span className="text-xs font-black font-mono text-amber-400">₺{militaryBudget.toLocaleString()}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-700/50" />
+            <div className="flex flex-col">
+              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Active Brigades/Divisions</span>
+              <span className="text-xs font-black font-mono text-emerald-400">{armies.length} Birlik</span>
+            </div>
+          </div>
+
           {/* TIME CONTROL SYSTEM */}
           <div className="flex items-center gap-2 border border-slate-700/40 bg-slate-950/20 px-3 py-1.5 rounded-xl">
             <button
@@ -572,12 +726,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                   <span className="relative flex h-2 w-2">
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
                   </span>
-                  ⏱️ PAUSE TIME
+                  ⏱️ DURDUR
                 </>
               ) : (
                 <>
                   <span className="relative flex h-2 w-2 bg-slate-950 rounded-full" />
-                  ▶ START TIME
+                  ▶ ZAMANI BAŞLAT
                 </>
               )}
             </button>
@@ -585,16 +739,105 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
               📅 {gameDate.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </div>
           </div>
-
-          <div className="flex flex-col items-end border-l border-slate-700/30 pl-4">
-            <span className="text-[10px] font-mono opacity-60">GOVERNMENT STATUS</span>
-            <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              ACTIVE - UNDER ATTACK
-            </span>
-          </div>
         </div>
       </div>
+
+      {/* PROVINCE ARMY RECRUITMENT MODAL */}
+      {recruitingProvinceId && (() => {
+        const prov = country.regions.find(r => r.id === recruitingProvinceId);
+        if (!prov) return null;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`max-w-md w-full p-6 rounded-3xl border shadow-2xl flex flex-col gap-4 animate-scale-up ${
+              darkMode ? 'bg-slate-900 border-indigo-500/30 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+            }`}>
+              <div className="flex justify-between items-center border-b pb-3 border-slate-700/50">
+                <div>
+                  <h3 className="font-extrabold text-base flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-indigo-400" />
+                    {prov.name} PROVINCE ARMY RECRUITMENT
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Recruit and deploy a new military unit in this province.</p>
+                </div>
+                <button 
+                  onClick={() => setRecruitingProvinceId(null)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                <button
+                  onClick={() => handleRecruitArmy(prov.id, 'infantry')}
+                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-lg">🪖</div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-100 group-hover:text-indigo-300">Infantry Division</div>
+                      <div className="text-[10px] text-slate-400">HP: 180 • Attack: 45 • Basic Defense</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-amber-400">₺15,000</span>
+                </button>
+
+                <button
+                  onClick={() => handleRecruitArmy(prov.id, 'armored')}
+                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-lg">🛡️</div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-100 group-hover:text-amber-300">Armored Brigade</div>
+                      <div className="text-[10px] text-slate-400">HP: 280 • Attack: 75 • Heavy Destruction</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-amber-400">₺35,000</span>
+                </button>
+
+                <button
+                  onClick={() => handleRecruitArmy(prov.id, 'specops')}
+                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold text-lg">🛩️</div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-100 group-hover:text-cyan-300">Special Operations Forces</div>
+                      <div className="text-[10px] text-slate-400">HP: 200 • Attack: 60 • Rapid Deployment</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-amber-400">₺25,000</span>
+                </button>
+
+                <button
+                  onClick={() => handleRecruitArmy(prov.id, 'artillery')}
+                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-orange-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 font-bold text-lg">🎯</div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-100 group-hover:text-orange-300">Artillery Regiment</div>
+                      <div className="text-[10px] text-slate-400">HP: 150 • Attack: 85 • High Area Damage</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-amber-400">₺30,000</span>
+                </button>
+              </div>
+
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => setRecruitingProvinceId(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300"
+                >
+                  Close / Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
         
@@ -627,63 +870,118 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
             </div>
           </div>
           
-          {mapMode === 'GIS' ? (
-             <div className="w-full flex-grow relative rounded-2xl overflow-hidden border border-slate-500/20 shadow-lg min-h-[400px]">
-                <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
-                <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
-                   <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-xl flex flex-col gap-2">
-                     <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider flex items-center gap-2"><MapIcon className="w-3 h-3 text-indigo-400" /> GIS Target System</span>
-                     <span className="text-[10px] text-slate-400">Click on any <span className="text-red-400 font-bold">Red (Rebel)</span> territory to order a military strike.</span>
-                   </div>
-                </div>
-             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {country?.regions?.map(reg => {
-              const status = regionStatus[reg.id];
-              if (!status) return null;
-              
-              const isRebel = status.type === 'rebel';
-              
-              return (
-                <button
-                  key={reg.id}
-                  disabled={!isRebel}
-                  onClick={() => handleAttack(reg.id)}
-                  className={`p-4 rounded-2xl border-2 text-left relative overflow-hidden transition-all duration-300 ${
-                    isRebel 
-                      ? 'border-red-500/50 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-crosshair' 
-                      : 'border-emerald-500/30 bg-emerald-500/10 opacity-80 cursor-default'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-sm line-clamp-1 pr-4">{reg.name}</span>
-                    {isRebel ? <Target className="w-4 h-4 text-red-500 shrink-0" /> : <Activity className="w-4 h-4 text-emerald-500 shrink-0" />}
-                  </div>
-                  
-                  <div className="flex flex-col gap-1 mt-4">
-                    <div className="flex justify-between text-[10px] font-mono">
-                      <span>INTEGRITY</span>
-                      <span className={isRebel ? 'text-red-400' : 'text-emerald-400'}>{status.hp} / {status.maxHp}</span>
+          {/* ACTIVE STANDING ARMIES ROSTER & COMMAND PANEL */}
+          <div className="mt-6 p-4 rounded-2xl bg-slate-900/90 border border-slate-700/60 shadow-xl flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/50 pb-3">
+              <div className="flex items-center gap-2">
+                <Swords className="w-4 h-4 text-amber-400" />
+                <h3 className="font-extrabold text-xs text-slate-100 uppercase tracking-wide">
+                  ACTIVE UNITS AND COMMAND ROSTER ({armies.length})
+                </h3>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Click on a loyal province on the map to recruit an army or issue attack orders from the units below.
+              </p>
+            </div>
+
+            {armies.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400 bg-slate-800/30 rounded-xl border border-dashed border-slate-700">
+                You have no active armies! Click on a green (Loyal) province on the map to recruit an army immediately.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {armies.map(army => {
+                  const isSel = selectedArmyId === army.id;
+                  const stationProv = country.regions.find(r => r.id === army.regionId)?.name || army.regionId;
+                  const rebelProvinces = country.regions.filter(r => regionStatus[r.id]?.type === 'rebel');
+
+                  return (
+                    <div 
+                      key={army.id} 
+                      onClick={() => setSelectedArmyId(army.id)}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-2.5 ${
+                        isSel 
+                          ? 'bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10' 
+                          : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">
+                            {army.type === 'armored' ? '🛡️' : army.type === 'specops' ? '🛩️' : army.type === 'artillery' ? '🎯' : '🪖'}
+                          </span>
+                          <div>
+                            <div className="font-bold text-xs text-slate-100">{army.name}</div>
+                            <div className="text-[10px] text-slate-400">Location: <strong className="text-emerald-400">{stationProv}</strong></div>
+                          </div>
+                        </div>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                          army.status === 'sieging' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                          {army.status === 'sieging' ? 'Sieging' : 'Ready'}
+                        </span>
+                      </div>
+
+                      {/* Army HP Bar */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                          <span>Strength / Durability</span>
+                          <span className="text-emerald-400 font-bold">{army.hp} / {army.maxHp} HP</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                            style={{ width: `${(army.hp / army.maxHp) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Orders & Action Dropdowns */}
+                      <div className="grid grid-cols-2 gap-1.5 mt-1">
+                        {rebelProvinces.length > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOrderAssault(army.id, rebelProvinces[0].id);
+                            }}
+                            className="py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer shadow-sm"
+                          >
+                            ⚔️ Assault ({rebelProvinces[0].name})
+                          </button>
+                        ) : (
+                          <div className="text-[10px] text-emerald-400 font-bold">Victory Achieved</div>
+                        )}
+
+                        {rebelProvinces.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOrderSiege(army.id, rebelProvinces[0].id);
+                            }}
+                            className="py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer"
+                          >
+                            🛡️ Siege
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex justify-end pt-1 border-t border-slate-700/30">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDisbandArmy(army.id);
+                          }}
+                          className="text-[9px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider"
+                        >
+                          Disband (+₺8k)
+                        </button>
+                      </div>
                     </div>
-                      <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${isRebel ? 'bg-red-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${(status.hp / status.maxHp) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  {isRebel && (
-                    <div className="absolute top-0 right-0 p-1 bg-red-500 text-white text-[8px] font-bold uppercase rounded-bl-lg">
-                      Target
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
-          )}
         </div>
 
         {/* BATTLE LOGS */}

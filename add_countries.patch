@@ -1,0 +1,106 @@
+--- src/constants/countries.ts
++++ src/constants/countries.ts
+@@ -829,6 +829,24 @@
+   { name: 'Western Australia', weight: 4 },
+ ];
+ 
++const FRANCE_SPEC = [
++  { name: 'Île-de-France', weight: 12 },
++  { name: 'Auvergne-Rhône-Alpes', weight: 8 },
++  { name: 'Nouvelle-Aquitaine', weight: 6 },
++];
++
++const ROMANIA_SPEC = [
++  { name: 'Bucharest-Ilfov', weight: 10 },
++  { name: 'Nord-Vest', weight: 8 },
++  { name: 'Centru', weight: 7 },
++];
++
++const HUNGARY_SPEC = [
++  { name: 'Central Hungary', weight: 15 },
++  { name: 'Transdanubia', weight: 10 },
++  { name: 'Great Plain', weight: 8 },
++];
++
+ export const getCanadaRegions = () => generateRegionsFromSpec('CA', CANADA_SPEC, ['LIB', 'CON', 'NDP', 'BQ'], { LIB: 32, CON: 38, NDP: 18, BQ: 8 });
+ export const getArgentinaRegions = () => generateRegionsFromSpec('AR', ARGENTINA_SPEC, ['LLA', 'UP', 'JXC'], { LLA: 30, UP: 36, JXC: 24 });
+ export const getSouthAfricaRegions = () => generateRegionsFromSpec('ZA', SOUTH_AFRICA_SPEC, ['ANC', 'DA', 'EFF', 'MK'], { ANC: 40, DA: 21, EFF: 10, MK: 14 });
+@@ -840,6 +858,9 @@
+ export const getSpainRegions = () => generateRegionsFromSpec('ES', SPAIN_SPEC, ['PP', 'PSOE', 'VOX', 'SUMAR'], { PP: 33, PSOE: 31, VOX: 12, SUMAR: 12 });
+ export const getSouthKoreaRegions = () => generateRegionsFromSpec('KR', SOUTH_KOREA_SPEC, ['DP', 'PPP'], { DP: 50, PPP: 35 });
+ export const getAustraliaRegions = () => generateRegionsFromSpec('AU', AUSTRALIA_SPEC, ['ALP', 'LNP', 'GRN'], { ALP: 32, LNP: 35, GRN: 12 });
++export const getFranceRegions = () => generateRegionsFromSpec('FR', FRANCE_SPEC, ['RE', 'RN', 'LFI', 'PS'], { RE: 25, RN: 30, LFI: 15, PS: 15 });
++export const getRomaniaRegions = () => generateRegionsFromSpec('RO', ROMANIA_SPEC, ['PSD', 'PNL', 'AUR', 'USR'], { PSD: 30, PNL: 20, AUR: 20, USR: 15 });
++export const getHungaryRegions = () => generateRegionsFromSpec('HU', HUNGARY_SPEC, ['FIDESZ', 'TISZA', 'DK', 'MHM'], { FIDESZ: 45, TISZA: 30, DK: 8, MHM: 6 });
+ 
+ // Mock Bills for countries
+ const BILL_POOL = [
+@@ -1045,6 +1066,57 @@
+     electionCycleYears: 3,
+   },
++  {
++    id: 'FR',
++    name: 'France',
++    description: 'A major European power with a semi-presidential system and a strong tradition of political mobilization.',
++    flag: '🇫🇷',
++    seats: 577,
++    parliamentName: 'National Assembly',
++    system: 'Semi-Presidential',
++    population: '68 Million',
++    primaryColor: '#002654',
++    rivals: [
++      { id: 'RE', name: 'Renaissance', leader: 'Emmanuel Macron', ideology: 'Centrist', symbol: 'Globe', color: '#facc15', baseSupport: 25 },
++      { id: 'RN', name: 'National Rally', leader: 'Marine Le Pen', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#0f172a', baseSupport: 30 },
++      { id: 'LFI', name: 'France Unbowed', leader: 'Jean-Luc Mélenchon', ideology: 'Socialist', symbol: 'Sparkles', color: '#ef4444', baseSupport: 15 },
++      { id: 'PS', name: 'Socialist Party', leader: 'Olivier Faure', ideology: 'Social Democrat', symbol: 'Heart', color: '#ec4899', baseSupport: 15 }
++    ],
++    regions: getFranceRegions(),
++    bills: createBills('FR'),
++    campaignTurns: 53,
++    electionCycleYears: 5,
++  },
++  {
++    id: 'RO',
++    name: 'Romania',
++    description: 'A rapidly developing Eastern European country with a highly competitive multiparty landscape.',
++    flag: '🇷🇴',
++    seats: 330,
++    parliamentName: 'Chamber of Deputies',
++    system: 'Semi-Presidential',
++    population: '19 Million',
++    primaryColor: '#fcd116',
++    rivals: [
++      { id: 'PSD', name: 'Social Democratic Party', leader: 'Marcel Ciolacu', ideology: 'Social Democrat', symbol: 'Heart', color: '#dc2626', baseSupport: 30 },
++      { id: 'PNL', name: 'National Liberal Party', leader: 'Nicolae Ciucă', ideology: 'Conservative', symbol: 'Building', color: '#facc15', baseSupport: 20 },
++      { id: 'AUR', name: 'Alliance for the Union', leader: 'George Simion', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#000000', baseSupport: 20 },
++      { id: 'USR', name: 'Save Romania Union', leader: 'Elena Lasconi', ideology: 'Liberal', symbol: 'Globe', color: '#3b82f6', baseSupport: 15 }
++    ],
++    regions: getRomaniaRegions(),
++    bills: createBills('RO'),
++    campaignTurns: 53,
++    electionCycleYears: 4,
++  },
++  {
++    id: 'HU',
++    name: 'Hungary',
++    description: 'A Central European nation characterized by strong conservative policies and a dominant ruling party.',
++    flag: '🇭🇺',
++    seats: 199,
++    parliamentName: 'National Assembly',
++    system: 'Parliamentary Republic',
++    population: '9.6 Million',
++    primaryColor: '#437a46',
++    rivals: [
++      { id: 'FIDESZ', name: 'Fidesz', leader: 'Viktor Orbán', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#ea580c', baseSupport: 45 },
++      { id: 'TISZA', name: 'Tisza Party', leader: 'Péter Magyar', ideology: 'Centrist', symbol: 'Building', color: '#3b82f6', baseSupport: 30 },
++      { id: 'DK', name: 'Democratic Coalition', leader: 'Ferenc Gyurcsány', ideology: 'Social Democrat', symbol: 'Globe', color: '#3b82f6', baseSupport: 8 },
++      { id: 'MHM', name: 'Our Homeland', leader: 'László Toroczkai', ideology: 'Nationalist', symbol: 'Flame', color: '#166534', baseSupport: 6 }
++    ],
++    regions: getHungaryRegions(),
++    bills: createBills('HU'),
++    campaignTurns: 53,
++    electionCycleYears: 4,
++  },
+   {
+     id: 'TR',
+     name: 'Turkey',
