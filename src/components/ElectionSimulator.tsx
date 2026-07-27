@@ -400,7 +400,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
           <button
             id="start-counting-btn"
             onClick={() => setStep('counting')}
-            className="px-8 py-3.5 rounded-2xl font-bold text-sm bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/25 hover:scale-[1.02] cursor-pointer transition-all"
+            className="px-8 py-3.5 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 hover:scale-[1.02] cursor-pointer transition-all"
           >
             Start Counting and Tune into Live Broadcast!
           </button>

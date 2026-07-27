@@ -341,7 +341,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
               <button
                 id="confirm-party-creation-btn"
                 type="submit"
-                className="w-full py-4 rounded-2xl font-bold transition-all shadow-lg text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-650 to-indigo-550 text-white cursor-pointer hover:scale-[1.015] hover:shadow-indigo-600/25"
+                className="w-full py-4 rounded-2xl font-bold transition-all shadow-lg text-sm flex items-center justify-center gap-2 bg-slate-800 text-white cursor-pointer hover:scale-[1.015] hover:shadow-indigo-600/25"
               >
                 <Award className="w-5 h-5 animate-pulse" /> Establish Party & Launch Campaign!
               </button>

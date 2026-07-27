@@ -281,7 +281,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                 onClick={() => {
                   if (onWinLeadership) onWinLeadership();
                 }}
-                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold text-xs cursor-pointer shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all transform hover:scale-105"
+                className="px-6 py-3 rounded-2xl bg-slate-800 text-white font-extrabold text-xs cursor-pointer shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all transform hover:scale-105"
               >
                 💥 TRIGGER EXTRAORDINARY CONGRESS! ({averageLoyalty}% Loyalty)
               </button>
@@ -409,7 +409,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                 id="congress-speech-btn"
                 type="button"
                 onClick={handleTriggerCongressSpeech}
-                className="p-3 bg-gradient-to-br from-indigo-950/20 to-slate-900 border border-indigo-500/30 hover:border-indigo-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
+                className="p-3 bg-slate-800 border border-indigo-500/30 hover:border-indigo-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
               >
                 <Radio className="w-5 h-5 text-indigo-400" />
                 <span className="text-xs font-bold mt-1">Deliver Podium Speech</span>
@@ -421,7 +421,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                 id="congress-dinner-btn"
                 type="button"
                 onClick={handleHostDinner}
-                className="p-3 bg-gradient-to-br from-amber-950/20 to-slate-900 border border-amber-500/30 hover:border-amber-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
+                className="p-3 bg-slate-800 border border-amber-500/30 hover:border-amber-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
               >
                 <Coffee className="w-5 h-5 text-amber-400" />
                 <span className="text-xs font-bold mt-1">Host Unity Dinner</span>
@@ -434,7 +434,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                 id="congress-youth-btn"
                 type="button"
                 onClick={handleEmpowerYouth}
-                className="p-3 bg-gradient-to-br from-cyan-950/20 to-slate-900 border border-cyan-500/30 hover:border-cyan-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
+                className="p-3 bg-slate-800 border border-cyan-500/30 hover:border-cyan-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
               >
                 <Sparkles className="w-5 h-5 text-cyan-400" />
                 <span className="text-xs font-bold mt-1">Empower Youth Branch</span>
@@ -447,7 +447,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                 id="congress-backroom-btn"
                 type="button"
                 onClick={handleBackroomDeals}
-                className="p-3 bg-gradient-to-br from-rose-950/20 to-slate-900 border border-rose-500/30 hover:border-rose-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
+                className="p-3 bg-slate-800 border border-rose-500/30 hover:border-rose-500 text-left rounded-xl transition-all flex flex-col gap-1 cursor-pointer"
               >
                 <Key className="w-5 h-5 text-rose-400" />
                 <span className="text-xs font-bold mt-1">Appoint Committee Seat</span>

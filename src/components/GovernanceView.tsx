@@ -580,7 +580,7 @@ export const GovernanceView: React.FC<GovernanceViewProps> = ({
 
             {/* Armed Opposition Uprising bypass trigger */}
             {!isRuling && (
-              <div className="p-5 rounded-3xl bg-gradient-to-br from-rose-900/40 to-slate-900/40 border border-rose-500/30 text-slate-100 flex flex-col gap-3">
+              <div className="p-5 rounded-3xl bg-rose-950/50 border border-rose-500/30 text-slate-100 flex flex-col gap-3">
                 <h4 className="font-extrabold text-xs text-rose-400 flex items-center gap-1 uppercase">
                   <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" /> Popular Opposition Uprising
                 </h4>

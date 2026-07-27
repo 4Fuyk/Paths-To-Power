@@ -835,10 +835,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="flex flex-col gap-6">
         
         {/* Playable Countries Diplomacy Panel (Left) */}
-        <div className="lg:col-span-8 flex flex-col gap-5">
+        <div className="flex flex-col gap-5">
           {/* Schematic Tactical World Map */}
           <div className={`p-5 rounded-3xl border flex flex-col gap-4 ${
             darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -1095,7 +1095,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         </div>
 
         {/* Global Blocs & Supranational Integration (Right) */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* Supranational Blocs */}
           <div className={`p-5 rounded-3xl border flex flex-col gap-4.5 ${

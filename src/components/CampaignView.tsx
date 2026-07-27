@@ -3357,7 +3357,7 @@ const getPolygonCenter = (feat: any) => {
                   id="rally-action-btn"
                   type="button"
                   onClick={handleStartRally}
-                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-gradient-to-br from-rose-955/20 to-slate-950/50 border-rose-500/30 hover:border-rose-500/65 hover:scale-102 transition-all group cursor-pointer"
+                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-slate-800 border-rose-500/30 hover:border-rose-500/65 hover:scale-102 transition-all group cursor-pointer"
                 >
                   <Flame className="w-6 h-6 text-rose-500 group-hover:animate-bounce" />
                   <span className="text-[11px] font-extrabold tracking-wider mt-1 text-rose-250 uppercase">RALLY STATIONS</span>
@@ -3370,7 +3370,7 @@ const getPolygonCenter = (feat: any) => {
                   id="ad-action-btn"
                   type="button"
                   onClick={() => handleStartAdCampaign(selectedRegion)}
-                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-gradient-to-br from-emerald-955/20 to-slate-950/50 border-emerald-500/30 hover:border-emerald-500/65 hover:scale-102 transition-all group cursor-pointer"
+                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-slate-800 border-emerald-500/30 hover:border-emerald-500/65 hover:scale-102 transition-all group cursor-pointer"
                 >
                   <Megaphone className="w-6 h-6 text-emerald-500 group-hover:scale-110" />
                   <span className="text-[11px] font-extrabold tracking-wider mt-1 text-emerald-250 uppercase">DIGITAL ADS</span>
@@ -3383,7 +3383,7 @@ const getPolygonCenter = (feat: any) => {
                   id="hq-action-btn"
                   type="button"
                   onClick={() => handleUpgradeInfrastructure(selectedRegion)}
-                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-gradient-to-br from-indigo-955/20 to-slate-950/50 border-indigo-500/30 hover:border-indigo-500/65 hover:scale-102 transition-all group cursor-pointer"
+                  className="p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 bg-slate-800 border-indigo-500/30 hover:border-indigo-500/65 hover:scale-102 transition-all group cursor-pointer"
                 >
                   <Users className="w-6 h-6 text-indigo-400 group-hover:rotate-6" />
                   <span className="text-[11px] font-extrabold tracking-wider mt-1 text-indigo-250 uppercase">OPEN HQ FIELD</span>

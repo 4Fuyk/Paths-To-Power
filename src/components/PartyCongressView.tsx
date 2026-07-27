@@ -578,7 +578,7 @@ export const PartyCongressView: React.FC<PartyCongressViewProps> = ({
             </div>
             <div className="h-3 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
               <div 
-                className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 rounded-full transition-all duration-150" 
+                className="h-full bg-indigo-600 rounded-full transition-all duration-150" 
                 style={{ width: `${votingProgress}%` }}
               />
             </div>
