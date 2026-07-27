@@ -332,6 +332,18 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
     return `AU_${normName}`;
   }
 
+  if (countryId === 'FR') {
+    return `FR_${normName}`;
+  }
+
+  if (countryId === 'RO') {
+    return `RO_${normName}`;
+  }
+
+  if (countryId === 'HU') {
+    return `HU_${normName}`;
+  }
+
   const coreMap: Record<string, string> = {
     'istanbul': 'TR_ist',
     'ankara': 'TR_ank',
@@ -350,7 +362,10 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
     'afyon': 'TR_afyonkarahisar',
     'afyonkarahisar': 'TR_afyonkarahisar'
   };
-  return coreMap[normName] || `TR_${normName}`;
+  if (countryId === 'TR' || !countryId) {
+    return coreMap[normName] || `TR_${normName}`;
+  }
+  return `${countryId}_${normName}`;
 };
 
 export const getFeatureName = (feature: any): string => {

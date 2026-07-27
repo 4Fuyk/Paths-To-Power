@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, Party } from '../types';
+import { countryColors, PLAYABLE_COUNTRIES } from '../constants/countries';
 import { playSound } from '../lib/sounds';
 import { Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, AlertTriangle, Swords, Flame, Check } from 'lucide-react';
 import L from 'leaflet';
@@ -54,6 +55,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   publicApprovalImpact,
   darkMode,
 }) => {
+  const [mapMode, setMapMode] = useState<'RELATIONS' | 'WARS' | 'IDEOLOGY' | 'FREEDOM'>('RELATIONS');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [casusBelli, setCasusBelli] = useState<Record<string, boolean>>({});
@@ -138,17 +140,49 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   };
 
   const getCountryColor = (cid: string) => {
-    if (cid === country.id) return '#3b82f6'; // Sovereign Blue HQ
-    const rel = diplomaticRelations[cid];
-    if (rel) {
-      if (rel.status === 'At War') return '#ef4444';
-      if (rel.status === 'Alliance') return '#10b981';
-      if (rel.status === 'Defensive Pact') return '#06b6d4';
-      if (rel.status === 'Sanctioned') return '#f59e0b';
-      if (rel.status === 'Non-Aggression') return '#eab308';
-      return '#6366f1';
+    const scheme = countryColors[cid] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
+    return scheme.default;
+  };
+
+  const getMapColor = (cid: string) => {
+    if (mapMode === 'RELATIONS') {
+      if (cid === country.id) return '#10b981'; // Our country
+      const rel = diplomaticRelations[cid];
+      if (rel) {
+        if (rel.status === 'At War') return '#ef4444';
+        if (rel.status === 'Alliance') return '#0ea5e9';
+        if (rel.status === 'Defensive Pact') return '#3b82f6';
+        if (rel.status === 'Sanctioned') return '#f59e0b';
+        if (rel.status === 'Non-Aggression') return '#eab308';
+        if (rel.opinion > 60) return '#4ade80';
+        if (rel.opinion < 40) return '#f87171';
+      }
+      return countryColors[cid]?.default || '#94a3b8';
     }
-    return '#6366f1';
+    
+    if (mapMode === 'IDEOLOGY') {
+       const playCountry = PLAYABLE_COUNTRIES.find(c => c.id === cid);
+       if (!playCountry) return '#94a3b8';
+       const rulingIdeology = playCountry.rivals[0]?.ideology || '';
+       if (rulingIdeology.includes('Social') || rulingIdeology.includes('Left') || rulingIdeology.includes('Marxist')) return '#ef4444';
+       if (rulingIdeology.includes('Conservative') || rulingIdeology.includes('Right') || rulingIdeology.includes('Nationalist')) return '#1e3a8a';
+       if (rulingIdeology.includes('Liberal') || rulingIdeology.includes('Centrist') || rulingIdeology.includes('Democrat')) return '#facc15';
+       if (rulingIdeology.includes('Green') || rulingIdeology.includes('Ecologist')) return '#22c55e';
+       return '#6366f1';
+    }
+
+    if (mapMode === 'FREEDOM') {
+      let hash = 0;
+      for (let i = 0; i < cid.length; i++) hash = cid.charCodeAt(i) + ((hash << 5) - hash);
+      const freedom = 30 + (Math.abs(hash) % 65);
+      // Optional: Use actual freedom index if it's the player's country
+      // if (cid === country.id) freedom = freedomIndex;
+      if (freedom > 80) return '#22c55e';
+      if (freedom > 50) return '#eab308';
+      return '#ef4444';
+    }
+
+    return getCountryColor(cid);
   };
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -180,14 +214,54 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   };
 
   useEffect(() => {
+    if (worldBgLayerRef.current) {
+      worldBgLayerRef.current.setStyle((feature: any) => {
+        const cid = getPlayableCountryIdFromFeature(feature);
+        const id3 = String(feature?.id || feature?.properties?.ISO_A3 || feature?.properties?.iso_a3 || '').toUpperCase();
+        const name = String(feature?.properties?.name || feature?.properties?.NAME || '').toUpperCase();
+        const isAtWar = ['UKR', 'RUS', 'ISR', 'PSE'].includes(id3) || name === 'PALESTINE' || name === 'ISRAEL' || name === 'UKRAINE' || name === 'RUSSIA';
+
+        if (cid) {
+          const isSelected = selectedMapCountryId === cid;
+          const fillColor = getMapColor(cid);
+          
+          if (mapMode === 'WARS' && isAtWar) {
+            return {
+              fillColor: '#ef4444',
+              color: isSelected ? "#ffffff" : "#ffffff",
+              weight: isSelected ? 2.5 : 1.2,
+              opacity: 1.0,
+              fillOpacity: isSelected ? 0.92 : 0.72,
+              interactive: true
+            };
+          }
+          
+          return {
+            fillColor: fillColor,
+            color: isSelected ? "#ffffff" : "#ffffff",
+            weight: isSelected ? 2.5 : 1.2,
+            opacity: 1.0,
+            fillOpacity: isSelected ? 0.92 : 0.72,
+            interactive: true
+          };
+        }
+        
+        const baseFill = (mapMode === 'WARS' && isAtWar) ? '#ef4444' : (darkMode ? "#1e293b" : "#e2e8f0");
+        const borderColor = (mapMode === 'WARS' && isAtWar) ? (darkMode ? '#7f1d1d' : '#f87171') : (darkMode ? "#0f172a" : "#cbd5e1");
+        return { fillColor: baseFill, color: borderColor, weight: (mapMode === 'WARS' && isAtWar) ? 1.5 : 0.8, opacity: 1.0, fillOpacity: (mapMode === 'WARS' && isAtWar) ? 0.6 : 0.5, interactive: false };
+      });
+    }
+  }, [mapMode, darkMode, selectedMapCountryId, diplomaticRelations]);
+
+  useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: [15.0, 0.0],
         zoom: 1.8,
-        minZoom: 1.2,
-        maxZoom: 7,
+        minZoom: 2.0,
+        maxZoom: 18,
         zoomControl: true,
         attributionControl: false,
         maxBounds: [[-85, -180], [85, 180]],
@@ -195,14 +269,14 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         worldCopyJump: false
       });
 
-      const tileUrl = darkMode
-        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
-        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+      const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
       const tiles = L.tileLayer(tileUrl, {
         subdomains: 'abcd',
         maxZoom: 18,
+        maxNativeZoom: 10,
         noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
         className: 'base-map-tile'
       }).addTo(map);
       
@@ -217,7 +291,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       const terrain = L.tileLayer(terrainUrl, {
         opacity: darkMode ? 0.35 : 0.35,
         maxZoom: 18,
+        maxNativeZoom: 10,
         noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
         pane: 'terrainPane',
         className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
       }).addTo(map);
@@ -232,7 +308,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
             if (cid) {
               const isSelected = selectedMapCountryId === cid;
-              const fillColor = getCountryColor(cid);
+              const fillColor = getMapColor(cid);
               return {
                 fillColor: fillColor,
                 color: isSelected ? "#ffffff" : "#ffffff",
@@ -243,9 +319,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               };
             }
             
-            const baseFill = isAtWar ? '#ef4444' : (darkMode ? "#1e293b" : "#e2e8f0");
-            const borderColor = isAtWar ? (darkMode ? '#7f1d1d' : '#f87171') : (darkMode ? "#0f172a" : "#cbd5e1");
-            return { fillColor: baseFill, color: borderColor, weight: isAtWar ? 1.5 : 0.8, opacity: 1.0, fillOpacity: isAtWar ? 0.6 : 0.5, interactive: false };
+            const baseFill = (mapMode === 'WARS' && isAtWar) ? '#ef4444' : (darkMode ? "#1e293b" : "#e2e8f0");
+            const borderColor = (mapMode === 'WARS' && isAtWar) ? (darkMode ? '#7f1d1d' : '#f87171') : (darkMode ? "#0f172a" : "#cbd5e1");
+            return { fillColor: baseFill, color: borderColor, weight: (mapMode === 'WARS' && isAtWar) ? 1.5 : 0.8, opacity: 1.0, fillOpacity: (mapMode === 'WARS' && isAtWar) ? 0.6 : 0.5, interactive: false };
           },
           onEachFeature: (feature, layer) => {
             const cid = getPlayableCountryIdFromFeature(feature);
@@ -270,13 +346,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       markersRef.current = L.layerGroup().addTo(map);
       mapInstanceRef.current = map;
     } else if (tileLayerRef.current && mapInstanceRef.current) {
-      const tileUrl = darkMode
-        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
-        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
-      tileLayerRef.current.setUrl(tileUrl);
+      tileLayerRef.current.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}');
       
       if (terrainLayerRef.current) {
-        terrainLayerRef.current.setOpacity(darkMode ? 0.35 : 0.35);
+        terrainLayerRef.current.setOpacity(darkMode ? 0.28 : 0.35);
         const pane = mapInstanceRef.current.getPane('terrainPane');
         if (pane) pane.style.mixBlendMode = 'overlay';
         
@@ -775,9 +848,32 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                 <Globe className="w-4 h-4 text-indigo-400 animate-pulse" />
                 TACTICAL OPERATIONS MAP
               </h3>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                SOVEREIGN CTRL
-              </span>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { playSound('click'); setMapMode('RELATIONS'); }}
+                  className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'RELATIONS' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'border-slate-700/50 text-slate-500'}`}
+                >
+                  <Globe className="w-3 h-3" /> RELATIONS
+                </button>
+                <button 
+                  onClick={() => { playSound('click'); setMapMode('IDEOLOGY'); }}
+                  className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'IDEOLOGY' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'border-slate-700/50 text-slate-500'}`}
+                >
+                  <Shield className="w-3 h-3" /> IDEOLOGY
+                </button>
+                <button 
+                  onClick={() => { playSound('click'); setMapMode('FREEDOM'); }}
+                  className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'FREEDOM' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'border-slate-700/50 text-slate-500'}`}
+                >
+                  <Scale className="w-3 h-3" /> FREEDOM
+                </button>
+                <button 
+                  onClick={() => { playSound('click'); setMapMode('WARS'); }}
+                  className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'WARS' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'border-slate-700/50 text-slate-500'}`}
+                >
+                  <Swords className="w-3 h-3" /> WARS
+                </button>
+              </div>
             </div>
 
             {/* Interactive Leaflet World Map */}
@@ -785,23 +881,25 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
               
               {/* Active Conflicts Legend */}
-              <div className="absolute top-4 right-4 z-20 pointer-events-none">
-                <div className="px-3 py-2 rounded-xl border flex flex-col gap-1.5 shadow-lg backdrop-blur-md bg-slate-900/80 border-slate-700/50">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Global Conflicts
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-0.5 mt-0.5">
-                    <div className="text-[9px] font-bold text-red-500">RU ⚔️ UA</div>
-                    <div className="text-[9px] font-bold text-red-500">IL ⚔️ PS</div>
+              {mapMode === 'WARS' && (
+                <div className="absolute top-4 right-4 z-20 pointer-events-none">
+                  <div className="px-3 py-2 rounded-xl border flex flex-col gap-1.5 shadow-lg backdrop-blur-md bg-slate-900/80 border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      </span>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Global Conflicts
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <div className="text-[9px] font-bold text-red-500">RU ⚔️ UA</div>
+                      <div className="text-[9px] font-bold text-red-500">IL ⚔️ PS</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
                  <div className="bg-slate-900/95 backdrop-blur border border-slate-700/50 p-3 rounded-xl shadow-xl flex flex-col gap-1">
@@ -987,14 +1085,6 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                         <span className="text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded-full uppercase">
                           Costs 80k
                         </span>
-                      </button>
-
-                      <button
-                        onClick={() => handleHostileAction(id, 'Declare War')}
-                        disabled={rel.status === 'At War'}
-                        className="w-full py-3 bg-red-650 hover:bg-red-600 text-white rounded-xl font-black text-xs cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] transition-transform shadow-lg shadow-red-500/10 uppercase tracking-widest"
-                      >
-                        <Swords className="w-4 h-4" /> DECLARE WAR!
                       </button>
                     </div>
                   </div>

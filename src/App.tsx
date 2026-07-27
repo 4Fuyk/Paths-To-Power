@@ -28,6 +28,7 @@ import {
   Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
+import { syncRegionOwnersAndMayors } from './utils/mayorUtils';
 
 const getDynamicIRLNews = (countryId: string | undefined, isRuling: boolean, playerPartyName?: string) => {
   const globalNews = [
@@ -164,7 +165,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [activeScreen, setActiveScreen] = useState<'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS'>('MAP');
+  const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS'>('START_SCREEN');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [playerParty, setPlayerParty] = useState<Party | null>(null);
   const [campaignTurn, setCampaignTurn] = useState<number>(1); // 1 to country.campaignTurns
@@ -283,7 +284,7 @@ export default function App() {
           // Apply a per-region randomized multiplier (+/- 35%) to create highly unique support ratios for each region
           const regionalRatios: Record<string, number> = {};
           Object.entries(region.supports).forEach(([rivalId, val]) => {
-            const randomFactor = 0.65 + Math.random() * 0.70; // Random factor between 0.65 and 1.35
+            const randomFactor = 0.95 + Math.random() * 0.10; // Random factor between 0.65 and 1.35
             regionalRatios[rivalId] = val * randomFactor;
           });
 
@@ -295,7 +296,7 @@ export default function App() {
           // Rivals share the remaining support based on their base support quotients with wider randomized variation
           const regionalRatios: Record<string, number> = {};
           targetCountry.rivals.forEach((rival) => {
-            const randomFactor = 0.50 + Math.random() * 1.0; // Random factor between 0.50 and 1.50
+            const randomFactor = 0.90 + Math.random() * 0.20; // Random factor between 0.50 and 1.50
             regionalRatios[rival.id] = rival.baseSupport * randomFactor;
           });
 
@@ -335,7 +336,8 @@ export default function App() {
         };
       });
 
-      const initCountry = { ...targetCountry, regions: preppedRegions };
+      const syncedRegions = syncRegionOwnersAndMayors(preppedRegions, targetCountry.id, undefined, targetCountry.rivals);
+      const initCountry = { ...targetCountry, regions: syncedRegions };
       setSelectedCountry(initCountry);
       setActiveScreen('PARTY_CREATOR');
     };
@@ -346,10 +348,11 @@ export default function App() {
   // Party assembly creation callback
   const handleCreateParty = (party: Party) => {
     let updatedCountry = selectedCountry;
+    let matchedRival: any = undefined;
 
     if (selectedCountry) {
       // Find matching rival to prevent duplicate preset parties
-      const matchedRival = selectedCountry.rivals.find(r => 
+      matchedRival = selectedCountry.rivals.find(r => 
         r.name.toLowerCase().trim() === party.name.toLowerCase().trim() ||
         party.name.toLowerCase().trim().includes(r.id.toLowerCase().trim()) ||
         r.id.toLowerCase().trim() === party.name.toLowerCase().trim() ||
@@ -360,6 +363,8 @@ export default function App() {
         (party.name.includes("Yeniden Refah") && r.id === "YRP") ||
         (party.name.includes("YRP") && r.id === "YRP") ||
         (party.name.includes("Zafer") && r.id === "ZAFER") ||
+        (party.name.includes("Yeni") && r.id === "YENI") ||
+        (party.name.includes("YENI") && r.id === "YENI") ||
         (party.name.includes("TİP") && r.id === "TIP") ||
         (party.name.includes("TKP") && r.id === "TKP") ||
         (party.name.includes("Saadet") && r.id === "SAADET") ||
@@ -384,14 +389,13 @@ export default function App() {
         // Swap supports from matchedRival to player_party so the player starts with their real historical support base!
         let updatedRegions = selectedCountry.regions.map(r => {
           const supports = { ...r.supports };
-          if (supports[matchedRival.id] !== undefined) {
-            supports[party.id] = (supports[party.id] || 0) + supports[matchedRival.id];
-            delete supports[matchedRival.id];
-          }
-          if (supports['player_party'] !== undefined) {
-            // Distribute the generic player_party points back proportionally since we are a real party
-            delete supports['player_party'];
-          }
+          const rivalVal = supports[matchedRival.id] || 0;
+          const playerStartVal = supports['player_party'] || 0;
+
+          // Merge matched rival support base into player_party
+          supports['player_party'] = rivalVal + playerStartVal;
+          delete supports[matchedRival.id];
+
           return { ...r, supports };
         });
 
@@ -399,7 +403,7 @@ export default function App() {
         updatedRegions = updatedRegions.map(r => {
           const supports = { ...r.supports };
           const sum = Object.keys(supports).reduce((s, k) => s + (supports[k] || 0), 0);
-          if (Math.abs(sum - 100) > 0.1) {
+          if (sum > 0 && Math.abs(sum - 100) > 0.1) {
             const scale = 100 / sum;
             Object.keys(supports).forEach(k => {
               supports[k] = parseFloat((supports[k] * scale).toFixed(2));
@@ -409,10 +413,11 @@ export default function App() {
         });
 
         const updatedRivals = selectedCountry.rivals.filter(r => r.id !== matchedRival.id);
+        const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, selectedCountry.id, party, updatedRivals);
         updatedCountry = {
           ...selectedCountry,
           rivals: updatedRivals,
-          regions: updatedRegions
+          regions: syncedRegions
         };
         setSelectedCountry(updatedCountry);
         setIsJuniorMember(true);
@@ -424,38 +429,7 @@ export default function App() {
     setPlayerParty(party);
     setCampaignTurn(1);
 
-    const hasMatchedRival = selectedCountry?.rivals.some(r => 
-      r.name.toLowerCase().trim() === party.name.toLowerCase().trim() ||
-      party.name.toLowerCase().trim().includes(r.id.toLowerCase().trim()) ||
-      r.id.toLowerCase().trim() === party.name.toLowerCase().trim() ||
-      (party.name.includes("CHP") && r.id === "CHP") ||
-      (party.name.includes("AK Parti") && r.id === "AKP") ||
-      (party.name.includes("DEM") && r.id === "DEM") ||
-      (party.name.includes("MHP") && r.id === "MHP") ||
-      (party.name.includes("Yeniden Refah") && r.id === "YRP") ||
-      (party.name.includes("YRP") && r.id === "YRP") ||
-      (party.name.includes("Zafer") && r.id === "ZAFER") ||
-      (party.name.includes("TİP") && r.id === "TIP") ||
-      (party.name.includes("TKP") && r.id === "TKP") ||
-      (party.name.includes("Saadet") && r.id === "SAADET") ||
-      (party.name.includes("DEVA") && r.id === "DEVA") ||
-      (party.name.includes("Gelecek") && r.id === "GELECEK") ||
-      (party.name.includes("Vatan") && r.id === "VATAN") ||
-      (party.name.includes("CDU") && r.id === "CDU") ||
-      (party.name.includes("AfD") && r.id === "AfD") ||
-      (party.name.includes("SPD") && r.id === "SPD") ||
-      (party.name.includes("GRÜNE") && r.id === "GRÜNE") ||
-      (party.name.includes("LINKE") && r.id === "LINKE") ||
-      (party.name.includes("BSW") && r.id === "BSW") ||
-      (party.name.includes("FDP") && r.id === "FDP") ||
-      (party.name.includes("SSW") && r.id === "SSW") ||
-      (party.name.includes("Republican Party") && r.id === "REP") ||
-      (party.name.includes("Democratic Party") && r.id === "DEM_US") ||
-      (party.name.includes("Libertarian Party") && r.id === "LP") ||
-      (party.name.includes("Green Party") && r.id === "GP")
-    );
-
-    if (hasMatchedRival) {
+    if (matchedRival) {
       setActiveScreen('PARTY_CONGRESS');
     } else {
       setDashboardTab('CAMPAIGN');
@@ -932,6 +906,16 @@ export default function App() {
     }
   };
 
+  const handleUpdateCountry = (updatedCountry: Country) => {
+    const syncedRegions = syncRegionOwnersAndMayors(
+      updatedCountry.regions,
+      updatedCountry.id,
+      playerParty || undefined,
+      updatedCountry.rivals
+    );
+    setSelectedCountry({ ...updatedCountry, regions: syncedRegions });
+  };
+
   // Spend turn action decrementer
   const handleSpendTurn = () => {
     if (!selectedCountry || !playerParty) return;
@@ -988,9 +972,10 @@ export default function App() {
       return { ...r, supports };
     });
 
+    const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, selectedCountry.id, playerParty, selectedCountry.rivals);
     const nextCountryState = {
       ...selectedCountry,
-      regions: updatedRegions
+      regions: syncedRegions
     };
     setSelectedCountry(nextCountryState);
 
@@ -1318,6 +1303,67 @@ export default function App() {
 
       {/* Main Container screen routers */}
       <main className="py-2">
+        {activeScreen === 'START_SCREEN' && (
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] relative overflow-hidden">
+            {/* Background Map Placeholder or abstract design */}
+            <div className="absolute inset-0 z-0 opacity-10">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-500/30 via-transparent to-transparent"></div>
+            </div>
+            
+            <div className="z-10 flex flex-col items-center justify-center p-8 max-w-2xl text-center space-y-12">
+              <div className="space-y-4 relative">
+                <span className="text-[12px] tracking-[0.3em] font-mono text-slate-500 font-bold block">GLOBAL ELECTION SIMULATOR</span>
+                
+                <div className="relative inline-block">
+                  {/* Boot footprint cutout effect using an SVG overlay */}
+                  <div className="absolute inset-0 z-10 flex items-center justify-center opacity-30 pointer-events-none transform -rotate-12 scale-150 mix-blend-multiply dark:mix-blend-color-burn">
+                     <svg viewBox="0 0 100 100" fill="currentColor" className="w-40 h-40 text-slate-900 dark:text-slate-950">
+                        <path d="M30 70 Q 40 85 50 85 Q 60 85 65 70 Q 75 55 65 40 Q 60 25 50 20 Q 40 25 35 40 Q 25 55 30 70 Z" />
+                        <path d="M50 85 Q 45 95 50 100 Q 55 95 50 85 Z" />
+                        {/* Boot tread marks */}
+                        <rect x="35" y="30" width="30" height="5" />
+                        <rect x="35" y="45" width="30" height="5" />
+                        <rect x="35" y="60" width="30" height="5" />
+                        <rect x="42" y="75" width="16" height="4" />
+                     </svg>
+                  </div>
+                  
+                  <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text font-mono relative z-0" 
+                      style={{
+                        backgroundImage: "url('https://www.transparenttextures.com/patterns/stardust.png'), linear-gradient(to bottom right, #94a3b8, #475569, #334155)",
+                        backgroundSize: "auto, cover",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent"
+                      }}>
+                    PATHS TO POWER
+                  </h1>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 w-full max-w-sm justify-center pt-8 mx-auto">
+                <button
+                  onClick={() => { playSound('click'); setActiveScreen('MAP'); }}
+                  className="w-full px-12 py-5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white font-black rounded-xl shadow-xl shadow-slate-900/20 transition-all text-xl uppercase tracking-widest border border-slate-700 dark:border-slate-300 hover:scale-[1.02]"
+                >
+                  PLAY
+                </button>
+                <button
+                  onClick={() => { playSound('click'); /* Optional Settings Logic */ }}
+                  className={`w-full px-8 py-4 font-bold rounded-xl transition-all text-lg border uppercase tracking-wider hover:scale-[1.02] ${darkMode ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  SETTINGS
+                </button>
+                <button
+                  onClick={() => { playSound('click'); /* Optional Languages Logic */ }}
+                  className={`w-full px-8 py-4 font-bold rounded-xl transition-all text-lg border uppercase tracking-wider hover:scale-[1.02] ${darkMode ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  LANGUAGES
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeScreen === 'MAP' && (
           <WorldMap
             completedCountries={completedCountries}
@@ -1460,7 +1506,7 @@ export default function App() {
                     <button
                       id="next-month-btn"
                       onClick={handleNextMonth}
-                      className="py-2.5 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 animate-pulse"
+                      className="py-2.5 px-4 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 animate-pulse border border-emerald-500/50"
                     >
                       <Calendar className="w-3.5 h-3.5" /> Next Month
                     </button>
@@ -1769,7 +1815,7 @@ export default function App() {
               <CampaignView
                 country={selectedCountry}
                 party={playerParty}
-                onUpdateCountry={setSelectedCountry}
+                onUpdateCountry={handleUpdateCountry}
                 onUpdateParty={setPlayerParty}
                 onSpendTurn={handleSpendTurn}
                 darkMode={darkMode}
@@ -1780,7 +1826,7 @@ export default function App() {
               <ParliamentView
                 country={selectedCountry}
                 party={playerParty}
-                onUpdateCountry={setSelectedCountry}
+                onUpdateCountry={handleUpdateCountry}
                 onUpdateParty={setPlayerParty}
                 darkMode={darkMode}
                 coalitions={coalitions}
@@ -1805,7 +1851,7 @@ export default function App() {
               <FinanceView
                 country={selectedCountry}
                 party={playerParty}
-                onUpdateCountry={setSelectedCountry}
+                onUpdateCountry={handleUpdateCountry}
                 onUpdateParty={setPlayerParty}
                 darkMode={darkMode}
                 isRuling={isRuling}

@@ -77,7 +77,7 @@ export interface Country {
   description: string;
   flag: string;
   seats: number;
-  system: 'Hükümet Koalisyonu' | 'Başkanlık Sistemi' | 'Dar Bölge Meclisi' | 'Presidential System' | 'Coalition Government' | 'First-Past-The-Post';
+  system: 'Hükümet Koalisyonu' | 'Başkanlık Sistemi' | 'Dar Bölge Meclisi' | 'Presidential System' | 'Coalition Government' | 'First-Past-The-Post' | 'Semi-Presidential' | 'Parliamentary Republic';
   parliamentName: string;
   population: string;
   primaryColor: string; // Map color when unlocked

@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Country } from '../types';
-import { PLAYABLE_COUNTRIES } from '../constants/countries';
+import { PLAYABLE_COUNTRIES, countryColors } from '../constants/countries';
 import { 
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
@@ -37,7 +37,10 @@ const countryCoords: Record<string, [number, number]> = {
   MX: [23.634, -102.552],
   ES: [40.463, -3.749],
   KR: [35.907, 127.766],
-  AU: [-25.274, 133.775]
+  AU: [-25.274, 133.775],
+  FR: [46.227, 2.213],
+  RO: [45.943, 24.966],
+  HU: [47.162, 19.503]
 };
 
 const englishNames: Record<string, string> = {
@@ -57,27 +60,10 @@ const englishNames: Record<string, string> = {
   MX: "Mexico",
   ES: "Spain",
   KR: "South Korea",
-  AU: "Australia"
-};
-
-const countryColors: Record<string, { default: string; completed: string; selected: string }> = {
-  TR: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' }, // Türkiye: Koyu Kırmızı -> Canlı Kırmızı -> Açık Kırmızı
-  US: { default: '#1d4ed8', completed: '#3b82f6', selected: '#60a5fa' }, // ABD: Canlı Mavi -> Açık Mavi -> Daha Açık Mavi
-  BR: { default: '#15803d', completed: '#22c55e', selected: '#4ade80' }, // Brezilya: Canlı Yeşil -> Açık Yeşil -> Daha Açık Yeşil
-  DE: { default: '#7c3aed', completed: '#8b5cf6', selected: '#a78bfa' }, // Almanya: Parlak Mor -> Eflatun -> Daha Açık Mor
-  GB: { default: '#0e7490', completed: '#06b6d4', selected: '#22d3ee' }, // Birleşik Krallık: Canlı Turkuaz -> Cyan -> Açık Cyan
-  EG: { default: '#b45309', completed: '#f59e0b', selected: '#fbc02d' }, // Mısır: Altın Sarısı / Taba -> Turuncu -> Açık Sarı/Amber
-  JP: { default: '#be1c5a', completed: '#ec4899', selected: '#f472b6' },
-  CA: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' },
-  AR: { default: '#1e3a8a', completed: '#3b82f6', selected: '#93c5fd' },
-  ZA: { default: '#166534', completed: '#22c55e', selected: '#86efac' },
-  IN: { default: '#c2410c', completed: '#ea580c', selected: '#fb923c' },
-  IT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
-  ID: { default: '#b91c1c', completed: '#ef4444', selected: '#f87171' },
-  MX: { default: '#064e3b', completed: '#059669', selected: '#34d399' },
-  ES: { default: '#b45309', completed: '#d97706', selected: '#fbbf24' },
-  KR: { default: '#1d4ed8', completed: '#2563eb', selected: '#60a5fa' },
-  AU: { default: '#0c4a6e', completed: '#0284c7', selected: '#38bdf8' }
+  AU: "Australia",
+  FR: "France",
+  RO: "Romania",
+  HU: "Hungary"
 };
 
 const countryRadii: Record<string, number> = {
@@ -97,7 +83,10 @@ const countryRadii: Record<string, number> = {
   MX: 600000,
   ES: 350000,
   KR: 200000,
-  AU: 850000
+  AU: 850000,
+  FR: 350000,
+  RO: 300000,
+  HU: 250000
 };
 
 export const WorldMap: React.FC<WorldMapProps> = ({
@@ -221,23 +210,23 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const map = L.map(mapRef.current, {
       center: [28, 12],
       zoom: 1.8,
-      minZoom: 1.5,
+      minZoom: 2.0,
       maxZoom: 18,
       zoomControl: false,
       attributionControl: false,
       worldCopyJump: false,
-      maxBounds: [[-90, -180], [90, 180]],
+      maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
     });
 
-    const tileUrl = darkMode
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
-      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+    const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
     const tiles = L.tileLayer(tileUrl, {
       subdomains: 'abcd',
       maxZoom: 18,
+      maxNativeZoom: 13,
       noWrap: true,
+      bounds: [[-85, -180], [85, 180]],
       className: 'base-map-tile'
     }).addTo(map);
 
@@ -250,9 +239,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     const terrainUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
     const terrain = L.tileLayer(terrainUrl, {
-      opacity: darkMode ? 0.35 : 0.35,
+      opacity: darkMode ? 0.16 : 0.22,
       maxZoom: 18,
+      maxNativeZoom: 13,
       noWrap: true,
+      bounds: [[-85, -180], [85, 180]],
       pane: 'terrainPane',
       className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
     }).addTo(map);
@@ -282,13 +273,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   // Update Map Tilings when DarkMode is toggled
   useEffect(() => {
     if (tileLayerRef.current) {
-      const newUrl = darkMode
-        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
-        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
-      tileLayerRef.current.setUrl(newUrl);
+      tileLayerRef.current.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}');
     }
     if (terrainLayerRef.current && mapInstanceRef.current) {
-      terrainLayerRef.current.setOpacity(darkMode ? 0.35 : 0.35);
+      terrainLayerRef.current.setOpacity(darkMode ? 0.28 : 0.35);
       const pane = mapInstanceRef.current.getPane('terrainPane');
       if (pane) {
         pane.style.mixBlendMode = 'overlay';

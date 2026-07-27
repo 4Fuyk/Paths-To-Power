@@ -4,6 +4,8 @@ const SOUNDS = {
   error: 'error',
   hover: 'hover',
   win: 'win',
+  battle: 'battle',
+  explosion: 'explosion',
 };
 
 let audioCtx: AudioContext | null = null;

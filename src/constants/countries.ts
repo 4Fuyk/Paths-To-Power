@@ -4,6 +4,7 @@
  */
 
 import { Country, VoterGroup, Bill, RivalParty, Region, SpeechCard } from '../types';
+import { getPartyGovernorForRegion } from '../utils/mayorUtils';
 
 const TURKEY_PROVINCES_SPEC = [
   { name: 'Adana', seats: 15, winner: 'CHP', mayorName: 'Zeydan Karalar' },
@@ -91,7 +92,7 @@ const TURKEY_PROVINCES_SPEC = [
 
 export const getTurkeyRegions = (): Region[] => {
   return TURKEY_PROVINCES_SPEC.map((prov) => {
-    let supports: Record<string, number> | undefined = prov.supports;
+    let supports: Record<string, number> | undefined = (prov as any).supports;
     if (!supports) {
       const base: Record<string, number> = {
         CHP: 11,
@@ -109,30 +110,51 @@ export const getTurkeyRegions = (): Region[] => {
         VATAN: 0.1
       };
 
+      let hash = 0;
+      for (let i = 0; i < prov.name.length; i++) hash = prov.name.charCodeAt(i) + ((hash << 5) - hash);
+      hash = Math.abs(hash);
+
+      const mod5 = hash % 5;
+      const mod4 = (hash >> 1) % 4;
+      const mod3 = (hash >> 2) % 3;
+      const mod2 = (hash >> 3) % 2;
+      const mod6 = (hash >> 4) % 6;
+
       if (prov.winner === 'DEM') {
-        base.DEM = 55.5 + Math.floor(Math.random() * 6);
-        base.AKP = 15 + Math.floor(Math.random() * 4);
-        base.YENI = 8.5 + Math.floor(Math.random() * 3);
-        base.CHP = 4.0;
+        base.DEM = 54 + mod5;
+        base.AKP = 22 + mod4;
+        base.CHP = 12 + mod3;
+        base.YENI = 6 + mod2;
+        base.YRP = 3 + mod2;
+        base.MHP = 3 + mod2;
       } else if (prov.winner === 'CHP') {
-        let combinedChp = 45.5 + Math.floor(Math.random() * 10);
-        base.YENI = combinedChp * 0.65;
-        base.CHP = combinedChp * 0.35;
-        base.AKP = 28 + Math.floor(Math.random() * 4);
+        base.CHP = 46 + mod6;
+        base.AKP = 28 + mod4;
+        base.YENI = 12 + mod3;
+        base.MHP = 6 + mod2;
+        base.YRP = 4 + mod2;
+        base.DEM = 4 + mod2;
       } else if (prov.winner === 'AKP') {
-        let combinedChp = 32 + Math.floor(Math.random() * 6);
-        base.YENI = combinedChp * 0.65;
-        base.CHP = combinedChp * 0.35;
-        base.AKP = 40.5 + Math.floor(Math.random() * 5);
+        base.AKP = 48 + mod6;
+        base.CHP = 20 + mod4;
+        base.YENI = 12 + mod3;
+        base.MHP = 10 + mod3;
+        base.YRP = 6 + mod2;
+        base.DEM = 4 + mod2;
       } else if (prov.winner === 'MHP') {
-        base.MHP = 35.5 + Math.floor(Math.random() * 5);
-        let combinedChp = 20 + Math.floor(Math.random() * 4);
-        base.YENI = combinedChp * 0.65;
-        base.CHP = combinedChp * 0.35;
-        base.AKP = 24 + Math.floor(Math.random() * 4);
+        base.MHP = 42 + mod5;
+        base.AKP = 28 + mod4;
+        base.CHP = 14 + mod3;
+        base.YENI = 10 + mod2;
+        base.YRP = 6 + mod2;
       } else if (prov.winner === 'YRP') {
-        base.YRP = 38.5 + Math.floor(Math.random() * 5);
-        base.AKP = 30 + Math.floor(Math.random() * 4);
+        base.YRP = 40 + mod5;
+        base.AKP = 30 + mod4;
+        base.CHP = 12 + mod3;
+        base.YENI = 10 + mod2;
+        base.MHP = 8 + mod2;
+      } else {
+        base.AKP = 35; base.CHP = 30; base.YENI = 15; base.MHP = 10; base.YRP = 10;
       }
 
       const total = Object.values(base).reduce((s, v) => s + v, 0);
@@ -143,21 +165,7 @@ export const getTurkeyRegions = (): Region[] => {
       });
     }
 
-    const workers = 20 + Math.floor(Math.random() * 15);
-    const youth = 15 + Math.floor(Math.random() * 15);
-    const Nationalists = 10 + Math.floor(Math.random() * 15);
-    const Liberals = 8 + Math.floor(Math.random() * 10);
-    const traditionalists = 10 + Math.floor(Math.random() * 20);
-    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
-
-    const voterDistribution = {
-      'Workers': workers,
-      'Youth': youth,
-      'Nationalists': Nationalists,
-      'Liberals': Liberals,
-      'Traditionalists': traditionalists,
-      'Shopkeepers': Math.max(2, shopkeepers),
-    };
+    const voterDistribution = getRealisticVoterDistribution(prov.name, 'TR', prov.winner);
 
     const isEast = ['DEM'].includes(prov.winner) || ['Diyarbakır', 'Van', 'Mardin', 'Batman', 'Siirt', 'Hakkari', 'Şırnak'].includes(prov.name);
     const infrastructure = isEast ? 2 : ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya'].includes(prov.name) ? 5 : 3;
@@ -201,7 +209,7 @@ export const getTurkeyRegions = (): Region[] => {
       infrastructure,
       campaignLevel: 0,
       ownerPartyId: prov.winner,
-      mayorName: prov.mayorName
+      mayorName: prov.mayorName || getPartyGovernorForRegion(prov.name, prov.winner, 'TR')
     };
   });
 };
@@ -239,19 +247,19 @@ export const getGermanyRegions = (): Region[] => {
     };
 
     if (spec.winner === 'CDU') {
-      base.CDU = 35 + Math.floor(Math.random() * 5);
+      base.CDU = 38 + Math.floor(Math.random() * 5);
       base.AfD = 18 + Math.floor(Math.random() * 3);
       base.SPD = 14 + Math.floor(Math.random() * 3);
       base.GRÜNE = 11 + Math.floor(Math.random() * 3);
       base.LINKE = 7 + Math.floor(Math.random() * 2);
     } else if (spec.winner === 'AfD') {
-      base.AfD = 34 + Math.floor(Math.random() * 5);
+      base.AfD = 38 + Math.floor(Math.random() * 5);
       base.CDU = 22 + Math.floor(Math.random() * 3);
       base.SPD = 12 + Math.floor(Math.random() * 2);
       base.GRÜNE = 7 + Math.floor(Math.random() * 2);
       base.LINKE = 11 + Math.floor(Math.random() * 3);
     } else if (spec.winner === 'SPD') {
-      base.SPD = 31 + Math.floor(Math.random() * 5);
+      base.SPD = 36 + Math.floor(Math.random() * 5);
       base.CDU = 22 + Math.floor(Math.random() * 3);
       base.GRÜNE = 14 + Math.floor(Math.random() * 3);
       base.AfD = 13 + Math.floor(Math.random() * 3);
@@ -269,21 +277,7 @@ export const getGermanyRegions = (): Region[] => {
       supports[pId] = parseFloat((val * scale).toFixed(2));
     });
 
-    const workers = 18 + Math.floor(Math.random() * 15);
-    const youth = 16 + Math.floor(Math.random() * 15);
-    const Nationalists = 8 + Math.floor(Math.random() * 12);
-    const Liberals = 12 + Math.floor(Math.random() * 10);
-    const traditionalists = 12 + Math.floor(Math.random() * 15);
-    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
-
-    const voterDistribution = {
-      'Workers': workers,
-      'Youth': youth,
-      'Nationalists': Nationalists,
-      'Liberals': Liberals,
-      'Traditionalists': traditionalists,
-      'Shopkeepers': Math.max(2, shopkeepers),
-    };
+    const voterDistribution = getRealisticVoterDistribution(spec.name, 'DE', spec.winner);
 
     const isEast = ['Brandenburg', 'Mecklenburg-Vorpommern', 'Sachsen', 'Sachsen-Anhalt', 'Thüringen'].includes(spec.name);
     const infrastructure = isEast ? 3 : ['Nordrhein-Westfalen', 'Bayern', 'Baden-Württemberg', 'Hamburg', 'Berlin'].includes(spec.name) ? 5 : 4;
@@ -306,7 +300,7 @@ export const getGermanyRegions = (): Region[] => {
       infrastructure,
       campaignLevel: 0,
       ownerPartyId: spec.winner,
-      mayorName: spec.mayorName
+      mayorName: spec.mayorName || getPartyGovernorForRegion(spec.name, spec.winner, 'DE')
     };
   });
 };
@@ -376,12 +370,12 @@ export const getUSRegions = (): Region[] => {
     };
 
     if (spec.winner === 'REP') {
-      base.REP = 50 + Math.floor(Math.random() * 8);
+      base.REP = 54 + Math.floor(Math.random() * 6);
       base.DEM_US = 35 + Math.floor(Math.random() * 5);
       base.LP = 5 + Math.floor(Math.random() * 3);
       base.GP = 2 + Math.floor(Math.random() * 2);
     } else {
-      base.DEM_US = 50 + Math.floor(Math.random() * 8);
+      base.DEM_US = 54 + Math.floor(Math.random() * 6);
       base.REP = 35 + Math.floor(Math.random() * 5);
       base.GP = 5 + Math.floor(Math.random() * 3);
       base.LP = 2 + Math.floor(Math.random() * 2);
@@ -394,21 +388,7 @@ export const getUSRegions = (): Region[] => {
       supports[pId] = parseFloat((val * scale).toFixed(2));
     });
 
-    const workers = 15 + Math.floor(Math.random() * 15);
-    const youth = 15 + Math.floor(Math.random() * 15);
-    const Nationalists = 10 + Math.floor(Math.random() * 15);
-    const Liberals = 15 + Math.floor(Math.random() * 10);
-    const traditionalists = 10 + Math.floor(Math.random() * 15);
-    const shopkeepers = 100 - (workers + youth + Nationalists + Liberals + traditionalists);
-
-    const voterDistribution = {
-      'Workers': workers,
-      'Youth': youth,
-      'Nationalists': Nationalists,
-      'Liberals': Liberals,
-      'Traditionalists': traditionalists,
-      'Shopkeepers': Math.max(2, shopkeepers),
-    };
+    const voterDistribution = getRealisticVoterDistribution(spec.name, 'US', spec.winner);
 
     const normalized = spec.name.toLowerCase()
       .replace(/[^a-z]/g, '');
@@ -424,11 +404,90 @@ export const getUSRegions = (): Region[] => {
       infrastructure: 4 + Math.floor(Math.random() * 2),
       campaignLevel: 0,
       ownerPartyId: spec.winner,
-      mayorName: spec.governor
+      mayorName: spec.governor || getPartyGovernorForRegion(spec.name, spec.winner, 'US')
     };
   });
 };
 
+// Helper to calculate realistic, region-tailored voter demographics that strictly sum to 100%
+export const getRealisticVoterDistribution = (
+  regionName: string,
+  countryId: string,
+  winnerPartyId?: string
+): Record<string, number> => {
+  let hash = 0;
+  const str = `${countryId}_${regionName}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  hash = Math.abs(hash);
+
+  const norm = regionName.toLowerCase();
+  
+  const isUrban = norm.includes('istanbul') || norm.includes('ankara') || norm.includes('izmir') || 
+                  norm.includes('tokyo') || norm.includes('osaka') || norm.includes('london') || 
+                  norm.includes('cairo') || norm.includes('sao paulo') || norm.includes('rio') ||
+                  norm.includes('paris') || norm.includes('berlin') || norm.includes('madrid') || 
+                  norm.includes('seoul') || norm.includes('delhi') || norm.includes('bucharest') || 
+                  norm.includes('budapest') || norm.includes('california') || norm.includes('york') || 
+                  norm.includes('capital') || norm.includes('sydney') || norm.includes('rome') ||
+                  norm.includes('toronto') || norm.includes('jakarta') || norm.includes('buenos');
+
+  const isIndustrial = norm.includes('ruhr') || norm.includes('nordrhein') || norm.includes('aichi') || 
+                       norm.includes('bursa') || norm.includes('kocaeli') || norm.includes('detroit') || 
+                       norm.includes('katowice') || norm.includes('pittsburgh') || norm.includes('busan') || 
+                       norm.includes('minas') || norm.includes('west java') || norm.includes('hauts') ||
+                       norm.includes('zonguldak') || norm.includes('silesia') || norm.includes('lombardy');
+
+  const isRural = norm.includes('bavaria') || norm.includes('texas') || norm.includes('alabama') || 
+                  norm.includes('anatolia') || norm.includes('yozgat') || norm.includes('aswan') || 
+                  norm.includes('dakota') || norm.includes('kansas') || norm.includes('transdanubia') ||
+                  norm.includes('queensland') || norm.includes('limpopo') || norm.includes('saskatchewan') ||
+                  norm.includes('konya') || norm.includes('erzurum');
+
+  let workers = 16 + (isIndustrial ? 14 : 0) + (hash % 8);
+  let youth = 15 + (isUrban ? 12 : 0) + ((hash >> 2) % 8);
+  let nationalists = 12 + (isRural ? 10 : 0) + ((hash >> 4) % 8);
+  let liberals = 12 + (isUrban ? 12 : 0) + ((hash >> 6) % 8);
+  let traditionalists = 12 + (isRural ? 12 : 0) + ((hash >> 8) % 8);
+
+  if (winnerPartyId === 'DEM' || winnerPartyId === 'CHP' || winnerPartyId === 'LFI' || winnerPartyId === 'GRN' || winnerPartyId === 'GRÜNE' || winnerPartyId === 'DEM_US') {
+    youth += 4;
+    liberals += 5;
+  } else if (winnerPartyId === 'AKP' || winnerPartyId === 'REP' || winnerPartyId === 'AfD' || winnerPartyId === 'RN' || winnerPartyId === 'MHP' || winnerPartyId === 'FIDESZ') {
+    nationalists += 5;
+    traditionalists += 5;
+  } else if (winnerPartyId === 'LAB' || winnerPartyId === 'PT' || winnerPartyId === 'SPD' || winnerPartyId === 'PDIP' || winnerPartyId === 'INC') {
+    workers += 6;
+  }
+
+  let total = workers + youth + nationalists + liberals + traditionalists;
+  let shopkeepers = Math.max(8, 100 - total);
+
+  total += shopkeepers;
+  const scale = 100 / total;
+
+  let w = Math.round(workers * scale);
+  let y = Math.round(youth * scale);
+  let n = Math.round(nationalists * scale);
+  let l = Math.round(liberals * scale);
+  let t = Math.round(traditionalists * scale);
+  let s = 100 - (w + y + n + l + t);
+
+  if (s < 2) {
+    s = 5;
+    w -= 1; y -= 1; n -= 1; l -= 1; t -= 1;
+  }
+
+  return {
+    'Workers': w,
+    'Youth': y,
+    'Nationalists': n,
+    'Liberals': l,
+    'Traditionalists': t,
+    'Shopkeepers': s
+  };
+};
 
 // Helper to generate a baseline distribution of voters for a region
 const makeVoterGroup = (
@@ -450,31 +509,33 @@ const makeVoterGroup = (
 // Helper to generate regions dynamically based on local party specs and actual historical wins
 const generateRegionsFromSpec = (
   countryId: string,
-  specs: { name: string; seats: number; winner: string; mayorName?: string }[],
+  specs: { name: string; seats: number; winner: string; mayorName?: string; id?: string }[],
   partyIds: string[],
   baseSupports: Record<string, number>
 ): Region[] => {
   return specs.map((spec) => {
-    // Generate a randomized but balanced support map
+    let hash = 0;
+    for (let i = 0; i < spec.name.length; i++) hash = spec.name.charCodeAt(i) + ((hash << 5) - hash);
+    hash = Math.abs(hash);
+    const mod10 = hash % 10;
+    const mod4 = (hash >> 1) % 4;
+
     const base: Record<string, number> = {};
     partyIds.forEach((pId) => {
       base[pId] = baseSupports[pId] || 10;
     });
 
     if (spec.winner && base[spec.winner] !== undefined) {
-      // Give a boost to the winner in this region
-      const boost = 12 + Math.floor(Math.random() * 8);
+      const boost = 18 + mod10;
       base[spec.winner] += boost;
       
-      // Reduce the other parties a bit, keep them above 1
       partyIds.forEach((pId) => {
         if (pId !== spec.winner) {
-          base[pId] = Math.max(1, base[pId] - (1 + Math.floor(Math.random() * 4)));
+          base[pId] = Math.max(1, base[pId] - (1 + mod4));
         }
       });
     }
 
-    // Normalize supports to sum to exactly 100%
     const total = Object.values(base).reduce((s, v) => s + v, 0);
     const scale = 100 / total;
     const supports: Record<string, number> = {};
@@ -482,7 +543,6 @@ const generateRegionsFromSpec = (
       supports[pId] = parseFloat((val * scale).toFixed(1));
     });
 
-    // Make sure it sums to exactly 100 by adjusting the winner
     const sum = Object.values(supports).reduce((s, v) => s + v, 0);
     if (sum !== 100) {
       const diff = parseFloat((100 - sum).toFixed(1));
@@ -494,29 +554,10 @@ const generateRegionsFromSpec = (
       }
     }
 
-    // Seed demographic distribution based on seats and random variance
-    const workers = 15 + Math.floor(Math.random() * 15);
-    const youth = 15 + Math.floor(Math.random() * 15);
-    const nationalists = 10 + Math.floor(Math.random() * 15);
-    const liberals = 10 + Math.floor(Math.random() * 12);
-    const traditionalists = 10 + Math.floor(Math.random() * 15);
-    const shopkeepers = 100 - (workers + youth + nationalists + liberals + traditionalists);
-
-    const voterDistribution = makeVoterGroup(
-      workers,
-      youth,
-      nationalists,
-      liberals,
-      traditionalists,
-      Math.max(2, shopkeepers)
-    );
+    const voterDistribution = getRealisticVoterDistribution(spec.name, countryId, spec.winner);
 
     const infrastructure = spec.seats >= 30 ? 5 : spec.seats >= 15 ? 4 : 3;
-    const normalized = spec.name.normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z]/g, '');
-    const id = `${countryId}_${normalized}`;
+    const id = spec.id || spec.name;
 
     return {
       id,
@@ -527,7 +568,7 @@ const generateRegionsFromSpec = (
       infrastructure,
       campaignLevel: 0,
       ownerPartyId: spec.winner,
-      mayorName: spec.mayorName || getDeterministicMayorName(spec.name, countryId)
+      mayorName: spec.mayorName || getPartyGovernorForRegion(spec.name, spec.winner, countryId)
     };
   });
 };
@@ -737,6 +778,130 @@ const HUNGARY_SPEC = [
   { name: 'North Hungary', seats: 34, winner: 'MHM', mayorName: 'Pál Veres' }
 ];
 
+const UK_SPEC = [
+  { name: 'North East', seats: 29, winner: 'LAB', mayorName: 'Kim McGuinness' },
+  { name: 'North West', seats: 73, winner: 'LAB', mayorName: 'Andy Burnham' },
+  { name: 'Yorkshire and The Humber', seats: 54, winner: 'LAB', mayorName: 'Tracy Brabin' },
+  { name: 'East Midlands', seats: 47, winner: 'LAB', mayorName: 'Claire Ward' },
+  { name: 'West Midlands', seats: 57, winner: 'LAB', mayorName: 'Richard Parker' },
+  { name: 'Eastern', seats: 61, winner: 'CON', mayorName: 'Peter Taylor' },
+  { name: 'London', seats: 75, winner: 'LAB', mayorName: 'Sadiq Khan' },
+  { name: 'South East', seats: 91, winner: 'CON', mayorName: 'Paul Marshall' },
+  { name: 'South West', seats: 58, winner: 'LD', mayorName: 'Dan Norris' },
+  { name: 'Scotland', seats: 57, winner: 'SNP', mayorName: 'John Swinney' },
+  { name: 'Wales', seats: 32, winner: 'LAB', mayorName: 'Eluned Morgan' }
+];
+
+const BRAZIL_SPEC = [
+  { name: 'Acre', seats: 15, winner: 'PL', mayorName: 'Gladson Cameli' },
+  { name: 'Alagoas', seats: 15, winner: 'PT', mayorName: 'Paulo Dantas' },
+  { name: 'Amapá', seats: 15, winner: 'PL', mayorName: 'Clécio Luís' },
+  { name: 'Amazonas', seats: 15, winner: 'UNIAO', mayorName: 'Wilson Lima' },
+  { name: 'Bahia', seats: 15, winner: 'PT', mayorName: 'Jerônimo Rodrigues' },
+  { name: 'Ceará', seats: 15, winner: 'PT', mayorName: 'Elmano de Freitas' },
+  { name: 'Distrito Federal', seats: 15, winner: 'MDB', mayorName: 'Ibaneis Rocha' },
+  { name: 'Espírito Santo', seats: 15, winner: 'PT', mayorName: 'Renato Casagrande' },
+  { name: 'Goiás', seats: 15, winner: 'UNIAO', mayorName: 'Ronaldo Caiado' },
+  { name: 'Maranhão', seats: 15, winner: 'PT', mayorName: 'Carlos Brandão' },
+  { name: 'Mato Grosso', seats: 15, winner: 'UNIAO', mayorName: 'Mauro Mendes' },
+  { name: 'Mato Grosso do Sul', seats: 15, winner: 'PL', mayorName: 'Eduardo Riedel' },
+  { name: 'Minas Gerais', seats: 15, winner: 'PL', mayorName: 'Romeu Zema' },
+  { name: 'Pará', seats: 15, winner: 'MDB', mayorName: 'Helder Barbalho' },
+  { name: 'Paraíba', seats: 15, winner: 'PT', mayorName: 'João Azevêdo' },
+  { name: 'Paraná', seats: 15, winner: 'PSD', mayorName: 'Ratinho Júnior' },
+  { name: 'Pernambuco', seats: 15, winner: 'PT', mayorName: 'Raquel Lyra' },
+  { name: 'Piauí', seats: 15, winner: 'PT', mayorName: 'Rafael Fonteles' },
+  { name: 'Rio de Janeiro', seats: 15, winner: 'PL', mayorName: 'Cláudio Castro' },
+  { name: 'Rio Grande do Norte', seats: 15, winner: 'PT', mayorName: 'Fátima Bezerra' },
+  { name: 'Rio Grande do Sul', seats: 15, winner: 'PT', mayorName: 'Eduardo Leite' },
+  { name: 'Rondônia', seats: 15, winner: 'UNIAO', mayorName: 'Marcos Rocha' },
+  { name: 'Roraima', seats: 15, winner: 'PP', mayorName: 'Antonio Denarium' },
+  { name: 'Santa Catarina', seats: 15, winner: 'PL', mayorName: 'Jorginho Mello' },
+  { name: 'São Paulo', seats: 15, winner: 'PL', mayorName: 'Tarcísio de Freitas' },
+  { name: 'Sergipe', seats: 15, winner: 'PSD', mayorName: 'Fábio Mitidieri' },
+  { name: 'Tocantins', seats: 15, winner: 'PL', mayorName: 'Wanderlei Barbosa' }
+];
+
+const JAPAN_SPEC = [
+  { name: 'Aichi', seats: 10, winner: 'LDP', mayorName: 'Hideaki Omura' },
+  { name: 'Akita', seats: 10, winner: 'LDP', mayorName: 'Norihisa Satake' },
+  { name: 'Aomori', seats: 10, winner: 'LDP', mayorName: 'Soichiro Miyashita' },
+  { name: 'Chiba', seats: 10, winner: 'LDP', mayorName: 'Toshihito Kumagai' },
+  { name: 'Ehime', seats: 10, winner: 'LDP', mayorName: 'Tokihiro Nakamura' },
+  { name: 'Fukui', seats: 10, winner: 'LDP', mayorName: 'Tatsuji Sugimoto' },
+  { name: 'Fukuoka', seats: 10, winner: 'LDP', mayorName: 'Seitaro Hattori' },
+  { name: 'Fukushima', seats: 10, winner: 'LDP', mayorName: 'Masao Uchibori' },
+  { name: 'Gifu', seats: 10, winner: 'LDP', mayorName: 'Hajime Furuta' },
+  { name: 'Gunma', seats: 10, winner: 'LDP', mayorName: 'Ichita Yamamoto' },
+  { name: 'Hiroshima', seats: 10, winner: 'LDP', mayorName: 'Hidehiko Yuzaki' },
+  { name: 'Hokkaido', seats: 10, winner: 'CDP', mayorName: 'Naomichi Suzuki' },
+  { name: 'Hyogo', seats: 10, winner: 'ISHIN', mayorName: 'Motohiko Saito' },
+  { name: 'Ibaraki', seats: 10, winner: 'LDP', mayorName: 'Kazuhiko Oigawa' },
+  { name: 'Ishikawa', seats: 10, winner: 'LDP', mayorName: 'Hiroshi Hase' },
+  { name: 'Iwate', seats: 10, winner: 'CDP', mayorName: 'Takuya Tasso' },
+  { name: 'Kagawa', seats: 10, winner: 'LDP', mayorName: 'Toyohito Ikeda' },
+  { name: 'Kagoshima', seats: 10, winner: 'LDP', mayorName: 'Koichi Shiota' },
+  { name: 'Kanagawa', seats: 10, winner: 'LDP', mayorName: 'Yuji Kuroiwa' },
+  { name: 'Kochi', seats: 10, winner: 'LDP', mayorName: 'Seiji Hamada' },
+  { name: 'Kumamoto', seats: 10, winner: 'LDP', mayorName: 'Takashi Kimura' },
+  { name: 'Kyoto', seats: 10, winner: 'LDP', mayorName: 'Takatoshi Nishiwaki' },
+  { name: 'Mie', seats: 10, winner: 'LDP', mayorName: 'Katsuyuki Ichimi' },
+  { name: 'Miyagi', seats: 10, winner: 'LDP', mayorName: 'Yoshihiro Murai' },
+  { name: 'Miyazaki', seats: 10, winner: 'LDP', mayorName: 'Shunji Kono' },
+  { name: 'Nagano', seats: 10, winner: 'CDP', mayorName: 'Shuichi Abe' },
+  { name: 'Nagasaki', seats: 10, winner: 'LDP', mayorName: 'Kengo Oishi' },
+  { name: 'Nara', seats: 10, winner: 'LDP', mayorName: 'Makoto Yamashita' },
+  { name: 'Niigata', seats: 10, winner: 'LDP', mayorName: 'Hideyo Hanazumi' },
+  { name: 'Oita', seats: 10, winner: 'LDP', mayorName: 'Kiichiro Sato' },
+  { name: 'Okayama', seats: 10, winner: 'LDP', mayorName: 'Ryuta Ibaragi' },
+  { name: 'Okinawa', seats: 10, winner: 'CDP', mayorName: 'Denny Tamaki' },
+  { name: 'Osaka', seats: 10, winner: 'ISHIN', mayorName: 'Hirofumi Yoshimura' },
+  { name: 'Saga', seats: 10, winner: 'LDP', mayorName: 'Yoshinori Yamaguchi' },
+  { name: 'Saitama', seats: 10, winner: 'LDP', mayorName: 'Motohiro Ono' },
+  { name: 'Shiga', seats: 10, winner: 'LDP', mayorName: 'Taizo Mikazuki' },
+  { name: 'Shimane', seats: 10, winner: 'LDP', mayorName: 'Tatsuya Maruyama' },
+  { name: 'Shizuoka', seats: 10, winner: 'LDP', mayorName: 'Yasutomo Suzuki' },
+  { name: 'Tochigi', seats: 10, winner: 'LDP', mayorName: 'Tomikazu Fukuda' },
+  { name: 'Tokushima', seats: 10, winner: 'LDP', mayorName: 'Masazumi Gotoda' },
+  { name: 'Tokyo', seats: 10, winner: 'LDP', mayorName: 'Yuriko Koike' },
+  { name: 'Tottori', seats: 10, winner: 'LDP', mayorName: 'Shinji Hirai' },
+  { name: 'Toyama', seats: 10, winner: 'LDP', mayorName: 'Hachiro Nitta' },
+  { name: 'Wakayama', seats: 10, winner: 'LDP', mayorName: 'Shuhei Kishimoto' },
+  { name: 'Yamagata', seats: 10, winner: 'LDP', mayorName: 'Mieko Yoshimura' },
+  { name: 'Yamaguchi', seats: 10, winner: 'LDP', mayorName: 'Tsugumasa Muraoka' },
+  { name: 'Yamanashi', seats: 10, winner: 'LDP', mayorName: 'Kotaro Nagasaki' }
+];
+
+const EGYPT_SPEC = [
+  { name: 'Alexandria', seats: 20, winner: 'NFP', mayorName: 'Mohamed Taher Al-Sherif' },
+  { name: 'Aswan', seats: 20, winner: 'NFP', mayorName: 'Ashraf Attia' },
+  { name: 'Asyut', seats: 20, winner: 'NFP', mayorName: 'Essam Saad' },
+  { name: 'Beheira', seats: 20, winner: 'NFP', mayorName: 'Hisham Amna' },
+  { name: 'Beni Suef', seats: 20, winner: 'NFP', mayorName: 'Mohamed Hany Ghoneim' },
+  { name: 'Cairo', seats: 20, winner: 'NFP', mayorName: 'Khaled Abdel Aal' },
+  { name: 'Dakahlia', seats: 20, winner: 'NFP', mayorName: 'Ayman Mokhtar' },
+  { name: 'Damietta', seats: 20, winner: 'NFP', mayorName: 'Manal Awad Mikhail' },
+  { name: 'Faiyum', seats: 20, winner: 'NFP', mayorName: 'Ahmed Al-Ansari' },
+  { name: 'Gharbia', seats: 20, winner: 'NFP', mayorName: 'Tarek Rahmy' },
+  { name: 'Giza', seats: 20, winner: 'NFP', mayorName: 'Ahmed Rashed' },
+  { name: 'Ismailia', seats: 20, winner: 'NFP', mayorName: 'Sherif Fahmy Bishara' },
+  { name: 'Kafr El Sheikh', seats: 20, winner: 'NFP', mayorName: 'Gamal Nour El-Din' },
+  { name: 'Luxor', seats: 20, winner: 'NFP', mayorName: 'Mustafa Al-Alham' },
+  { name: 'Matrouh', seats: 20, winner: 'NFP', mayorName: 'Khaled Shoaib' },
+  { name: 'Minya', seats: 20, winner: 'NFP', mayorName: 'Osama Al-Qady' },
+  { name: 'Monufia', seats: 20, winner: 'NFP', mayorName: 'Ibrahim Abu Limon' },
+  { name: 'New Valley', seats: 20, winner: 'NFP', mayorName: 'Mohamed Al-Zamlout' },
+  { name: 'North Sinai', seats: 20, winner: 'NFP', mayorName: 'Mohamed Shousha' },
+  { name: 'Port Said', seats: 20, winner: 'NFP', mayorName: 'Adel Ghadban' },
+  { name: 'Qalyubia', seats: 20, winner: 'NFP', mayorName: 'Abdel Hamid El-Haggan' },
+  { name: 'Qena', seats: 20, winner: 'NFP', mayorName: 'Ashraf Daoudi' },
+  { name: 'Red Sea', seats: 20, winner: 'NFP', mayorName: 'Amr Hanafy' },
+  { name: 'Sharqia', seats: 20, winner: 'NFP', mayorName: 'Mamdouh Ghorab' },
+  { name: 'Sohag', seats: 20, winner: 'NFP', mayorName: 'Tarek El-Feki' },
+  { name: 'South Sinai', seats: 20, winner: 'NFP', mayorName: 'Khaled Fouda' },
+  { name: 'Suez', seats: 20, winner: 'NFP', mayorName: 'Abdel Majeed Saqr' }
+];
+
 export const getCanadaRegions = () => generateRegionsFromSpec('CA', CANADA_SPEC, ['LIB', 'CON', 'NDP', 'BQ'], { LIB: 32, CON: 38, NDP: 18, BQ: 8 });
 export const getArgentinaRegions = () => generateRegionsFromSpec('AR', ARGENTINA_SPEC, ['LLA', 'UP', 'JXC'], { LLA: 30, UP: 36, JXC: 24 });
 export const getSouthAfricaRegions = () => generateRegionsFromSpec('ZA', SOUTH_AFRICA_SPEC, ['ANC', 'DA', 'EFF', 'MK'], { ANC: 40, DA: 21, EFF: 10, MK: 14 });
@@ -750,6 +915,10 @@ export const getAustraliaRegions = () => generateRegionsFromSpec('AU', AUSTRALIA
 export const getFranceRegions = () => generateRegionsFromSpec('FR', FRANCE_SPEC, ['RE', 'RN', 'LFI', 'PS'], { RE: 25, RN: 30, LFI: 15, PS: 15 });
 export const getRomaniaRegions = () => generateRegionsFromSpec('RO', ROMANIA_SPEC, ['PSD', 'PNL', 'AUR', 'USR'], { PSD: 30, PNL: 20, AUR: 20, USR: 15 });
 export const getHungaryRegions = () => generateRegionsFromSpec('HU', HUNGARY_SPEC, ['FIDESZ', 'TISZA', 'DK', 'MHM'], { FIDESZ: 45, TISZA: 30, DK: 8, MHM: 6 });
+export const getUKRegions = () => generateRegionsFromSpec('GB', UK_SPEC, ['LAB', 'CON', 'REF', 'LD', 'GRN', 'SNP'], { LAB: 36, CON: 25, REF: 14, LD: 12, GRN: 6, SNP: 3 });
+export const getBrazilRegions = () => generateRegionsFromSpec('BR', BRAZIL_SPEC, ['PT', 'PL', 'UNIAO', 'MDB', 'PSD', 'PP'], { PT: 30, PL: 30, UNIAO: 15, MDB: 11, PSD: 10, PP: 5 });
+export const getJapanRegions = () => generateRegionsFromSpec('JP', JAPAN_SPEC, ['LDP', 'CDP', 'KOMEITO', 'ISHIN', 'DPFP', 'JCP'], { LDP: 35, CDP: 22, KOMEITO: 10, ISHIN: 10, DPFP: 8, JCP: 6 });
+export const getEgyptRegions = () => generateRegionsFromSpec('EG', EGYPT_SPEC, ['NFP', 'RPP', 'WAFD', 'HDP', 'MEP', 'ESDP'], { NFP: 55, RPP: 12, WAFD: 8, HDP: 8, MEP: 5, ESDP: 3 });
 
 // Mock Bills for countries
 const BILL_POOL = [
@@ -870,6 +1039,29 @@ const createBills = (countryId: string): Bill[] => {
   }));
 };
 
+export const countryColors: Record<string, { default: string; completed: string; selected: string }> = {
+  TR: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' }, // Türkiye
+  US: { default: '#1d4ed8', completed: '#3b82f6', selected: '#60a5fa' }, // ABD
+  BR: { default: '#15803d', completed: '#22c55e', selected: '#4ade80' }, // Brezilya
+  DE: { default: '#7c3aed', completed: '#8b5cf6', selected: '#a78bfa' }, // Almanya
+  GB: { default: '#0e7490', completed: '#06b6d4', selected: '#22d3ee' }, // Birleşik Krallık
+  EG: { default: '#b45309', completed: '#f59e0b', selected: '#fbc02d' }, // Mısır
+  JP: { default: '#be1c5a', completed: '#ec4899', selected: '#f472b6' },
+  CA: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' },
+  AR: { default: '#1e3a8a', completed: '#3b82f6', selected: '#93c5fd' },
+  ZA: { default: '#166534', completed: '#22c55e', selected: '#86efac' },
+  IN: { default: '#c2410c', completed: '#ea580c', selected: '#fb923c' },
+  IT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
+  ID: { default: '#b91c1c', completed: '#ef4444', selected: '#f87171' },
+  MX: { default: '#064e3b', completed: '#059669', selected: '#34d399' },
+  ES: { default: '#b45309', completed: '#d97706', selected: '#fbbf24' },
+  KR: { default: '#1d4ed8', completed: '#2563eb', selected: '#60a5fa' },
+  AU: { default: '#0c4a6e', completed: '#0284c7', selected: '#38bdf8' },
+  FR: { default: '#1e40af', completed: '#2563eb', selected: '#60a5fa' },
+  RO: { default: '#d97706', completed: '#f59e0b', selected: '#fbbf24' }, // Romanya
+  HU: { default: '#047857', completed: '#10b981', selected: '#34d399' }  // Macaristan
+};
+
 export const PLAYABLE_COUNTRIES: Country[] = [
   {
     id: 'FR',
@@ -883,7 +1075,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     primaryColor: '#002654',
     rivals: [
       { id: 'RE', name: 'Renaissance', leader: 'Emmanuel Macron', ideology: 'Centrist', symbol: 'Globe', color: '#facc15', baseSupport: 25 },
-      { id: 'RN', name: 'National Rally', leader: 'Marine Le Pen', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#0f172a', baseSupport: 30 },
+      { id: 'RN', name: 'National Rally', leader: 'Marine Le Pen', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#1e40af', baseSupport: 30 },
       { id: 'LFI', name: 'France Unbowed', leader: 'Jean-Luc Mélenchon', ideology: 'Socialist', symbol: 'Sparkles', color: '#ef4444', baseSupport: 15 },
       { id: 'PS', name: 'Socialist Party', leader: 'Olivier Faure', ideology: 'Social Democrat', symbol: 'Heart', color: '#ec4899', baseSupport: 15 }
     ],
@@ -1236,19 +1428,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'GRN', name: 'Green Party', leader: 'Carla Denyer', ideology: 'Ecologist', symbol: 'Leaf', color: '#02A95B', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Carla_Denyer_May_2024.jpg/250px-Carla_Denyer_May_2024.jpg' },
       { id: 'SNP', name: 'SNP', leader: 'John Swinney', ideology: 'Social Democrat', symbol: 'Flag', color: '#FDF38E', baseSupport: 3, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/John_Swinney_Official_Portrait.jpg/250px-John_Swinney_Official_Portrait.jpg' }
     ],
-    regions: [
-      { id: 'North East', name: 'North East', seats: 29, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'North West', name: 'North West', seats: 73, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'Yorkshire and The Humber', name: 'Yorkshire and The Humber', seats: 54, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'East Midlands', name: 'East Midlands', seats: 47, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'West Midlands', name: 'West Midlands', seats: 57, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'Eastern', name: 'Eastern', seats: 61, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CON' },
-      { id: 'London', name: 'London', seats: 75, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 5, campaignLevel: 0, ownerPartyId: 'LAB' },
-      { id: 'South East', name: 'South East', seats: 91, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 5, campaignLevel: 0, ownerPartyId: 'CON' },
-      { id: 'South West', name: 'South West', seats: 58, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LD' },
-      { id: 'Scotland', name: 'Scotland', seats: 57, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'SNP' },
-      { id: 'Wales', name: 'Wales', seats: 32, voterDistribution: makeVoterGroup(25, 20, 15, 10, 10, 20), supports: {}, infrastructure: 3, campaignLevel: 0, ownerPartyId: 'LAB' }
-    ],
+    regions: getUKRegions(),
     bills: createBills('GB'),
     campaignTurns: 53,
     electionCycleYears: 5,
@@ -1272,40 +1452,13 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'PSD', name: 'PSD', leader: 'Gilberto Kassab', ideology: 'Centrist', symbol: 'Globe', color: '#FFA500', baseSupport: 10, photo: 'https://th.bing.com/th/id/OIP.EwUpQAPDpFISnZancWJpBwHaE8?w=273&h=182&c=7&r=0&o=7&pid=1.7&rm=3' },
       { id: 'PP', name: 'Progressistas', leader: 'Ciro Nogueira', ideology: 'Conservative', symbol: 'Landmark', color: '#0057A0', baseSupport: 5, photo: 'https://th.bing.com/th/id/OIP._3KxON20q7QIRaCUhbqqKAHaE8?w=277&h=185&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
-    regions: [
-      { id: 'Acre', name: 'Acre', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Alagoas', name: 'Alagoas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Amapá', name: 'Amapá', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Amazonas', name: 'Amazonas', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Bahia', name: 'Bahia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Ceará', name: 'Ceará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Distrito Federal', name: 'Distrito Federal', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Espírito Santo', name: 'Espírito Santo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Goiás', name: 'Goiás', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Maranhão', name: 'Maranhão', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Mato Grosso', name: 'Mato Grosso', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Mato Grosso do Sul', name: 'Mato Grosso do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Minas Gerais', name: 'Minas Gerais', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Pará', name: 'Pará', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Paraíba', name: 'Paraíba', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Paraná', name: 'Paraná', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Pernambuco', name: 'Pernambuco', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Piauí', name: 'Piauí', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio de Janeiro', name: 'Rio de Janeiro', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio Grande do Norte', name: 'Rio Grande do Norte', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rio Grande do Sul', name: 'Rio Grande do Sul', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Rondônia', name: 'Rondônia', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Roraima', name: 'Roraima', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'Santa Catarina', name: 'Santa Catarina', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' },
-      { id: 'São Paulo', name: 'São Paulo', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Sergipe', name: 'Sergipe', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PT' },
-      { id: 'Tocantins', name: 'Tocantins', seats: 15, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'PL' }
-    ],
+    regions: getBrazilRegions(),
     bills: createBills('BR'),
     campaignTurns: 48,
     electionCycleYears: 4,
     termLimit: 2,
-  },  {
+  },
+  {
     id: 'JP',
     name: 'Japan',
     description: 'An aging but technologically advanced parliamentary system with strong single-party dominance.',
@@ -1323,55 +1476,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'DPFP', name: 'DPFP', leader: 'Yuichiro Tamaki', ideology: 'Centrist', symbol: 'Bird', color: '#F6B132', baseSupport: 7, photo: 'https://th.bing.com/th/id/OIP.qTp0c0jdUr7oqIqSSZyQ-gHaE7?w=239&h=187&c=7&r=0&o=7&pid=1.7&rm=3' },
       { id: 'JCP', name: 'JCP', leader: 'Tomoko Tamura', ideology: 'Communist', symbol: 'Star', color: '#DB001C', baseSupport: 6, photo: 'https://th.bing.com/th/id/OIP._SMDrNs9CjSBMW5Fl3-PbgHaF3?w=219&h=180&c=7&r=0&o=7&pid=1.7&rm=3' }
     ],
-    regions: [
-      { id: 'Aichi', name: 'Aichi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Akita', name: 'Akita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Aomori', name: 'Aomori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Chiba', name: 'Chiba', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ehime', name: 'Ehime', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukui', name: 'Fukui', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukuoka', name: 'Fukuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Fukushima', name: 'Fukushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gifu', name: 'Gifu', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Gunma', name: 'Gunma', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hiroshima', name: 'Hiroshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Hokkaido', name: 'Hokkaido', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Hyogo', name: 'Hyogo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
-      { id: 'Ibaraki', name: 'Ibaraki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Ishikawa', name: 'Ishikawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Iwate', name: 'Iwate', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Kagawa', name: 'Kagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kagoshima', name: 'Kagoshima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kanagawa', name: 'Kanagawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kochi', name: 'Kochi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kumamoto', name: 'Kumamoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Kyoto', name: 'Kyoto', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Mie', name: 'Mie', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyagi', name: 'Miyagi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Miyazaki', name: 'Miyazaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nagano', name: 'Nagano', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Nagasaki', name: 'Nagasaki', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Nara', name: 'Nara', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Niigata', name: 'Niigata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Oita', name: 'Oita', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okayama', name: 'Okayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Okinawa', name: 'Okinawa', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'CDP' },
-      { id: 'Osaka', name: 'Osaka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'ISHIN' },
-      { id: 'Saga', name: 'Saga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Saitama', name: 'Saitama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shiga', name: 'Shiga', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shimane', name: 'Shimane', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Shizuoka', name: 'Shizuoka', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tochigi', name: 'Tochigi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokushima', name: 'Tokushima', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tokyo', name: 'Tokyo', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Tottori', name: 'Tottori', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Toyama', name: 'Toyama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Wakayama', name: 'Wakayama', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamagata', name: 'Yamagata', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamaguchi', name: 'Yamaguchi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' },
-      { id: 'Yamanashi', name: 'Yamanashi', seats: 10, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 4, campaignLevel: 0, ownerPartyId: 'LDP' }
-    ],
+    regions: getJapanRegions(),
     bills: createBills('JP'),
     campaignTurns: 53,
     electionCycleYears: 4,
@@ -1394,35 +1499,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
       { id: 'MEP', name: 'Modern Egypt', leader: 'Nabil Deibis', ideology: 'Liberal', symbol: 'Briefcase', color: '#DC2626', baseSupport: 2, photo: 'https://thf.bing.com/th/id/OIP.TfX1K9wIok0lY246_n-uQwAAAA?w=197&h=196&c=7&r=0&o=7&pid=1.7' },
       { id: 'ESDP', name: 'ESDP', leader: 'Farid Zahran', ideology: 'Social Democrat', symbol: 'Compass', color: '#F97316', baseSupport: 1, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Farid_Zahran.jpg/250px-Farid_Zahran.jpg' }
     ],
-    regions: [
-      { id: 'Alexandria', name: 'Alexandria', mayorName: 'Mohamed Taher Al-Sherif', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Aswan', name: 'Aswan', mayorName: 'Ashraf Attia', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Asyut', name: 'Asyut', mayorName: 'Essam Saad', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beheira', name: 'Beheira', mayorName: 'Hisham Amna', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Beni Suef', name: 'Beni Suef', mayorName: 'Mohamed Hany Ghoneim', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Cairo', name: 'Cairo', mayorName: 'Khaled Abdel Aal', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Dakahlia', name: 'Dakahlia', mayorName: 'Ayman Mokhtar', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Damietta', name: 'Damietta', mayorName: 'Manal Awad Mikhail', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Faiyum', name: 'Faiyum', mayorName: 'Ahmed Al-Ansari', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Gharbia', name: 'Gharbia', mayorName: 'Tarek Rahmy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Giza', name: 'Giza', mayorName: 'Ahmed Rashed', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Ismailia', name: 'Ismailia', mayorName: 'Sherif Fahmy Bishara', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Kafr El Sheikh', name: 'Kafr El Sheikh', mayorName: 'Gamal Nour El-Din', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Luxor', name: 'Luxor', mayorName: 'Mustafa Al-Alham', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Matrouh', name: 'Matrouh', mayorName: 'Khaled Shoaib', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Minya', name: 'Minya', mayorName: 'Osama Al-Qady', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Monufia', name: 'Monufia', mayorName: 'Ibrahim Abu Limon', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'New Valley', name: 'New Valley', mayorName: 'Mohamed Al-Zamlout', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'North Sinai', name: 'North Sinai', mayorName: 'Mohamed Shousha', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Port Said', name: 'Port Said', mayorName: 'Adel Ghadban', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qalyubia', name: 'Qalyubia', mayorName: 'Abdel Hamid El-Haggan', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Qena', name: 'Qena', mayorName: 'Ashraf Daoudi', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Red Sea', name: 'Red Sea', mayorName: 'Amr Hanafy', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sharqia', name: 'Sharqia', mayorName: 'Mamdouh Ghorab', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Sohag', name: 'Sohag', mayorName: 'Tarek El-Feki', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'South Sinai', name: 'South Sinai', mayorName: 'Khaled Fouda', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' },
-      { id: 'Suez', name: 'Suez', mayorName: 'Abdel Majeed Saqr', seats: 20, voterDistribution: makeVoterGroup(20,20,20,20,10,10), infrastructure: 3, campaignLevel: 0, ownerPartyId: 'NFP' }
-    ],
+    regions: getEgyptRegions(),
     bills: createBills('EG'),
     campaignTurns: 53,
     electionCycleYears: 5,

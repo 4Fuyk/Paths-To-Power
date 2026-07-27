@@ -619,8 +619,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                       </div>
                       <div className="border-l border-slate-800 h-8"></div>
                       <div>
-                        <div className="text-slate-450">SEATS WON</div>
-                        <div className="text-lg font-black text-amber-500">{seatsWon[party.id]} / {country.seats}</div>
+                        <div className="text-slate-450">{winningCoalition ? 'COALITION SEATS' : 'SEATS WON'}</div>
+                        <div className="text-lg font-black text-amber-500">{winningCoalition ? winningCoalition.totalSeats : seatsWon[party.id]} / {country.seats}</div>
                       </div>
                     </div>
 

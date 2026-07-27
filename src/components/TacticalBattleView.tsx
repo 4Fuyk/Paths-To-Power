@@ -49,9 +49,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const [battleLogs, setBattleLogs] = useState<string[]>([
     'Tactical command center active! You can recruit new armies from provinces and issue attack or siege orders.'
   ]);
-  const [mapMode, setMapMode] = useState<'GIS' | 'CARDS'>(
-    (country.id === 'TR' || country.id === 'DE' || country.id === 'US' || country.id === 'BR' || country.id === 'JP' || country.id === 'EG' || country.id === 'GB') ? 'GIS' : 'CARDS'
-  );
+  const [mapMode, setMapMode] = useState<'GIS' | 'CARDS'>('GIS');
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -293,6 +291,15 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     setRecruitingProvinceId(null);
   };
 
+  const handleAttack = (targetRegionId: string) => {
+    const army = selectedArmyId ? armies.find(a => a.id === selectedArmyId) : armies[0];
+    if (army) {
+      handleOrderAssault(army.id, targetRegionId);
+    } else {
+      handleCallAirStrike(targetRegionId);
+    }
+  };
+
   const handleOrderAssault = (armyId: string, targetRegionId: string) => {
     const army = armies.find(a => a.id === armyId);
     const target = regionStatus[targetRegionId];
@@ -396,6 +403,19 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
       else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
       else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
+      else if (country.id === 'FR') { initialCenter = [46.2276, 2.2137]; initialZoom = 5.5; }
+      else if (country.id === 'RO') { initialCenter = [45.9432, 24.9668]; initialZoom = 6.2; }
+      else if (country.id === 'HU') { initialCenter = [47.1625, 19.5033]; initialZoom = 6.8; }
+      else if (country.id === 'CA') { initialCenter = [56.1304, -106.3468]; initialZoom = 3.5; }
+      else if (country.id === 'ZA') { initialCenter = [-30.5595, 22.9375]; initialZoom = 5; }
+      else if (country.id === 'IN') { initialCenter = [20.5937, 78.9629]; initialZoom = 4.2; }
+      else if (country.id === 'MX') { initialCenter = [23.6345, -102.5528]; initialZoom = 4.5; }
+      else if (country.id === 'ES') { initialCenter = [40.4637, -3.7492]; initialZoom = 5.8; }
+      else if (country.id === 'AU') { initialCenter = [-25.2744, 133.7751]; initialZoom = 3.8; }
+      else if (country.id === 'IT') { initialCenter = [41.8719, 12.5674]; initialZoom = 5.8; }
+      else if (country.id === 'ID') { initialCenter = [-0.7893, 113.9213]; initialZoom = 4.2; }
+      else if (country.id === 'KR') { initialCenter = [35.9078, 127.7669]; initialZoom = 6.5; }
+      else if (country.id === 'AR') { initialCenter = [-38.4161, -63.6167]; initialZoom = 3.8; }
 
       const map = L.map(mapContainerRef.current, {
         center: initialCenter,
@@ -416,32 +436,31 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   // Fetch GeoJSON and apply it
   useEffect(() => {
     if (mapMode !== 'GIS') return;
-    if (country.id === 'TR') {
-      fetch('https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'DE') {
-      fetch('https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'US') {
-      fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'BR') {
-      fetch('https://code.highcharts.com/mapdata/countries/br/br-all.geo.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'JP') {
-      fetch('https://code.highcharts.com/mapdata/countries/jp/jp-all.geo.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'EG') {
-      fetch('https://code.highcharts.com/mapdata/countries/eg/eg-all.geo.json')
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
-    } else if (country.id === 'GB') {
-      fetch('https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json')
+    const geojsonMapUrls: Record<string, string> = {
+      TR: 'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json',
+      DE: 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json',
+      US: 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
+      BR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson',
+      JP: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson',
+      EG: '/egypt-provinces.geojson',
+      GB: 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json',
+      CA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson',
+      ZA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson',
+      IN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/india.geojson',
+      MX: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/mexico.geojson',
+      ES: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson',
+      AU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/australia.geojson',
+      IT: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson',
+      ID: 'https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson',
+      KR: 'https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json',
+      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson',
+      FR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson',
+      RO: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson',
+      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson'
+    };
+
+    if (geojsonMapUrls[country.id]) {
+      fetch(geojsonMapUrls[country.id])
         .then(res => res.json())
         .then(setGeoJsonData).catch(console.error);
     }

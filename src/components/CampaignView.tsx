@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import { Country, Region, Party, VoterGroup, SpeechCard, SpeechChoice } from '../types';
 import { SPEECH_CARDS_POOL, getDeterministicMayorName } from '../constants/countries';
+import { getPartyGovernorForRegion, syncRegionOwnersAndMayors } from '../utils/mayorUtils';
 import { 
   Megaphone, MapPin, Coins, Users, Landmark, 
   HelpCircle, BarChart3, ChevronRight, CheckCircle, Flame,
@@ -156,7 +157,8 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
        if (!fName) return;
        
        const normName = normalizeName(fName);
-       const regionId = getRegionIdFromNormalizedName(normName, country.id) || normName;
+       const regionId = getRegionIdFromNormalizedName(normName, country.id);
+       if (!regionId) return; // Do NOT add unmapped sea/ocean features as regions!
        
        const exists = newRegions.find(r => r.id === regionId || normalizeName(r.id) === normName || normalizeName(r.name) === normName);
        
@@ -1413,8 +1415,8 @@ const getPolygonCenter = (feat: any) => {
     if (country.id !== 'TR') return;
     
     const provinceUrls = [
-      'https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json',
-      'https://raw.githubusercontent.com/AlexArapoglu/Turkey-City-and-District-Level-Map-GeoJSON/main/geoBoundaries-TUR-ADM1_simplified.json'
+      'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json',
+      'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json'
     ];
 
     const tryFetchProvinces = async () => {
@@ -1498,7 +1500,10 @@ const getPolygonCenter = (feat: any) => {
       IT: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson',
       ID: 'https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson',
       KR: 'https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json',
-      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson'
+      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson',
+      FR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson',
+      RO: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson',
+      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson'
     };
 
     if (!geojsonMapUrls[country.id]) return;
@@ -1673,7 +1678,7 @@ const getPolygonCenter = (feat: any) => {
 
   // Main Turkey/Germany Leaflet map builder and sync
   useEffect(() => {
-    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR'];
+    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR', 'FR', 'RO', 'HU'];
     if (!supportedCountries.includes(country.id) || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
@@ -1688,26 +1693,33 @@ const getPolygonCenter = (feat: any) => {
       else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
       else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
       else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
+      else if (country.id === 'FR') { initialCenter = [46.2276, 2.2137]; initialZoom = 5.5; }
+      else if (country.id === 'RO') { initialCenter = [45.9432, 24.9668]; initialZoom = 6.2; }
+      else if (country.id === 'HU') { initialCenter = [47.1625, 19.5033]; initialZoom = 6.8; }
       
       let mapOptions: any = {
+        center: initialCenter,
+        zoom: initialZoom,
+        minZoom: 2.0,
+        maxZoom: 18,
         zoomSnap: 0.1,
         zoomDelta: 0.5,
         zoomControl: false,
         attributionControl: false,
         maxBoundsViscosity: 1.0,
-        maxBounds: [[-90, -180], [90, 180]],
+        maxBounds: [[-85, -180], [85, 180]],
         worldCopyJump: false,
       };
       const map = L.map(turkeyMapRef.current, mapOptions);
 
-      const tileUrl = darkMode
-        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}'
-        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+      const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
       const tiles = L.tileLayer(tileUrl, {
         subdomains: 'abcd',
         maxZoom: 18,
+        maxNativeZoom: 13,
         noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
         className: 'base-map-tile'
       }).addTo(map);
       turkeyTileLayerRef.current = tiles;
@@ -1719,15 +1731,31 @@ const getPolygonCenter = (feat: any) => {
 
       const terrainUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
       const terrain = L.tileLayer(terrainUrl, {
-        opacity: darkMode ? 0.35 : 0.35,
+        opacity: darkMode ? 0.16 : 0.22,
         maxZoom: 18,
+        maxNativeZoom: 13,
         noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
         pane: 'terrainPane',
         className: darkMode ? 'terrain-tile-dark' : 'terrain-tile'
       }).addTo(map);
       turkeyTerrainLayerRef.current = terrain;
 
       turkeyMapInstanceRef.current = map;
+    } else {
+      if (turkeyTerrainLayerRef.current) {
+        turkeyTerrainLayerRef.current.setOpacity(darkMode ? 0.16 : 0.22);
+        const container = turkeyTerrainLayerRef.current.getContainer();
+        if (container) {
+          if (darkMode) {
+            container.classList.remove('terrain-tile');
+            container.classList.add('terrain-tile-dark');
+          } else {
+            container.classList.remove('terrain-tile-dark');
+            container.classList.add('terrain-tile');
+          }
+        }
+      }
     }
 
     const map = turkeyMapInstanceRef.current;
@@ -1778,7 +1806,7 @@ const getPolygonCenter = (feat: any) => {
     } catch (e) {}
     try {
       map.eachLayer((layer) => {
-        if (layer !== turkeyTileLayerRef.current) {
+        if (layer !== turkeyTileLayerRef.current && layer !== turkeyTerrainLayerRef.current) {
           try {
             if (layer.unbindTooltip) layer.unbindTooltip();
             if (layer.unbindPopup) layer.unbindPopup();
@@ -1906,10 +1934,25 @@ const getPolygonCenter = (feat: any) => {
         }
       }
 
-      if (worldGeoJsonData) {
-        worldBgLayerRef.current = L.geoJSON(worldGeoJsonData, {
-          style: (feature) => {
-            return { fillColor: darkMode ? "#1e293b" : "#e2e8f0", color: "#ffffff", weight: 1.0, opacity: 1.0, fillOpacity: 0.88, interactive: false };
+      if (worldGeoJsonData && worldGeoJsonData.features) {
+        const filteredFeatures = worldGeoJsonData.features.filter((f: any) => {
+          const fName = String(f?.properties?.name || f?.properties?.NAME || f?.id || '').toLowerCase();
+          if (country.id === 'TR' && (fName.includes('turkey') || fName.includes('turkiye') || f?.id === 'TUR')) return false;
+          if (country.id === 'DE' && (fName.includes('germany') || f?.id === 'DEU')) return false;
+          if (country.id === 'US' && (fName.includes('united states') || fName.includes('usa') || f?.id === 'USA')) return false;
+          return true;
+        });
+
+        worldBgLayerRef.current = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures } as any, {
+          style: () => {
+            return {
+              fillColor: darkMode ? "#0f172a" : "#cbd5e1",
+              color: darkMode ? "#1e293b" : "#94a3b8",
+              weight: 0.8,
+              opacity: 0.8,
+              fillOpacity: 0.85,
+              interactive: false
+            };
           }
         }).addTo(map);
       }
@@ -2211,7 +2254,7 @@ const getPolygonCenter = (feat: any) => {
           layer.bindTooltip(`
             <div class="p-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
               <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-              <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getDeterministicMayorName(reg.name, country.id)}</strong></div>
+              <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getPartyGovernorForRegion(reg.name, reg.ownerPartyId, country.id, party, country.rivals)}</strong></div>
               <div class="mt-1 pt-1 border-t border-slate-800/40">
                 ${rivalHtmlList}
               </div>
@@ -2293,7 +2336,7 @@ const getPolygonCenter = (feat: any) => {
         marker.bindTooltip(`
           <div class="p-1 px-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
             <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getDeterministicMayorName(reg.name, country.id)}</strong></div>
+            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getPartyGovernorForRegion(reg.name, reg.ownerPartyId, country.id, party, country.rivals)}</strong></div>
             <div class="mt-1 pt-1 border-t border-slate-800/40">
               ${rivalHtmlList}
             </div>
@@ -2696,7 +2739,7 @@ const getPolygonCenter = (feat: any) => {
         }
       `}</style>
       {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY, GERMANY, OR USA) */}
-      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR'].includes(country.id)) && (
+      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR', 'FR', 'RO', 'HU'].includes(country.id)) && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>
@@ -3181,9 +3224,36 @@ const getPolygonCenter = (feat: any) => {
                     <span className="text-[10px] text-slate-400 font-mono uppercase block">
                       {country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Local Mayor'}
                     </span>
-                    <strong className="text-xs text-slate-200">
-                      {selectedRegion.mayorName || getDeterministicMayorName(selectedRegion.name, country.id)}
-                    </strong>
+                    <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold border" style={{
+                        backgroundColor: (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') ? party.color + '22' : getRivalColor(selectedRegion.ownerPartyId) + '22',
+                        color: (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') ? party.color : getRivalColor(selectedRegion.ownerPartyId),
+                        borderColor: (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') ? party.color + '44' : getRivalColor(selectedRegion.ownerPartyId) + '44'
+                      }}>
+                        {selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party' ? party.name : (country.rivals.find(r => r.id === selectedRegion.ownerPartyId)?.name || selectedRegion.ownerPartyId)}
+                      </span>
+                      <strong className="text-xs text-slate-200">
+                        {selectedRegion.mayorName || getPartyGovernorForRegion(selectedRegion.name, selectedRegion.ownerPartyId, country.id, party, country.rivals)}
+                      </strong>
+                      {(selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') && (
+                        <button
+                          onClick={() => {
+                            const newName = prompt("Partinizin bu bölgedeki Belediye Başkanı / Vali adayının adını girin:", selectedRegion.mayorName || "");
+                            if (newName && newName.trim()) {
+                              const updatedRegions = country.regions.map(r => 
+                                r.id === selectedRegion.id ? { ...r, mayorName: newName.trim() } : r
+                              );
+                              onUpdateCountry({ ...country, regions: updatedRegions });
+                              setSelectedRegion({ ...selectedRegion, mayorName: newName.trim() });
+                            }
+                          }}
+                          className="px-1.5 py-0.5 hover:bg-indigo-500/20 rounded text-indigo-400 text-[10px] font-mono border border-indigo-500/30 transition-colors"
+                          title="Belediye Başkanını Değiştir / Atama Yap"
+                        >
+                          ✏️ Atama
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
