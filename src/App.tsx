@@ -8,6 +8,7 @@ import { Country, Party, MinisterCandidate, Coalition } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
 import { ALL_PRESS_QUESTIONS } from './constants/pressQuestions';
 import { ThemeToggle } from './components/ThemeToggle';
+import { StartScreen } from './components/StartScreen';
 import { WorldMap } from './components/WorldMap';
 import { PartyCreator } from './components/PartyCreator';
 import { CampaignView } from './components/CampaignView';
@@ -1304,64 +1305,12 @@ export default function App() {
       {/* Main Container screen routers */}
       <main className="py-2">
         {activeScreen === 'START_SCREEN' && (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] relative overflow-hidden">
-            {/* Background Map Placeholder or abstract design */}
-            <div className="absolute inset-0 z-0 opacity-10">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-500/30 via-transparent to-transparent"></div>
-            </div>
-            
-            <div className="z-10 flex flex-col items-center justify-center p-8 max-w-2xl text-center space-y-12">
-              <div className="space-y-4 relative">
-                <span className="text-[12px] tracking-[0.3em] font-mono text-slate-500 font-bold block">GLOBAL ELECTION SIMULATOR</span>
-                
-                <div className="relative inline-block">
-                  {/* Boot footprint cutout effect using an SVG overlay */}
-                  <div className="absolute inset-0 z-10 flex items-center justify-center opacity-30 pointer-events-none transform -rotate-12 scale-150 mix-blend-multiply dark:mix-blend-color-burn">
-                     <svg viewBox="0 0 100 100" fill="currentColor" className="w-40 h-40 text-slate-900 dark:text-slate-950">
-                        <path d="M30 70 Q 40 85 50 85 Q 60 85 65 70 Q 75 55 65 40 Q 60 25 50 20 Q 40 25 35 40 Q 25 55 30 70 Z" />
-                        <path d="M50 85 Q 45 95 50 100 Q 55 95 50 85 Z" />
-                        {/* Boot tread marks */}
-                        <rect x="35" y="30" width="30" height="5" />
-                        <rect x="35" y="45" width="30" height="5" />
-                        <rect x="35" y="60" width="30" height="5" />
-                        <rect x="42" y="75" width="16" height="4" />
-                     </svg>
-                  </div>
-                  
-                  <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text font-mono relative z-0" 
-                      style={{
-                        backgroundImage: "url('https://www.transparenttextures.com/patterns/stardust.png'), linear-gradient(to bottom right, #94a3b8, #475569, #334155)",
-                        backgroundSize: "auto, cover",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent"
-                      }}>
-                    PATHS TO POWER
-                  </h1>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4 w-full max-w-sm justify-center pt-8 mx-auto">
-                <button
-                  onClick={() => { playSound('click'); setActiveScreen('MAP'); }}
-                  className="w-full px-12 py-5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-200 dark:hover:bg-white dark:text-slate-900 text-white font-black rounded-xl shadow-xl shadow-slate-900/20 transition-all text-xl uppercase tracking-widest border border-slate-700 dark:border-slate-300 hover:scale-[1.02]"
-                >
-                  PLAY
-                </button>
-                <button
-                  onClick={() => { playSound('click'); /* Optional Settings Logic */ }}
-                  className={`w-full px-8 py-4 font-bold rounded-xl transition-all text-lg border uppercase tracking-wider hover:scale-[1.02] ${darkMode ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  SETTINGS
-                </button>
-                <button
-                  onClick={() => { playSound('click'); /* Optional Languages Logic */ }}
-                  className={`w-full px-8 py-4 font-bold rounded-xl transition-all text-lg border uppercase tracking-wider hover:scale-[1.02] ${darkMode ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  LANGUAGES
-                </button>
-              </div>
-            </div>
-          </div>
+          <StartScreen
+            darkMode={darkMode}
+            onPlay={() => { playSound('click'); setActiveScreen('MAP'); }}
+            onSettings={() => { playSound('click'); }}
+            onLanguages={() => { playSound('click'); }}
+          />
         )}
 
         {activeScreen === 'MAP' && (
