@@ -26,7 +26,7 @@ import { MilitaryView } from './components/MilitaryView';
 import { 
   Landmark, Megaphone, Users, Award, Calendar, 
   Coins, HelpCircle, RefreshCw, LogOut, CheckCircle, Info, X, Play,
-  Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield
+  Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield, Home
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
 import { syncRegionOwnersAndMayors } from './utils/mayorUtils';
@@ -1258,6 +1258,25 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {activeScreen !== 'START_SCREEN' && (
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setActiveScreen('START_SCREEN');
+                  setSelectedCountry(null);
+                  setPlayerParty(null);
+                }}
+                className={`p-2 px-3 rounded-xl transition-all duration-300 flex items-center justify-center border text-xs font-bold gap-1.5 ${
+                  darkMode
+                    ? 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'
+                }`}
+                title="Return to Main Menu"
+              >
+                <Home className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">Main Menu</span>
+              </button>
+            )}
+
             {/* Play Guide */}
             <button
               id="how-to-play-toggle"
