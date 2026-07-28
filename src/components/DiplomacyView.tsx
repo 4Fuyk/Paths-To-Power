@@ -23,7 +23,21 @@ const countryCoords: Record<string, [number, number]> = {
   MX: [23.634, -102.552],
   ES: [40.463, -3.749],
   KR: [35.907, 127.766],
-  AU: [-25.274, 133.775]
+  AU: [-25.274, 133.775],
+  RU: [61.524, 105.318],
+  UA: [48.379, 31.165],
+  IL: [31.046, 34.851],
+  PS: [31.952, 35.233],
+  CN: [35.861, 104.195],
+  TW: [23.697, 120.960],
+  FR: [46.227, 2.213],
+  RO: [45.943, 24.966],
+  HU: [47.162, 19.503],
+  SA: [23.885, 45.079],
+  IR: [32.427, 53.688],
+  PL: [51.919, 19.145],
+  GR: [39.074, 21.824],
+  SE: [60.128, 18.643]
 };
 
 interface DiplomacyViewProps {
@@ -102,17 +116,22 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
   const getPlayableCountryIdFromFeature = (feature: any): string | null => {
     if (!feature) return null;
-    const id3 = feature.id || feature.properties?.iso_a3 || feature.properties?.adm0_a3;
-    const id2 = feature.properties?.iso_a2 || feature.properties?.wb_a2;
-    const name = (feature.properties?.name || '').toLowerCase();
-
-    if (id2 && countryCoords[id2]) return id2;
+    const id3 = String(feature.id || feature.properties?.iso_a3 || feature.properties?.ISO_A3 || feature.properties?.adm0_a3 || '').toUpperCase();
+    const id2 = String(feature.properties?.iso_a2 || feature.properties?.ISO_A2 || feature.properties?.wb_a2 || '').toUpperCase();
+    const name = String(feature.properties?.name || feature.properties?.NAME || '').toLowerCase();
 
     const a3ToA2: Record<string, string> = {
       USA: 'US', TUR: 'TR', DEU: 'DE', GBR: 'GB', EGY: 'EG', BRA: 'BR', JPN: 'JP',
       CAN: 'CA', ARG: 'AR', ZAF: 'ZA', IND: 'IN', ITA: 'IT', IDN: 'ID', MEX: 'MX',
-      ESP: 'ES', KOR: 'KR', AUS: 'AU', FRA: 'FR', ROU: 'RO', HUN: 'HU'
+      ESP: 'ES', KOR: 'KR', AUS: 'AU', FRA: 'FR', ROU: 'RO', HUN: 'HU', RUS: 'RU',
+      UKR: 'UA', ISR: 'IL', PSE: 'PS', CHN: 'CN', TWN: 'TW', SAU: 'SA', IRN: 'IR',
+      POL: 'PL', GRC: 'GR', SWE: 'SE', NOR: 'NO', FIN: 'FI', NLD: 'NL', BEL: 'BE',
+      CHE: 'CH', AUT: 'AT', PRT: 'PT', IRL: 'IE', DNK: 'DK', CZE: 'CZ', SVK: 'SK',
+      BGR: 'BG', HRV: 'HR', SRB: 'RS', AZE: 'AZ', PAK: 'PK', SYR: 'SY', IRQ: 'IQ',
+      QAT: 'QA', ARE: 'AE', NZL: 'NZ'
     };
+
+    if (id2 && id2.length === 2 && id2 !== '-9') return id2;
     if (id3 && a3ToA2[id3]) return a3ToA2[id3];
 
     if (name.includes('united states') || name.includes('america')) return 'US';
@@ -132,9 +151,21 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     if (name.includes('spain')) return 'ES';
     if (name.includes('korea')) return 'KR';
     if (name.includes('australia')) return 'AU';
+    if (name.includes('russia')) return 'RU';
+    if (name.includes('ukraine')) return 'UA';
+    if (name.includes('israel')) return 'IL';
+    if (name.includes('palestine')) return 'PS';
+    if (name.includes('china')) return 'CN';
+    if (name.includes('taiwan')) return 'TW';
     if (name.includes('france')) return 'FR';
-    if (name.includes('romania')) return 'RO';
-    if (name.includes('hungary')) return 'HU';
+    if (name.includes('saudi arabia')) return 'SA';
+    if (name.includes('iran')) return 'IR';
+    if (name.includes('poland')) return 'PL';
+    if (name.includes('greece')) return 'GR';
+    if (name.includes('sweden')) return 'SE';
+
+    if (id3 && id3.length === 3) return id3.substring(0, 2);
+    if (id2 && id2.length >= 2) return id2.substring(0, 2);
 
     return null;
   };
@@ -538,36 +569,50 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       IL: 'Israel',
       PS: 'Palestine',
       CN: 'China',
-      TW: 'Taiwan'
+      TW: 'Taiwan',
+      FR: 'France',
+      RO: 'Romania',
+      HU: 'Hungary',
+      SA: 'Saudi Arabia',
+      IR: 'Iran',
+      PL: 'Poland',
+      GR: 'Greece',
+      SE: 'Sweden',
+      NO: 'Norway',
+      FI: 'Finland',
+      NL: 'Netherlands',
+      BE: 'Belgium',
+      CH: 'Switzerland',
+      AT: 'Austria',
+      PT: 'Portugal',
+      IE: 'Ireland',
+      DK: 'Denmark',
+      CZ: 'Czechia',
+      SK: 'Slovakia',
+      BG: 'Bulgaria',
+      HR: 'Croatia',
+      RS: 'Serbia',
+      AZ: 'Azerbaijan',
+      PK: 'Pakistan',
+      SY: 'Syria',
+      IQ: 'Iraq',
+      QA: 'Qatar',
+      AE: 'United Arab Emirates',
+      NZ: 'New Zealand'
     };
     return list[id] || id;
   };
 
   const getCountryFlag = (id: string) => {
     const list: Record<string, string> = {
-      US: '🇺🇸',
-      BR: '🇧🇷',
-      GB: '🇬🇧',
-      DE: '🇩🇪',
-      TR: '🇹🇷',
-      EG: '🇪🇬',
-      JP: '🇯🇵',
-      CA: '🇨🇦',
-      AR: '🇦🇷',
-      ZA: '🇿🇦',
-      IN: '🇮🇳',
-      IT: '🇮🇹',
-      ID: '🇮🇩',
-      MX: '🇲🇽',
-      ES: '🇪🇸',
-      KR: '🇰🇷',
-      AU: '🇦🇺',
-      RU: '🇷🇺',
-      UA: '🇺🇦',
-      IL: '🇮🇱',
-      PS: '🇵🇸',
-      CN: '🇨🇳',
-      TW: '🇹🇼'
+      US: '🇺🇸', BR: '🇧🇷', GB: '🇬🇧', DE: '🇩🇪', TR: '🇹🇷', EG: '🇪🇬', JP: '🇯🇵',
+      CA: '🇨🇦', AR: '🇦🇷', ZA: '🇿🇦', IN: '🇮🇳', IT: '🇮🇹', ID: '🇮🇩', MX: '🇲🇽',
+      ES: '🇪🇸', KR: '🇰🇷', AU: '🇦🇺', RU: '🇷🇺', UA: '🇺🇦', IL: '🇮🇱', PS: '🇵🇸',
+      CN: '🇨🇳', TW: '🇹🇼', FR: '🇫🇷', RO: '🇷🇴', HU: '🇭🇺', SA: '🇸🇦', IR: '🇮🇷',
+      PL: '🇵🇱', GR: '🇬🇷', SE: '🇸🇪', NO: '🇳🇴', FI: '🇫🇮', NL: '🇳🇱', BE: '🇧🇪',
+      CH: '🇨🇭', AT: '🇦🇹', PT: '🇵🇹', IE: '🇮🇪', DK: '🇩🇰', CZ: '🇨🇿', SK: '🇸🇰',
+      BG: '🇧🇬', HR: '🇭🇷', RS: '🇷🇸', AZ: '🇦🇿', PK: '🇵🇰', SY: '🇸🇾', IQ: '🇮🇶',
+      QA: '🇶🇦', AE: '🇦🇪', NZ: '🇳🇿'
     };
     return list[id] || '🌐';
   };
@@ -900,11 +945,100 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                 </div>
               )}
 
-              <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
-                 <div className="bg-slate-900/95 backdrop-blur border border-slate-700/50 p-3 rounded-xl shadow-xl flex flex-col gap-1">
-                   <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-indigo-400 font-bold" /> Co-Op GIS Operations Map</span>
-                   <span className="text-[10px] text-slate-400 max-w-xs">Click on any Country Hub Node to manage bilateral foreign actions and defense treaties.</span>
-                 </div>
+              {/* Bottom-Left Map Legend (Renk Kodları Karşılığı) */}
+              <div className="absolute bottom-3 left-3 z-20 pointer-events-auto max-w-[250px]">
+                <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/70 p-2.5 rounded-xl shadow-2xl flex flex-col gap-1.5 text-white">
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-700/50 pb-1">
+                    <span className="text-[10px] text-indigo-300 font-extrabold uppercase tracking-wider flex items-center gap-1">
+                      <Globe className="w-3 h-3 text-indigo-400" /> RENK KODLARI
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400 font-bold">{mapMode}</span>
+                  </div>
+
+                  {mapMode === 'RELATIONS' && (
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 border border-emerald-300/40" />
+                        <span className="text-slate-200 truncate">HQ / İttifak</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 border border-cyan-300/40" />
+                        <span className="text-slate-200 truncate">Savunma Paktı</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 border border-amber-200/40" />
+                        <span className="text-slate-200 truncate">Saldırmazlık</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 border border-rose-300/40" />
+                        <span className="text-slate-200 truncate">Savaş Halinde</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0 border border-amber-300/40" />
+                        <span className="text-slate-200 truncate">Yaptırımlı</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0 border border-slate-300/40" />
+                        <span className="text-slate-200 truncate">Nötr İlişki</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {mapMode === 'IDEOLOGY' && (
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                        <span className="text-slate-200">Sol / Sosyalist</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-900 shrink-0" />
+                        <span className="text-slate-200">Sağ / Muhafazakar</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="text-slate-200">Liberal / Merkez</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-slate-200">Yeşil / Ekolojist</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {mapMode === 'FREEDOM' && (
+                    <div className="grid grid-cols-1 gap-1 text-[9px] font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-slate-200">Yüksek Özgürlük (&gt;80)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="text-slate-200">Orta Özgürlük (50-80)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                        <span className="text-slate-200">Düşük Özgürlük (&lt;50)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {mapMode === 'WARS' && (
+                    <div className="grid grid-cols-1 gap-1 text-[9px] font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                        <span className="text-slate-200">Aktif Savaş Bölgesi</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-600 shrink-0" />
+                        <span className="text-slate-200">Barışçıl / Taraf Olmayan</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-1 border-t border-slate-800 text-[8.5px] text-slate-400 italic">
+                    Ayrıntılı diplomatik eylemler için haritada ülkeye tıklayın.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -912,8 +1046,8 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
           {/* Active Focused Diplomatic Controls Card */}
           {(() => {
             const id = selectedMapCountryId;
-            const rel = diplomaticRelations[id];
-            if (!rel) return null;
+            const isSelf = id === country.id;
+            const rel = diplomaticRelations[id] || { status: 'Neutral', opinion: 50 };
             const hasCB = casusBelli[id];
 
             return (
