@@ -149,7 +149,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
 
         <div className="relative select-none">
           <h1
-            className={`ptp-title-scuff text-6xl md:text-8xl font-black tracking-tighter font-mono leading-[0.95] ${
+            className={`ptp-title-scuff text-5xl md:text-6xl font-black tracking-tighter font-mono leading-[0.95] ${
               darkMode ? 'text-slate-100' : 'text-slate-800'
             }`}
           >
@@ -160,7 +160,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
 
           <svg
             viewBox="0 0 220 140"
-            className="absolute -right-6 -bottom-8 w-40 md:w-56 rotate-[-16deg] pointer-events-none"
+            className="absolute -right-4 -bottom-6 w-32 md:w-44 rotate-[-16deg] pointer-events-none"
             style={{ mixBlendMode: darkMode ? 'screen' : 'multiply' }}
           >
             <circle

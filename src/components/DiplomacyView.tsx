@@ -490,41 +490,25 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   }>(() => {
     const conflictPool = [
       {
-        countryA: 'TR',
-        countryB: 'EG',
-        description: 'Eastern Mediterranean natural gas exploration rights and maritime boundary tensions.'
+        countryA: 'RU',
+        countryB: 'UA',
+        description: 'Territorial invasion and sovereignty defense in Eastern Europe.'
       },
       {
-        countryA: 'US',
-        countryB: 'DE',
-        description: 'NATO military spending and automotive trade tariff tensions.'
+        countryA: 'IL',
+        countryB: 'PS',
+        description: 'Intense regional conflict over territorial sovereignty and security.'
       },
       {
-        countryA: 'GB',
-        countryB: 'DE',
-        description: 'North Sea fishing quotas and trade restrictions dispute.'
-      },
-      {
-        countryA: 'US',
-        countryB: 'JP',
-        description: 'Semiconductor chip production sharing and tech export blockades competition.'
-      },
-      {
-        countryA: 'BR',
-        countryB: 'US',
-        description: 'Amazon basin environmental regulations and agricultural food import tariffs tension.'
-      },
-      {
-        countryA: 'EG',
-        countryB: 'GB',
-        description: 'Suez Canal cargo transit fees and historical artifact return lawsuit dispute.'
+        countryA: 'CN',
+        countryB: 'TW',
+        description: 'Cross-strait tensions regarding political status and international recognition.'
       }
     ];
 
     // Pick a conflict that does not include the player's own nation if possible
     const available = conflictPool.filter(c => c.countryA !== country.id && c.countryB !== country.id);
     const chosen = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : conflictPool[0];
-
     return {
       countryA: chosen.countryA,
       countryB: chosen.countryB,
@@ -551,7 +535,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       MX: 'Mexico',
       ES: 'Spain',
       KR: 'South Korea',
-      AU: 'Australia'
+      AU: 'Australia',
+      RU: 'Russia',
+      UA: 'Ukraine',
+      IL: 'Israel',
+      PS: 'Palestine',
+      CN: 'China',
+      TW: 'Taiwan'
     };
     return list[id] || id;
   };
@@ -574,7 +564,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       MX: '🇲🇽',
       ES: '🇪🇸',
       KR: '🇰🇷',
-      AU: '🇦🇺'
+      AU: '🇦🇺',
+      RU: '🇷🇺',
+      UA: '🇺🇦',
+      IL: '🇮🇱',
+      PS: '🇵🇸',
+      CN: '🇨🇳',
+      TW: '🇹🇼'
     };
     return list[id] || '🌐';
   };
