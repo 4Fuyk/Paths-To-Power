@@ -57,27 +57,13 @@ const ROUTES: [number, number, number, number][] = [
   [823.3, 139.2, 914.2, 348.1],
 ];
 
-const RAW_BASE = 'https://raw.githubusercontent.com/aourednik/historical-basemaps/master/geojson/';
-
-interface Epoch { file: string; label: string; }
-
-const EPOCHS: Epoch[] = [
-  { file: 'world_bc2000.geojson', label: 'M.Ö. 2000 — Tunç Çağı' },
-  { file: 'world_bc1000.geojson', label: 'M.Ö. 1000 — Demir Çağı' },
-  { file: 'world_bc500.geojson', label: 'M.Ö. 500 — Antik Uygarlıklar' },
-  { file: 'world_bc1.geojson', label: 'M.Ö. 1 — Roma Cumhuriyeti' },
-  { file: 'world_100.geojson', label: 'M.S. 100 — Roma İmparatorluğu' },
-  { file: 'world_500.geojson', label: 'M.S. 500 — Kavimler Göçü' },
-];
-const TOTAL_SLOTS = EPOCHS.length + 1;
-const TODAY_SLOT = EPOCHS.length;
-const SLOT_MS = 4800;
+const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
 
 function project(lon: number, lat: number): [number, number] {
   return [((lon + 180) / 360) * 1000, ((90 - lat) / 180) * 500];
 }
 
-function ringToPath(ring: number[][], stride: number): string {
+function ringToPath(ring: number[][], stride: number = 2): string {
   const pts = ring.filter((_, i) => i % stride === 0);
   if (pts.length < 3) return '';
   return 'M ' + pts.map((c) => project(c[0], c[1]).map((n) => n.toFixed(1)).join(',')).join(' L ') + ' Z';
@@ -103,58 +89,21 @@ function featurePaths(feature: any, stride: number): string[] {
   return out;
 }
 
-const PALETTE = ['#b3432f', '#c9a26a', '#5b7c99', '#6b8e5a', '#9b6b9e', '#c97b4a', '#4a7c8c', '#a85c5c', '#7a8c4a', '#8c5a7c'];
-function colourFor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
-
-interface RegionShape { name: string; color: string; d: string[] }
-
-const epochCache = new Map<string, RegionShape[]>();
-
-function useEpoch(file: string | null): RegionShape[] | null {
-  const [data, setData] = useState<RegionShape[] | null>(file ? epochCache.get(file) ?? null : null);
-
-  useEffect(() => {
-    if (!file) return;
-    const cached = epochCache.get(file);
-    if (cached) {
-      setData(cached);
-      return;
-    }
-    let cancelled = false;
-    fetch(RAW_BASE + file)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((geojson) => {
-        const shapes: RegionShape[] = (geojson.features || [])
-          .map((f: any) => {
-            const name = f.properties?.SUBJECTO || f.properties?.NAME || 'unknown';
-            return { name, color: colourFor(name), d: featurePaths(f, 6) };
-          })
-          .filter((s: RegionShape) => s.d.length > 0);
-        epochCache.set(file, shapes);
-        if (!cancelled) setData(shapes);
-      })
-      .catch(() => {
-        if (!cancelled) setData([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [file]);
-
-  return data;
-}
-
 export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: StartScreenProps) {
-  const [slot, setSlot] = useState(0);
   const [capitalScene, setCapitalScene] = useState(0);
+  const [worldPaths, setWorldPaths] = useState<string[]>(CONTINENTS);
 
   useEffect(() => {
-    const id = setInterval(() => setSlot((s) => (s + 1) % TOTAL_SLOTS), SLOT_MS);
-    return () => clearInterval(id);
+    fetch(WORLD_URL)
+      .then(res => res.json())
+      .then(data => {
+        const paths: string[] = [];
+        data.features.forEach((f: any) => {
+          paths.push(...featurePaths(f, 2));
+        });
+        if (paths.length > 0) setWorldPaths(paths);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -162,16 +111,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
     return () => clearInterval(id);
   }, []);
 
-  const isToday = slot === TODAY_SLOT;
-  const epochFile = isToday ? null : EPOCHS[slot].file;
-  const fetched = useEpoch(epochFile);
-
-  const lastGoodRef = useRef<RegionShape[]>([]);
-  if (fetched && fetched.length > 0) lastGoodRef.current = fetched;
-  const historicalShapes = fetched && fetched.length > 0 ? fetched : lastGoodRef.current;
-
   const [, focusX, focusY] = CAPITALS[capitalScene];
-  const epochLabel = isToday ? 'GÜNÜMÜZ — 2026' : EPOCHS[slot].label;
 
   return (
     <div
@@ -203,40 +143,29 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
               ))}
             </g>
 
-            {isToday ? (
-              <g
-                fill={darkMode ? '#d8ae72' : '#334155'}
-                stroke={darkMode ? '#f2d9a8' : '#0f172a'}
-                strokeWidth="1.3"
-                strokeOpacity={darkMode ? 0.85 : 0.6}
-              >
-                {CONTINENTS.map((d, i) => (
-                  <path key={i} d={d} />
-                ))}
-              </g>
-            ) : (
-              <g stroke={darkMode ? '#05070d' : '#f8fafc'} strokeWidth="0.6" strokeOpacity={0.5}>
-                {historicalShapes.map((region, ri) =>
-                  region.d.map((d, di) => <path key={`${ri}-${di}`} d={d} fill={region.color} />)
-                )}
-              </g>
-            )}
+            <g
+              fill={darkMode ? '#d8ae72' : '#334155'}
+              stroke={darkMode ? '#f2d9a8' : '#0f172a'}
+              strokeWidth="0.8"
+              strokeOpacity={darkMode ? 0.85 : 0.6}
+            >
+              {worldPaths.map((d, i) => (
+                <path key={i} d={d} />
+              ))}
+            </g>
 
-            {isToday && (
-              <>
-                <g fill="none" stroke={darkMode ? '#c9a26a' : '#b3432f'} strokeWidth="1.1" opacity={darkMode ? 0.8 : 0.6}>
-                  {ROUTES.map(([x1, y1, x2, y2], i) => (
-                    <line key={i} className="ptp-route" x1={x1} y1={y1} x2={x2} y2={y2} />
-                  ))}
-                </g>
-                <g fill={darkMode ? '#e7c98f' : '#b3432f'}>
-                  {CAPITALS.map(([name, x, y], i) => (
-                    <circle key={name} r={i === capitalScene ? 4 : 2.2} cx={x} cy={y} opacity={i === capitalScene ? 1 : 0.55} />
-                  ))}
-                </g>
-                <circle className="ptp-spot" cx={focusX} cy={focusY} r="70" fill="url(#ptp-spot-glow)" />
-              </>
-            )}
+            <g fill="none" stroke={darkMode ? '#c9a26a' : '#b3432f'} strokeWidth="1.1" opacity={darkMode ? 0.8 : 0.6}>
+              {ROUTES.map(([x1, y1, x2, y2], i) => (
+                <line key={i} className="ptp-route" x1={x1} y1={y1} x2={x2} y2={y2} />
+              ))}
+            </g>
+            <g fill={darkMode ? '#e7c98f' : '#b3432f'}>
+              {CAPITALS.map(([name, x, y], i) => (
+                <circle key={name} r={i === capitalScene ? 4 : 2.2} cx={x} cy={y} opacity={i === capitalScene ? 1 : 0.55} />
+              ))}
+            </g>
+            <circle className="ptp-spot" cx={focusX} cy={focusY} r="70" fill="url(#ptp-spot-glow)" />
+
             <defs>
               <radialGradient id="ptp-spot-glow">
                 <stop offset="0%" stopColor="#b3432f" stopOpacity="0.55" />
@@ -255,15 +184,6 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
             : 'radial-gradient(ellipse at center, transparent 45%, #f8fafc 92%)',
         }}
       />
-
-      <div
-        key={slot}
-        className={`ptp-epoch-label absolute bottom-4 left-4 z-[2] text-[11px] md:text-xs font-mono font-bold tracking-widest px-3 py-1.5 rounded border ${
-          darkMode ? 'bg-black/40 border-[#c9a26a]/30 text-[#e7c98f]' : 'bg-white/70 border-slate-300 text-slate-600'
-        }`}
-      >
-        {epochLabel}
-      </div>
 
       <div className="z-10 flex flex-col items-center justify-center px-8 pt-6 pb-12 max-w-2xl text-center gap-6">
         <div className="flex items-center gap-3">
