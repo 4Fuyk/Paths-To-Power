@@ -480,41 +480,38 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     });
   }, [diplomaticRelations, selectedMapCountryId, country.id, darkMode]);
 
-  // Current active global conflict
-  const [globalConflict, setGlobalConflict] = useState<{
+  // Current active global conflicts
+  const [globalConflicts, setGlobalConflicts] = useState<Array<{
+    id: string;
     countryA: string;
     countryB: string;
     description: string;
     resolved: boolean;
     stance?: 'Neutral' | 'Diplomatic' | 'Military';
-  }>(() => {
-    const conflictPool = [
+  }>>(() => {
+    return [
       {
+        id: 'RU_UA',
         countryA: 'RU',
         countryB: 'UA',
-        description: 'Territorial invasion and sovereignty defense in Eastern Europe.'
+        description: 'Territorial invasion and sovereignty defense in Eastern Europe.',
+        resolved: false
       },
       {
+        id: 'IL_PS',
         countryA: 'IL',
         countryB: 'PS',
-        description: 'Intense regional conflict over territorial sovereignty and security.'
+        description: 'Intense regional conflict over territorial sovereignty and security.',
+        resolved: false
       },
       {
+        id: 'CN_TW',
         countryA: 'CN',
         countryB: 'TW',
-        description: 'Cross-strait tensions regarding political status and international recognition.'
+        description: 'Cross-strait tensions regarding political status and international recognition.',
+        resolved: false
       }
-    ];
-
-    // Pick a conflict that does not include the player's own nation if possible
-    const available = conflictPool.filter(c => c.countryA !== country.id && c.countryB !== country.id);
-    const chosen = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : conflictPool[0];
-    return {
-      countryA: chosen.countryA,
-      countryB: chosen.countryB,
-      description: chosen.description,
-      resolved: false
-    };
+    ].filter(c => c.countryA !== country.id && c.countryB !== country.id);
   });
 
   const getCountryName = (id: string) => {
@@ -765,8 +762,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   };
 
   // Stance in third-party wars
-  const handleStance = (stance: 'Neutral' | 'Diplomatic' | 'Military') => {
-    if (globalConflict.resolved) return;
+  const handleStance = (conflictId: string, stance: 'Neutral' | 'Diplomatic' | 'Military') => {
+    const conflictIndex = globalConflicts.findIndex(c => c.id === conflictId);
+    if (conflictIndex === -1 || globalConflicts[conflictIndex].resolved) return;
+    const conflict = globalConflicts[conflictIndex];
 
     if (stance === 'Military') {
       const mobilizeCost = 50000;
@@ -780,9 +779,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       publicApprovalImpact(-3); // moderate intervention resistance
     }
 
-    setGlobalConflict(prev => ({ ...prev, stance, resolved: true }));
+    setGlobalConflicts(prev => {
+      const next = [...prev];
+      next[conflictIndex] = { ...next[conflictIndex], stance, resolved: true };
+      return next;
+    });
     playSound('success');
-    setSuccessMessage(`Stance locked! Your strategic stance of [${stance} Support] in the ${getCountryName(globalConflict.countryA)} vs. ${getCountryName(globalConflict.countryB)} dispute has been broadcasted globally.`);
+    setSuccessMessage(`Stance locked! Your strategic stance of [${stance} Support] in the ${getCountryName(conflict.countryA)} vs. ${getCountryName(conflict.countryB)} dispute has been broadcasted globally.`);
   };
 
   return (
@@ -1148,43 +1151,50 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
             <h3 className="text-xs font-bold tracking-wider font-mono uppercase text-slate-400 pb-2 border-b border-slate-500/10 flex items-center gap-1.5">
               <Swords className="w-4 h-4 text-rose-400" /> GLOBAL CONFLICT RADAR
             </h3>
+            
+            <div className="flex flex-col gap-3">
+              {globalConflicts.map((conflict) => (
+                <div key={conflict.id} className="bg-rose-500/5 border border-rose-500/10 p-3 rounded-2xl text-xs">
+                  <div className="flex justify-between items-center font-bold text-slate-200">
+                    <span className="flex items-center gap-1">
+                      {getCountryFlag(conflict.countryA)} vs {getCountryFlag(conflict.countryB)}
+                    </span>
+                    <span className="text-[10px] text-rose-500 font-mono animate-pulse uppercase">Wartime Stance Req</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2.5 leading-relaxed">
+                    {conflict.description}
+                  </p>
 
-            <div className="bg-rose-500/5 border border-rose-500/10 p-3 rounded-2xl text-xs">
-              <div className="flex justify-between items-center font-bold text-slate-200">
-                <span className="flex items-center gap-1">
-                  {getCountryFlag(globalConflict.countryA)} vs {getCountryFlag(globalConflict.countryB)}
-                </span>
-                <span className="text-[10px] text-rose-500 font-mono animate-pulse uppercase">Wartime Stance Req</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-2.5 leading-relaxed">
-                {globalConflict.description}
-              </p>
-
-              {!globalConflict.resolved ? (
-                <div className="grid grid-cols-3 gap-1.5 mt-3.5 pt-3.5 border-t border-slate-500/10">
-                  <button
-                    onClick={() => handleStance('Neutral')}
-                    className="py-2 bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-300 font-extrabold text-[10px] rounded-xl cursor-pointer"
-                  >
-                    Stay Neutral
-                  </button>
-                  <button
-                    onClick={() => handleStance('Diplomatic')}
-                    className="py-2 bg-cyan-650 hover:bg-cyan-600 text-white font-extrabold text-[10px] rounded-xl cursor-pointer"
-                  >
-                    Diplomatic Aid
-                  </button>
-                  <button
-                    onClick={() => handleStance('Military')}
-                    className="py-2 bg-rose-650 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-xl cursor-pointer"
-                  >
-                    Intervene militarily
-                  </button>
+                  {!conflict.resolved ? (
+                    <div className="grid grid-cols-3 gap-1.5 mt-3.5 pt-3.5 border-t border-slate-500/10">
+                      <button
+                        onClick={() => handleStance(conflict.id, 'Neutral')}
+                        className="py-2 bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-300 font-extrabold text-[10px] rounded-xl cursor-pointer"
+                      >
+                        Stay Neutral
+                      </button>
+                      <button
+                        onClick={() => handleStance(conflict.id, 'Diplomatic')}
+                        className="py-2 bg-cyan-650 hover:bg-cyan-600 text-white font-extrabold text-[10px] rounded-xl cursor-pointer"
+                      >
+                        Diplomatic Aid
+                      </button>
+                      <button
+                        onClick={() => handleStance(conflict.id, 'Military')}
+                        className="py-2 bg-rose-650 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-xl cursor-pointer"
+                      >
+                        Intervene militarily
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 bg-black/25 p-2 rounded-xl border border-slate-500/5 text-center font-bold text-[10px] text-emerald-400 uppercase font-mono tracking-wide">
+                      Stance Locked: {conflict.stance}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="mt-3 bg-black/25 p-2 rounded-xl border border-slate-500/5 text-center font-bold text-[10px] text-emerald-400 uppercase font-mono tracking-wide">
-                  Stance Locked: {globalConflict.stance}
-                </div>
+              ))}
+              {globalConflicts.length === 0 && (
+                <div className="text-center py-4 text-xs font-bold text-slate-500">No active global conflicts.</div>
               )}
             </div>
           </div>
