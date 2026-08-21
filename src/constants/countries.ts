@@ -13,26 +13,26 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Ağrı', seats: 4, winner: 'DEM', mayorName: 'Hazal Aras' },
   { name: 'Amasya', seats: 3, winner: 'CHP', mayorName: 'Turgay Sevindi' },
   { name: 'Ankara', seats: 36, winner: 'CHP', mayorName: 'Mansur Yavaş' },
-  { name: 'Antalya', seats: 17, winner: 'CHP', mayorName: 'Muhittin Böcek' },
+  { name: 'Antalya', seats: 17, winner: 'YENI', mayorName: 'Muhittin Böcek' },
   { name: 'Artvin', seats: 2, winner: 'CHP', mayorName: 'Bilgehan Erdem' },
   { name: 'Aydın', seats: 8, winner: 'CHP', mayorName: 'Özlem Çerçioğlu' },
-  { name: 'Balıkesir', seats: 9, winner: 'CHP', mayorName: 'Ahmet Akın' },
-  { name: 'Bilecik', seats: 2, winner: 'CHP', mayorName: 'Melek Mızrak Subaşı' },
+  { name: 'Balıkesir', seats: 9, winner: 'YENI', mayorName: 'Ahmet Akın' },
+  { name: 'Bilecik', seats: 2, winner: 'YENI', mayorName: 'Melek Mızrak Subaşı' },
   { name: 'Bingöl', seats: 3, winner: 'AKP', mayorName: 'Erdal Arıkan' },
   { name: 'Bitlis', seats: 3, winner: 'AKP', mayorName: 'Nesrullah Tanğlay' },
   { name: 'Bolu', seats: 3, winner: 'CHP', mayorName: 'Tanju Özcan' },
   { name: 'Burdur', seats: 3, winner: 'CHP', mayorName: 'Ali Orkun Ercengiz' },
-  { name: 'Bursa', seats: 20, winner: 'CHP', mayorName: 'Mustafa Bozbey' },
-  { name: 'Çanakkale', seats: 4, winner: 'CHP', mayorName: 'Muharrem Erkek' },
+  { name: 'Bursa', seats: 20, winner: 'YENI', mayorName: 'Mustafa Bozbey' },
+  { name: 'Çanakkale', seats: 4, winner: 'YENI', mayorName: 'Muharrem Erkek' },
   { name: 'Çankırı', seats: 2, winner: 'MHP', mayorName: 'İsmail Hakkı Esen' },
   { name: 'Çorum', seats: 4, winner: 'AKP', mayorName: 'Halil İbrahim Aşgın' },
-  { name: 'Denizli', seats: 7, winner: 'CHP', mayorName: 'Bülent Nuri Çavuşoğlu' },
+  { name: 'Denizli', seats: 7, winner: 'YENI', mayorName: 'Bülent Nuri Çavuşoğlu' },
   { name: 'Diyarbakır', seats: 12, winner: 'DEM', mayorName: 'Ayşe Serra Bucak Küçük' },
-  { name: 'Edirne', seats: 4, winner: 'CHP', mayorName: 'Filiz Gencan Akın' },
+  { name: 'Edirne', seats: 4, winner: 'YENI', mayorName: 'Filiz Gencan Akın' },
   { name: 'Elazığ', seats: 5, winner: 'AKP', mayorName: 'Şahin Şerifoğulları' },
   { name: 'Erzincan', seats: 2, winner: 'MHP', mayorName: 'Bekir Aksun' },
   { name: 'Erzurum', seats: 6, winner: 'AKP', mayorName: 'Mehmet Sekmen' },
-  { name: 'Eskişehir', seats: 7, winner: 'CHP', mayorName: 'Ayşe Ünlüce' },
+  { name: 'Eskişehir', seats: 7, winner: 'YENI', mayorName: 'Ayşe Ünlüce' },
   { name: 'Gaziantep', seats: 14, winner: 'AKP', mayorName: 'Fatma Şahin' },
   { name: 'Giresun', seats: 4, winner: 'CHP', mayorName: 'Fuat Köse' },
   { name: 'Gümüşhane', seats: 2, winner: 'MHP', mayorName: 'Vedat Soner Başer' },
@@ -41,20 +41,20 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Isparta', seats: 4, winner: 'AKP', mayorName: 'Şükrü Başdeğirmen' },
   { name: 'Mersin', seats: 13, winner: 'CHP', mayorName: 'Vahap Seçer' },
   { name: 'İstanbul', seats: 98, winner: 'CHP', mayorName: 'Ekrem İmamoğlu' },
-  { name: 'İzmir', seats: 28, winner: 'CHP', mayorName: 'Cemil Tugay' },
+  { name: 'İzmir', seats: 28, winner: 'YENI', mayorName: 'Cemil Tugay' },
   { name: 'Kars', seats: 3, winner: 'MHP', mayorName: 'Ötüken Senger' },
   { name: 'Kastamonu', seats: 3, winner: 'CHP', mayorName: 'Hasan Baltacı' },
   { name: 'Kayseri', seats: 10, winner: 'AKP', mayorName: 'Memduh Büyükkılıç' },
   { name: 'Kırklareli', seats: 3, winner: 'MHP', mayorName: 'Derya Bulut' },
-  { name: 'Kırşehir', seats: 2, winner: 'CHP', mayorName: 'Selahattin Ekicioğlu' },
+  { name: 'Kırşehir', seats: 2, winner: 'YENI', mayorName: 'Selahattin Ekicioğlu' },
   { name: 'Kocaeli', seats: 14, winner: 'AKP', mayorName: 'Tahir Büyükakın' },
   { name: 'Konya', seats: 15, winner: 'AKP', mayorName: 'Uğur İbrahim Altay' },
-  { name: 'Kütahya', seats: 5, winner: 'CHP', mayorName: 'Eyüp Kahveci' },
+  { name: 'Kütahya', seats: 5, winner: 'YENI', mayorName: 'Eyüp Kahveci' },
   { name: 'Malatya', seats: 6, winner: 'AKP', mayorName: 'Sami Er' },
-  { name: 'Manisa', seats: 10, winner: 'CHP', mayorName: 'Ferdi Zeyrek' },
+  { name: 'Manisa', seats: 10, winner: 'YENI', mayorName: 'Ferdi Zeyrek' },
   { name: 'Kahramanmaraş', seats: 8, winner: 'AKP', mayorName: 'Fırat Görgel' },
   { name: 'Mardin', seats: 6, winner: 'DEM', mayorName: 'Ahmet Türk' },
-  { name: 'Muğla', seats: 7, winner: 'CHP', mayorName: 'Ahmet Aras' },
+  { name: 'Muğla', seats: 7, winner: 'YENI', mayorName: 'Ahmet Aras' },
   { name: 'Muş', seats: 3, winner: 'DEM', mayorName: 'Sırrı Söylemez' },
   { name: 'Nevşehir', seats: 3, winner: 'AKP', mayorName: 'Rasim Arı' },
   { name: 'Niğde', seats: 3, winner: 'AKP', mayorName: 'Emrah Özdemir' },
@@ -68,13 +68,13 @@ const TURKEY_PROVINCES_SPEC = [
   { name: 'Sinop', seats: 2, winner: 'CHP', mayorName: 'Metin Gürbüz' },
   { name: 'Şırnak', seats: 4, winner: 'AKP', mayorName: 'Mehmet Yarka' },
   { name: 'Sivas', seats: 5, winner: 'MHP', mayorName: 'Adem Uzun' },
-  { name: 'Tekirdağ', seats: 8, winner: 'CHP', mayorName: 'Candan Yüceer' },
+  { name: 'Tekirdağ', seats: 8, winner: 'YENI', mayorName: 'Candan Yüceer' },
   { name: 'Tokat', seats: 5, winner: 'MHP', mayorName: 'Mehmet Kemal Yazıcıoğlu' },
   { name: 'Trabzon', seats: 6, winner: 'AKP', mayorName: 'Ahmet Metin Genç' },
   { name: 'Tunceli', seats: 1, winner: 'DEM', mayorName: 'Cevdet Konak' },
-  { name: 'Uşak', seats: 3, winner: 'CHP', mayorName: 'Özkan Yalım' },
+  { name: 'Uşak', seats: 3, winner: 'YENI', mayorName: 'Özkan Yalım' },
   { name: 'Van', seats: 8, winner: 'DEM', mayorName: 'Abdullah Zeydan' },
-  { name: 'Yalova', seats: 3, winner: 'CHP', mayorName: 'Mehmet Gürel' },
+  { name: 'Yalova', seats: 3, winner: 'YENI', mayorName: 'Mehmet Gürel' },
   { name: 'Yozgat', seats: 4, winner: 'YRP', mayorName: 'Kazım Arslan' },
   { name: 'Zonguldak', seats: 5, winner: 'CHP', mayorName: 'Tahsin Erdem' },
   { name: 'Aksaray', seats: 4, winner: 'AKP', mayorName: 'Evren Dinçer' },
@@ -95,19 +95,19 @@ export const getTurkeyRegions = (): Region[] => {
     let supports: Record<string, number> | undefined = (prov as any).supports;
     if (!supports) {
       const base: Record<string, number> = {
-        CHP: 11,
-        YENI: 7,
-        AKP: 18,
-        DEM: 2,
-        MHP: 5,
-        YRP: 4,
-        ZAFER: 1.5,
-        TIP: 0.5,
-        TKP: 0.1,
+        YENI: 19,
+        CHP: 17,
+        AKP: 31,
+        DEM: 9,
+        MHP: 9,
+        YRP: 6,
+        ZAFER: 4,
+        TIP: 2,
+        TKP: 0.8,
         SAADET: 0.8,
-        DEVA: 0.4,
-        GELECEK: 0.2,
-        VATAN: 0.1
+        DEVA: 0.5,
+        GELECEK: 0.5,
+        VATAN: 0.4
       };
 
       let hash = 0;
@@ -121,40 +121,47 @@ export const getTurkeyRegions = (): Region[] => {
       const mod6 = (hash >> 4) % 6;
 
       if (prov.winner === 'DEM') {
-        base.DEM = 54 + mod5;
+        base.DEM = 52 + mod5;
         base.AKP = 22 + mod4;
-        base.CHP = 12 + mod3;
-        base.YENI = 6 + mod2;
+        base.YENI = 9 + mod3;
+        base.CHP = 8 + mod2;
         base.YRP = 3 + mod2;
         base.MHP = 3 + mod2;
       } else if (prov.winner === 'CHP') {
-        base.CHP = 46 + mod6;
-        base.AKP = 28 + mod4;
-        base.YENI = 12 + mod3;
+        base.CHP = 36 + mod6;
+        base.AKP = 25 + mod4;
+        base.YENI = 21 + mod3;
+        base.MHP = 6 + mod2;
+        base.YRP = 4 + mod2;
+        base.DEM = 4 + mod2;
+      } else if (prov.winner === 'YENI') {
+        base.YENI = 37 + mod6;
+        base.AKP = 24 + mod4;
+        base.CHP = 20 + mod3;
         base.MHP = 6 + mod2;
         base.YRP = 4 + mod2;
         base.DEM = 4 + mod2;
       } else if (prov.winner === 'AKP') {
-        base.AKP = 48 + mod6;
-        base.CHP = 20 + mod4;
-        base.YENI = 12 + mod3;
+        base.AKP = 46 + mod6;
+        base.YENI = 14 + mod3;
+        base.CHP = 13 + mod3;
         base.MHP = 10 + mod3;
         base.YRP = 6 + mod2;
         base.DEM = 4 + mod2;
       } else if (prov.winner === 'MHP') {
-        base.MHP = 42 + mod5;
-        base.AKP = 28 + mod4;
-        base.CHP = 14 + mod3;
-        base.YENI = 10 + mod2;
+        base.MHP = 40 + mod5;
+        base.AKP = 26 + mod4;
+        base.YENI = 11 + mod3;
+        base.CHP = 10 + mod2;
         base.YRP = 6 + mod2;
       } else if (prov.winner === 'YRP') {
-        base.YRP = 40 + mod5;
-        base.AKP = 30 + mod4;
-        base.CHP = 12 + mod3;
-        base.YENI = 10 + mod2;
+        base.YRP = 38 + mod5;
+        base.AKP = 28 + mod4;
+        base.YENI = 10 + mod3;
+        base.CHP = 9 + mod2;
         base.MHP = 8 + mod2;
       } else {
-        base.AKP = 35; base.CHP = 30; base.YENI = 15; base.MHP = 10; base.YRP = 10;
+        base.AKP = 32; base.YENI = 20; base.CHP = 16; base.MHP = 10; base.YRP = 8;
       }
 
       const total = Object.values(base).reduce((s, v) => s + v, 0);
@@ -757,10 +764,19 @@ const AUSTRALIA_SPEC = [
 
 const FRANCE_SPEC = [
   { name: 'Île-de-France', seats: 97, winner: 'RE', mayorName: 'Valérie Pécresse' },
-  { name: 'Auvergne-Rhône-Alpes', seats: 72, winner: 'RN', mayorName: 'Laurent Wauquiez' },
+  { name: 'Auvergne-Rhône-Alpes', seats: 68, winner: 'RN', mayorName: 'Laurent Wauquiez' },
   { name: 'Nouvelle-Aquitaine', seats: 49, winner: 'PS', mayorName: 'Alain Rousset' },
   { name: 'Hauts-de-France', seats: 50, winner: 'RN', mayorName: 'Xavier Bertrand' },
-  { name: 'Occitanie', seats: 49, winner: 'LFI', mayorName: 'Carole Delga' }
+  { name: 'Occitanie', seats: 49, winner: 'LFI', mayorName: 'Carole Delga' },
+  { name: 'Grand Est', seats: 49, winner: 'RN', mayorName: 'Franck Leroy' },
+  { name: 'Provence-Alpes-Côte d\'Azur', seats: 42, winner: 'RN', mayorName: 'Renaud Muselier' },
+  { name: 'Pays de la Loire', seats: 30, winner: 'RE', mayorName: 'Christelle Morançais' },
+  { name: 'Bretagne', seats: 27, winner: 'PS', mayorName: 'Loïg Chesnais-Girard' },
+  { name: 'Normandie', seats: 28, winner: 'RE', mayorName: 'Hervé Morin' },
+  { name: 'Bourgogne-Franche-Comté', seats: 27, winner: 'RN', mayorName: 'Marie-Guite Dufay' },
+  { name: 'Centre-Val de Loire', seats: 23, winner: 'PS', mayorName: 'François Bonneau' },
+  { name: 'Corse', seats: 4, winner: 'RE', mayorName: 'Gilles Simeoni' },
+  { name: 'Outre-Mer (Overseas)', seats: 34, winner: 'LFI', mayorName: 'Ary Chalus' }
 ];
 
 const ROMANIA_SPEC = [
@@ -789,7 +805,8 @@ const UK_SPEC = [
   { name: 'South East', seats: 91, winner: 'CON', mayorName: 'Paul Marshall' },
   { name: 'South West', seats: 58, winner: 'LD', mayorName: 'Dan Norris' },
   { name: 'Scotland', seats: 57, winner: 'SNP', mayorName: 'John Swinney' },
-  { name: 'Wales', seats: 32, winner: 'LAB', mayorName: 'Eluned Morgan' }
+  { name: 'Wales', seats: 32, winner: 'LAB', mayorName: 'Eluned Morgan' },
+  { name: 'Northern Ireland', seats: 16, winner: 'LAB', mayorName: 'Michelle O\'Neill' }
 ];
 
 const BRAZIL_SPEC = [
@@ -920,6 +937,103 @@ export const getBrazilRegions = () => generateRegionsFromSpec('BR', BRAZIL_SPEC,
 export const getJapanRegions = () => generateRegionsFromSpec('JP', JAPAN_SPEC, ['LDP', 'CDP', 'KOMEITO', 'ISHIN', 'DPFP', 'JCP'], { LDP: 35, CDP: 22, KOMEITO: 10, ISHIN: 10, DPFP: 8, JCP: 6 });
 export const getEgyptRegions = () => generateRegionsFromSpec('EG', EGYPT_SPEC, ['NFP', 'RPP', 'WAFD', 'HDP', 'MEP', 'ESDP'], { NFP: 55, RPP: 12, WAFD: 8, HDP: 8, MEP: 5, ESDP: 3 });
 
+const RUSSIA_SPEC = [
+  { name: 'Moscow', seats: 35, winner: 'UR', mayorName: 'Sergey Sobyanin' },
+  { name: 'Saint Petersburg', seats: 22, winner: 'UR', mayorName: 'Alexander Beglov' },
+  { name: 'Moscow Oblast', seats: 20, winner: 'UR', mayorName: 'Andrey Vorobyov' },
+  { name: 'Krasnodar Krai', seats: 15, winner: 'UR', mayorName: 'Veniamin Kondratyev' },
+  { name: 'Tatarstan', seats: 14, winner: 'UR', mayorName: 'Rustam Minnikhanov' },
+  { name: 'Bashkortostan', seats: 12, winner: 'UR', mayorName: 'Radiy Khabirov' },
+  { name: 'Sverdlovsk Oblast', seats: 12, winner: 'UR', mayorName: 'Yevgeny Kuyvashev' },
+  { name: 'Rostov Oblast', seats: 12, winner: 'UR', mayorName: 'Vasily Golubev' },
+  { name: 'Nizhny Novgorod', seats: 10, winner: 'UR', mayorName: 'Gleb Nikitin' },
+  { name: 'Chelyabinsk Oblast', seats: 10, winner: 'UR', mayorName: 'Aleksey Teksler' },
+  { name: 'Samara Oblast', seats: 10, winner: 'UR', mayorName: 'Vyacheslav Fedorishchev' },
+  { name: 'Novosibirsk Oblast', seats: 9, winner: 'CPRF', mayorName: 'Andrey Travnikov' },
+  { name: 'Krasnoyarsk Krai', seats: 8, winner: 'UR', mayorName: 'Mikhail Kotyukov' },
+  { name: 'Perm Krai', seats: 8, winner: 'UR', mayorName: 'Dmitry Makhonin' },
+  { name: 'Voronezh Oblast', seats: 8, winner: 'UR', mayorName: 'Aleksandr Gusev' },
+  { name: 'Volgograd Oblast', seats: 8, winner: 'UR', mayorName: 'Andrey Bocharov' },
+  { name: 'Saratov Oblast', seats: 8, winner: 'UR', mayorName: 'Roman Busargin' },
+  { name: 'Kemerovo Oblast', seats: 7, winner: 'UR', mayorName: 'Ilya Seredyuk' },
+  { name: 'Primorsky Krai', seats: 6, winner: 'UR', mayorName: 'Oleg Kozhemyako' },
+  { name: 'Khabarovsk Krai', seats: 6, winner: 'LDPR', mayorName: 'Dmitry Demeshin' },
+  { name: 'Irkutsk Oblast', seats: 6, winner: 'CPRF', mayorName: 'Igor Kobzev' },
+  { name: 'Omsk Oblast', seats: 6, winner: 'CPRF', mayorName: 'Vitaly Khotsenko' },
+  { name: 'Dagestan', seats: 9, winner: 'UR', mayorName: 'Sergey Melikov' },
+  { name: 'Chechnya', seats: 5, winner: 'UR', mayorName: 'Ramzan Kadyrov' },
+  { name: 'Crimea', seats: 6, winner: 'UR', mayorName: 'Sergey Aksyonov' }
+];
+
+export const getRussiaRegions = () => generateRegionsFromSpec('RU', RUSSIA_SPEC, ['UR', 'CPRF', 'LDPR', 'SRZP', 'NL', 'YABLOKO'], { UR: 46, CPRF: 17, LDPR: 13, SRZP: 9, NL: 9, YABLOKO: 6 });
+
+const CHILE_SPEC = [
+  { name: 'Santiago Metropolitan', seats: 47, winner: 'FA', mayorName: 'Claudio Orrego' },
+  { name: 'Valparaíso', seats: 16, winner: 'FA', mayorName: 'Rodrigo Mundaca' },
+  { name: 'Biobío (Concepción)', seats: 13, winner: 'REP', mayorName: 'Rodrigo Díaz' },
+  { name: 'Antofagasta & North', seats: 9, winner: 'REP', mayorName: 'Ricardo Díaz' },
+  { name: 'Araucanía (Temuco)', seats: 11, winner: 'UDI', mayorName: 'Luciano Rivas' },
+  { name: 'Los Lagos (Puerto Montt)', seats: 9, winner: 'UDI', mayorName: 'Patricio Vallespín' },
+  { name: 'Coquimbo (La Serena)', seats: 7, winner: 'FA', mayorName: 'Krist Naranjo' },
+  { name: 'Maule (Talca)', seats: 11, winner: 'REP', mayorName: 'Cristina Bravo' },
+  { name: "O'Higgins (Rancagua)", seats: 9, winner: 'PS', mayorName: 'Pablo Silva' },
+  { name: 'Magallanes & South', seats: 5, winner: 'PS', mayorName: 'Jorge Flies' }
+];
+export const getChileRegions = () => generateRegionsFromSpec('CL', CHILE_SPEC, ['FA', 'REP', 'UDI', 'PS', 'EVO'], { FA: 28, REP: 27, UDI: 22, PS: 14, EVO: 9 });
+
+const ICELAND_SPEC = [
+  { name: 'Reykjavík North', seats: 11, winner: 'SDA', mayorName: 'Dagur B. Eggertsson' },
+  { name: 'Reykjavík South', seats: 11, winner: 'SDA', mayorName: 'Einar Þorsteinsson' },
+  { name: 'Southwest (Suðvestur)', seats: 13, winner: 'IP', mayorName: 'Rósa Guðbjartsdóttir' },
+  { name: 'Northwest (Norðvestur)', seats: 8, winner: 'CP', mayorName: 'Ásthildur Sturludóttir' },
+  { name: 'Northeast (Norðaustur)', seats: 10, winner: 'PP', mayorName: 'Halla Signý Kristjánsdóttir' },
+  { name: 'South (Suðurkjördæmi)', seats: 10, winner: 'IP', mayorName: 'Fannar Jónasson' }
+];
+export const getIcelandRegions = () => generateRegionsFromSpec('IS', ICELAND_SPEC, ['SDA', 'IP', 'CP', 'PP', 'LGM', 'PIR'], { SDA: 30, IP: 22, CP: 18, PP: 12, LGM: 9, PIR: 9 });
+
+const PORTUGAL_SPEC = [
+  { name: 'Lisboa Metropolitan', seats: 48, winner: 'PS', mayorName: 'Carlos Moedas' },
+  { name: 'Porto & Douro', seats: 40, winner: 'PSD', mayorName: 'Rui Moreira' },
+  { name: 'Braga & Minho', seats: 19, winner: 'PSD', mayorName: 'Ricardo Rio' },
+  { name: 'Setúbal & South Tagus', seats: 18, winner: 'PS', mayorName: 'André Martins' },
+  { name: 'Aveiro', seats: 16, winner: 'PSD', mayorName: 'Ribau Esteves' },
+  { name: 'Leiria & West', seats: 10, winner: 'PSD', mayorName: 'Gonçalo Lopes' },
+  { name: 'Coimbra & Centro', seats: 9, winner: 'PS', mayorName: 'José Manuel Silva' },
+  { name: 'Faro & Algarve', seats: 9, winner: 'CH', mayorName: 'Rogério Bacalhau' },
+  { name: 'Santarém', seats: 9, winner: 'CH', mayorName: 'Ricardo Gonçalves' },
+  { name: 'Alentejo (Évora & Beja)', seats: 6, winner: 'PS', mayorName: 'Carlos Pinto de Sá' },
+  { name: 'Azores & Madeira Autonomous', seats: 8, winner: 'PSD', mayorName: 'José Manuel Bolieiro' }
+];
+export const getPortugalRegions = () => generateRegionsFromSpec('PT', PORTUGAL_SPEC, ['PSD', 'PS', 'CH', 'IL', 'BE', 'PCP'], { PSD: 31, PS: 29, CH: 19, IL: 8, BE: 7, PCP: 6 });
+
+const GREECE_SPEC = [
+  { name: 'Attica (Athens & Piraeus)', seats: 110, winner: 'ND', mayorName: 'Haris Doukas' },
+  { name: 'Central Macedonia (Thessaloniki)', seats: 45, winner: 'ND', mayorName: 'Stelios Angeloudis' },
+  { name: 'Western Greece & Peloponnese', seats: 35, winner: 'PASOK', mayorName: 'Kostas Peletidis' },
+  { name: 'Crete (Heraklion & Chania)', seats: 24, winner: 'PASOK', mayorName: 'Alexis Kalokairinos' },
+  { name: 'Thessaly & Central Greece', seats: 30, winner: 'ND', mayorName: 'Dimitrios Kouretas' },
+  { name: 'Epirus & Western Macedonia', seats: 20, winner: 'ND', mayorName: 'Alexandros Kachrimanis' },
+  { name: 'Aegean & Ionian Islands', seats: 26, winner: 'ND', mayorName: 'Kostas Moutzouris' }
+];
+export const getGreeceRegions = () => generateRegionsFromSpec('GR', GREECE_SPEC, ['ND', 'PASOK', 'SYRIZA', 'KKE', 'EL', 'NIKI'], { ND: 38, PASOK: 22, SYRIZA: 14, KKE: 10, EL: 10, NIKI: 6 });
+
+const POLAND_2026_SPEC = [
+  { name: 'Mazowieckie (Warszawa)', seats: 63, winner: 'KO', mayorName: 'Rafał Trzaskowski' },
+  { name: 'Śląskie (Katowice & Silesia)', seats: 55, winner: 'KO', mayorName: 'Marcin Krupa' },
+  { name: 'Wielkopolskie (Poznań)', seats: 40, winner: 'KO', mayorName: 'Jacek Jaśkowiak' },
+  { name: 'Małopolskie (Kraków)', seats: 41, winner: 'PIS', mayorName: 'Aleksander Miszalski' },
+  { name: 'Dolnośląskie (Wrocław)', seats: 34, winner: 'KO', mayorName: 'Jacek Sutryk' },
+  { name: 'Łódzkie (Łódź)', seats: 31, winner: 'KO', mayorName: 'Hanna Zdanowska' },
+  { name: 'Pomorskie (Gdańsk & Coast)', seats: 26, winner: 'KO', mayorName: 'Aleksandra Dulkiewicz' },
+  { name: 'Lubelskie (Lublin)', seats: 27, winner: 'PIS', mayorName: 'Krzysztof Żuk' },
+  { name: 'Podkarpackie (Rzeszów)', seats: 26, winner: 'PIS', mayorName: 'Konrad Fijołek' },
+  { name: 'Kujawsko-Pomorskie (Bydgoszcz)', seats: 24, winner: 'KO', mayorName: 'Rafał Bruski' },
+  { name: 'Zachodniopomorskie (Szczecin)', seats: 20, winner: 'KO', mayorName: 'Piotr Krzystek' },
+  { name: 'Świętokrzyskie & Opole', seats: 23, winner: 'PIS', mayorName: 'Agata Wojda' },
+  { name: 'Podlaskie & Warmia-Mazury', seats: 30, winner: 'PIS', mayorName: 'Tadeusz Truskolaski' }
+];
+export const getPolandRegions2026 = () => generateRegionsFromSpec('PL', POLAND_2026_SPEC, ['KO', 'PIS', 'TD', 'LEW', 'KON', 'RAZ'], { KO: 35, PIS: 32, TD: 13, LEW: 9, KON: 8, RAZ: 3 });
+
 // Mock Bills for countries
 const BILL_POOL = [
   {
@@ -1040,12 +1154,19 @@ const createBills = (countryId: string): Bill[] => {
 };
 
 export const countryColors: Record<string, { default: string; completed: string; selected: string }> = {
-  TR: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' }, // Türkiye
-  US: { default: '#1d4ed8', completed: '#3b82f6', selected: '#60a5fa' }, // ABD
-  BR: { default: '#15803d', completed: '#22c55e', selected: '#4ade80' }, // Brezilya
-  DE: { default: '#7c3aed', completed: '#8b5cf6', selected: '#a78bfa' }, // Almanya
-  GB: { default: '#0e7490', completed: '#06b6d4', selected: '#22d3ee' }, // Birleşik Krallık
-  EG: { default: '#b45309', completed: '#f59e0b', selected: '#fbc02d' }, // Mısır
+  TR: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' }, // Turkey
+  US: { default: '#1d4ed8', completed: '#3b82f6', selected: '#60a5fa' }, // USA
+  BR: { default: '#15803d', completed: '#22c55e', selected: '#4ade80' }, // Brazil
+  DE: { default: '#0f172a', completed: '#1e293b', selected: '#334155' }, // Germany / West Germany (Dark Charcoal/Slate)
+  DDR: { default: '#991b1b', completed: '#b91c1c', selected: '#ef4444' }, // East Germany
+  SU: { default: '#b91c1c', completed: '#dc2626', selected: '#ef4444' }, // Soviet Union (Red)
+  CS: { default: '#c2410c', completed: '#ea580c', selected: '#fb923c' }, // Czechoslovakia
+  PL: { default: '#be123c', completed: '#e11d48', selected: '#fb7185' }, // Poland
+  CN: { default: '#dc2626', completed: '#ef4444', selected: '#fca5a5' }, // China
+  YU: { default: '#0284c7', completed: '#0ea5e9', selected: '#38bdf8' }, // Yugoslavia
+  TW: { default: '#0284c7', completed: '#2563eb', selected: '#60a5fa' }, // Taiwan
+  GB: { default: '#0e7490', completed: '#06b6d4', selected: '#22d3ee' }, // UK
+  EG: { default: '#b45309', completed: '#f59e0b', selected: '#fbc02d' }, // Egypt
   JP: { default: '#be1c5a', completed: '#ec4899', selected: '#f472b6' },
   CA: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' },
   AR: { default: '#1e3a8a', completed: '#3b82f6', selected: '#93c5fd' },
@@ -1058,8 +1179,13 @@ export const countryColors: Record<string, { default: string; completed: string;
   KR: { default: '#1d4ed8', completed: '#2563eb', selected: '#60a5fa' },
   AU: { default: '#0c4a6e', completed: '#0284c7', selected: '#38bdf8' },
   FR: { default: '#1e40af', completed: '#2563eb', selected: '#60a5fa' },
-  RO: { default: '#d97706', completed: '#f59e0b', selected: '#fbbf24' }, // Romanya
-  HU: { default: '#047857', completed: '#10b981', selected: '#34d399' }  // Macaristan
+  RO: { default: '#d97706', completed: '#f59e0b', selected: '#fbbf24' },
+  HU: { default: '#047857', completed: '#10b981', selected: '#34d399' },
+  RU: { default: '#1e3a8a', completed: '#2563eb', selected: '#60a5fa' },
+  CL: { default: '#b91c1c', completed: '#dc2626', selected: '#f87171' },
+  IS: { default: '#0284c7', completed: '#0ea5e9', selected: '#38bdf8' },
+  PT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
+  GR: { default: '#0369a1', completed: '#0284c7', selected: '#38bdf8' }
 };
 
 export const PLAYABLE_COUNTRIES: Country[] = [
@@ -1343,8 +1469,8 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     population: '85 Million',
     primaryColor: '#dc2626', // Turkish Red
     rivals: [
-      { id: 'CHP', name: 'CHP', leader: 'Kemal Kılıçdaroğlu', ideology: 'Social Democrat', symbol: 'Flame', color: '#e30613', baseSupport: 12, photo: 'https://th.bing.com/th/id/OIP.qfT2hC6ZpM9kP1M_aYyNkwHaEK' },
-      { id: 'YENI', name: 'Yeni Parti', leader: 'Özgür Özel', ideology: 'Social Democrat', symbol: 'Sun', color: '#0ea5e9', baseSupport: 24, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
+      { id: 'CHP', name: 'CHP', leader: 'Kemal Kılıçdaroğlu', ideology: 'Social Democrat', symbol: 'Flame', color: '#e30613', baseSupport: 17, photo: 'https://th.bing.com/th/id/OIP.qfT2hC6ZpM9kP1M_aYyNkwHaEK' },
+      { id: 'YENI', name: 'Yeni Parti', leader: 'Özgür Özel', ideology: 'Social Democrat', symbol: 'Sun', color: '#0ea5e9', baseSupport: 20, photo: 'https://thf.bing.com/th/id/OIP.tw1bDleSary6Ua4NxPIuvgHaEK?w=292&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=' },
       { id: 'AKP', name: 'AK Parti', leader: 'Recep Tayyip Erdoğan', ideology: 'Conservative', symbol: 'Scale', color: '#ff9e1b', baseSupport: 31, photo: 'https://thf.bing.com/th/id/OIP.OSuQe5LJxNif6UcSy0D9YAHaE7?w=242&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'DEM', name: 'DEM Parti', leader: 'Tuncer Bakırhan', ideology: 'Socialist', symbol: 'Sparkles', color: '#8b5cf6', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.37I-MTcx4uo8vRif0r3DmgHaEO?w=278&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
       { id: 'MHP', name: 'MHP', leader: 'Devlet Bahçeli', ideology: 'Nationalist', symbol: 'ShieldAlert', color: '#991b1b', baseSupport: 9, photo: 'https://thf.bing.com/th/id/OIP.uKLHt8YQ5W_ghAlMr7TR7AHaEK?w=280&h=180&c=7&r=0&o=7&cb=thfc1falcon2&pid=1.7&rm=3' },
@@ -1504,6 +1630,145 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     campaignTurns: 53,
     electionCycleYears: 5,
     termLimit: 2,
+  },
+  {
+    id: 'RU',
+    name: 'Russia',
+    description: 'A vast transcontinental power with a presidential republic system and deep geopolitical influence across Eurasia.',
+    flag: '🇷🇺',
+    seats: 450,
+    parliamentName: 'State Duma (Государственная Дума)',
+    system: 'Presidential System',
+    population: '144 Million',
+    primaryColor: '#1e3a8a',
+    rivals: [
+      { id: 'UR', name: 'United Russia (Единая Россия)', leader: 'Dmitry Medvedev', ideology: 'Conservative', symbol: 'Building', color: '#0055A5', baseSupport: 46, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Dmitry_Medvedev_2024.jpg/250px-Dmitry_Medvedev_2024.jpg' },
+      { id: 'CPRF', name: 'CPRF (КПРФ)', leader: 'Gennady Zyuganov', ideology: 'Communist', symbol: 'Star', color: '#D52B1E', baseSupport: 17, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Gennady_Zyuganov_2021.jpg/250px-Gennady_Zyuganov_2021.jpg' },
+      { id: 'LDPR', name: 'LDPR (ЛДПР)', leader: 'Leonid Slutsky', ideology: 'Nationalist', symbol: 'Shield', color: '#0039A6', baseSupport: 13, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Leonid_Slutsky_2022.jpg/250px-Leonid_Slutsky_2022.jpg' },
+      { id: 'SRZP', name: 'A Just Russia (Справедливая Россия)', leader: 'Sergey Mironov', ideology: 'Social Democrat', symbol: 'Users', color: '#FF7900', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Sergey_Mironov_2021.jpg/250px-Sergey_Mironov_2021.jpg' },
+      { id: 'NL', name: 'New People (Новые люди)', leader: 'Alexey Nechayev', ideology: 'Liberal', symbol: 'Sparkles', color: '#00A896', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Alexey_Nechayev_2021.jpg/250px-Alexey_Nechayev_2021.jpg' },
+      { id: 'YABLOKO', name: 'Yabloko (Яблоко)', leader: 'Nikolay Rybakov', ideology: 'Social Democrat', symbol: 'Leaf', color: '#22C55E', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Nikolay_Rybakov_2020.jpg/250px-Nikolay_Rybakov_2020.jpg' }
+    ],
+    regions: getRussiaRegions(),
+    bills: createBills('RU'),
+    campaignTurns: 53,
+    electionCycleYears: 5,
+    termLimit: 2,
+  },
+  {
+    id: 'CL',
+    name: 'Chile',
+    description: 'A democratic republic with a strong presidential system situated between the Andes and the Pacific Ocean.',
+    flag: '🇨🇱',
+    seats: 155,
+    parliamentName: 'Chamber of Deputies (Cámara de Diputadas y Diputados)',
+    system: 'Presidential System',
+    population: '19.5 Million',
+    primaryColor: '#b91c1c',
+    rivals: [
+      { id: 'FA', name: 'Broad Front (Frente Amplio)', leader: 'Gabriel Boric', ideology: 'Social Democrat', symbol: 'Users', color: '#ef4444', baseSupport: 28, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Gabriel_Boric_2022.jpg/250px-Gabriel_Boric_2022.jpg' },
+      { id: 'REP', name: 'Republican Party (Republicanos)', leader: 'José Antonio Kast', ideology: 'Nationalist', symbol: 'Shield', color: '#1e3a8a', baseSupport: 27, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Jos%C3%A9_Antonio_Kast_2021.jpg/250px-Jos%C3%A9_Antonio_Kast_2021.jpg' },
+      { id: 'UDI', name: 'Chile Vamos (UDI & RN)', leader: 'Evelyn Matthei', ideology: 'Conservative', symbol: 'Building', color: '#0284c7', baseSupport: 22, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Evelyn_Matthei_2023.jpg/250px-Evelyn_Matthei_2023.jpg' },
+      { id: 'PS', name: 'Socialist Party (PS)', leader: 'Paulina Vodanovic', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 14, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Paulina_Vodanovic_2022.jpg/250px-Paulina_Vodanovic_2022.jpg' },
+      { id: 'EVO', name: 'Political Evolution (Evópoli)', leader: 'Gloria Hutt', ideology: 'Liberal', symbol: 'Compass', color: '#f59e0b', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Gloria_Hutt_2022.jpg/250px-Gloria_Hutt_2022.jpg' }
+    ],
+    regions: getChileRegions(),
+    bills: createBills('CL'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+    termLimit: 2,
+  },
+  {
+    id: 'IS',
+    name: 'Iceland',
+    description: 'The world oldest parliamentary democracy, nestled in the North Atlantic with vibrant social welfare and green energy systems.',
+    flag: '🇮🇸',
+    seats: 63,
+    parliamentName: 'Althing (Alþingi)',
+    system: 'Parliamentary Republic',
+    population: '390 Thousand',
+    primaryColor: '#0284c7',
+    rivals: [
+      { id: 'SDA', name: 'Social Democratic Alliance (Samfylkingin)', leader: 'Kristrún Frostadóttir', ideology: 'Social Democrat', symbol: 'Heart', color: '#dc2626', baseSupport: 30, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Kristr%C3%BAn_Frostad%C3%B3ttir.jpg/250px-Kristr%C3%BAn_Frostad%C3%B3ttir.jpg' },
+      { id: 'IP', name: 'Independence Party (Sjálfstæðisflokkurinn)', leader: 'Bjarni Benediktsson', ideology: 'Conservative', symbol: 'Building', color: '#2563eb', baseSupport: 22, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Bjarni_Benediktsson_2023.jpg/250px-Bjarni_Benediktsson_2023.jpg' },
+      { id: 'CP', name: 'Centre Party (Miðflokkurinn)', leader: 'Sigmundur Davíð Gunnlaugsson', ideology: 'Nationalist', symbol: 'Shield', color: '#15803d', baseSupport: 18, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Sigmundur_Dav%C3%AD%C3%B0_Gunnlaugsson.jpg/250px-Sigmundur_Dav%C3%AD%C3%B0_Gunnlaugsson.jpg' },
+      { id: 'PP', name: 'Progressive Party (Framsóknarflokkurinn)', leader: 'Sigurður Ingi Jóhannsson', ideology: 'Liberal', symbol: 'Compass', color: '#059669', baseSupport: 12, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Sigur%C3%B0ur_Ingi_J%C3%B3hannsson_2022.jpg/250px-Sigur%C3%B0ur_Ingi_J%C3%B3hannsson_2022.jpg' },
+      { id: 'LGM', name: 'Left-Green Movement (Vinstri græn)', leader: 'Guðmundur Ingi Guðbrandsson', ideology: 'Socialist', symbol: 'Flame', color: '#16a34a', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Gu%C3%B0mundur_Ingi_Gu%C3%B0brandsson.jpg/250px-Gu%C3%B0mundur_Ingi_Gu%C3%B0brandsson.jpg' },
+      { id: 'PIR', name: 'Pirate Party (Píratar)', leader: 'Þórhildur Sunna Ævarsdóttir', ideology: 'Liberal', symbol: 'Sparkles', color: '#7c3aed', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/%C3%9E%C3%B3rhildur_Sunna_%C3%86varsd%C3%B3ttir.jpg/250px-%C3%9E%C3%B3rhildur_Sunna_%C3%86varsd%C3%B3ttir.jpg' }
+    ],
+    regions: getIcelandRegions(),
+    bills: createBills('IS'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'PT',
+    name: 'Portugal',
+    description: 'An Atlantic European democracy characterized by dynamic parliamentary coalitions and high renewable integration.',
+    flag: '🇵🇹',
+    seats: 230,
+    parliamentName: 'Assembly of the Republic (Assembleia da República)',
+    system: 'Semi-Presidential',
+    population: '10.4 Million',
+    primaryColor: '#15803d',
+    rivals: [
+      { id: 'PSD', name: 'Democratic Alliance (AD / PSD)', leader: 'Luís Montenegro', ideology: 'Conservative', symbol: 'Building', color: '#f97316', baseSupport: 31, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Lu%C3%ADs_Montenegro_2024.jpg/250px-Lu%C3%ADs_Montenegro_2024.jpg' },
+      { id: 'PS', name: 'Socialist Party (PS)', leader: 'Pedro Nuno Santos', ideology: 'Social Democrat', symbol: 'Users', color: '#dc2626', baseSupport: 29, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Pedro_Nuno_Santos_2024.jpg/250px-Pedro_Nuno_Santos_2024.jpg' },
+      { id: 'CH', name: 'CHEGA', leader: 'André Ventura', ideology: 'Nationalist', symbol: 'Shield', color: '#1e3a8a', baseSupport: 19, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Andr%C3%A9_Ventura_2024.jpg/250px-Andr%C3%A9_Ventura_2024.jpg' },
+      { id: 'IL', name: 'Liberal Initiative (IL)', leader: 'Rui Rocha', ideology: 'Liberal', symbol: 'Compass', color: '#06b6d4', baseSupport: 8, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Rui_Rocha_2023.jpg/250px-Rui_Rocha_2023.jpg' },
+      { id: 'BE', name: 'Left Bloc (Bloco de Esquerda)', leader: 'Mariana Mortágua', ideology: 'Socialist', symbol: 'Flame', color: '#b91c1c', baseSupport: 7, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Mariana_Mort%C3%A1gua_2023.jpg/250px-Mariana_Mort%C3%A1gua_2023.jpg' },
+      { id: 'PCP', name: 'Communist Party (PCP/CDU)', leader: 'Paulo Raimundo', ideology: 'Communist', symbol: 'Star', color: '#991b1b', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Paulo_Raimundo_2023.jpg/250px-Paulo_Raimundo_2023.jpg' }
+    ],
+    regions: getPortugalRegions(),
+    bills: createBills('PT'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'GR',
+    name: 'Greece',
+    description: 'The cradle of Western democracy, navigating Mediterranean security, tourism economic growth, and maritime commerce.',
+    flag: '🇬🇷',
+    seats: 300,
+    parliamentName: 'Hellenic Parliament (Βουλή των Ελλήνων)',
+    system: 'Parliamentary Republic',
+    population: '10.4 Million',
+    primaryColor: '#0369a1',
+    rivals: [
+      { id: 'ND', name: 'New Democracy (Νέα Δημοκρατία)', leader: 'Kyriakos Mitsotakis', ideology: 'Conservative', symbol: 'Building', color: '#0055A5', baseSupport: 38, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Kyriakos_Mitsotakis_2023.jpg/250px-Kyriakos_Mitsotakis_2023.jpg' },
+      { id: 'PASOK', name: 'PASOK - KINAL', leader: 'Nikos Androulakis', ideology: 'Social Democrat', symbol: 'Sun', color: '#059669', baseSupport: 22, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Nikos_Androulakis_2023.jpg/250px-Nikos_Androulakis_2023.jpg' },
+      { id: 'SYRIZA', name: 'SYRIZA - Progressive Alliance', leader: 'Stefanos Kasselakis', ideology: 'Socialist', symbol: 'Users', color: '#dc2626', baseSupport: 14, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Stefanos_Kasselakis_2023.jpg/250px-Stefanos_Kasselakis_2023.jpg' },
+      { id: 'KKE', name: 'Communist Party of Greece (ΚΚΕ)', leader: 'Dimitris Koutsoumbas', ideology: 'Communist', symbol: 'Star', color: '#991b1b', baseSupport: 10, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Dimitris_Koutsoumpas_2023.jpg/250px-Dimitris_Koutsoumpas_2023.jpg' },
+      { id: 'EL', name: 'Greek Solution (Ελληνική Λύση)', leader: 'Kyriakos Velopoulos', ideology: 'Nationalist', symbol: 'Shield', color: '#1e40af', baseSupport: 10, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Kyriakos_Velopoulos_2023.jpg/250px-Kyriakos_Velopoulos_2023.jpg' },
+      { id: 'NIKI', name: 'Democratic Patriotic Movement (NIKI)', leader: 'Dimitris Natsios', ideology: 'Traditionalist', symbol: 'Cross', color: '#ca8a04', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Dimitris_Natsios_2023.jpg/250px-Dimitris_Natsios_2023.jpg' }
+    ],
+    regions: getGreeceRegions(),
+    bills: createBills('GR'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'PL',
+    name: 'Poland',
+    description: 'A major Central European democracy and NATO eastern pillar with strong economic modernization and democratic institutions.',
+    flag: '🇵🇱',
+    seats: 460,
+    parliamentName: 'Sejm of the Republic of Poland',
+    system: 'Parliamentary Republic',
+    population: '38 Million',
+    primaryColor: '#be123c',
+    rivals: [
+      { id: 'KO', name: 'Civic Coalition (Koalicja Obywatelska)', leader: 'Donald Tusk', ideology: 'Liberal', symbol: 'Globe', color: '#f97316', baseSupport: 35, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Donald_Tusk_2024.jpg/250px-Donald_Tusk_2024.jpg' },
+      { id: 'PIS', name: 'Law and Justice (Prawo i Sprawiedliwość)', leader: 'Jarosław Kaczyński', ideology: 'Conservative', symbol: 'Building', color: '#1e3a8a', baseSupport: 32, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Jaros%C3%82aw_Kaczy%C5%84ski_2023.jpg/250px-Jaros%C3%82aw_Kaczy%C5%84ski_2023.jpg' },
+      { id: 'TD', name: 'Third Way (Trzecia Droga)', leader: 'Szymon Hołownia', ideology: 'Centrist', symbol: 'Compass', color: '#eab308', baseSupport: 13, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Szymon_Ho%C5%82ownia_2023.jpg/250px-Szymon_Ho%C5%82ownia_2023.jpg' },
+      { id: 'LEW', name: 'The Left (Lewica)', leader: 'Włodzimierz Czarzasty', ideology: 'Social Democrat', symbol: 'Heart', color: '#dc2626', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/W%C5%82odzimierz_Czarzasty_2023.jpg/250px-W%C5%82odzimierz_Czarzasty_2023.jpg' },
+      { id: 'KON', name: 'Confederation (Konfederacja)', leader: 'Krzysztof Bosak & Sławomir Mentzen', ideology: 'Nationalist', symbol: 'Shield', color: '#1f2937', baseSupport: 8, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Krzysztof_Bosak_2023.jpg/250px-Krzysztof_Bosak_2023.jpg' },
+      { id: 'RAZ', name: 'Left Together (Razem)', leader: 'Adrian Zandberg', ideology: 'Socialist', symbol: 'Flame', color: '#b91c1c', baseSupport: 3, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Adrian_Zandberg_2023.jpg/250px-Adrian_Zandberg_2023.jpg' }
+    ],
+    regions: getPolandRegions2026(),
+    bills: createBills('PL'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
   }
 ];
 

@@ -30,8 +30,41 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const countryCode = country.id;
-  const positions = CABINET_POSITIONS_BY_COUNTRY[countryCode] || CABINET_POSITIONS_BY_COUNTRY['DE'];
-  const baseCandidatesPool = POLITICIAN_CANDIDATES_POOL[countryCode] || POLITICIAN_CANDIDATES_POOL['DE'];
+
+  const DEFAULT_POSITIONS: CabinetPosition[] = [
+    { id: 'foreign_affairs', name: 'Minister of Foreign Affairs', description: 'Oversees foreign diplomacy, international treaties, and alliances.' },
+    { id: 'interior', name: 'Minister of Internal Affairs', description: 'Controls domestic law enforcement, civil protection, and regional administration.' },
+    { id: 'finance', name: 'Minister of Finance & Treasury', description: 'Manages national budgetary planning, taxation, and fiscal allocations.' },
+    { id: 'defence', name: 'Minister of Defence', description: 'Directs national armed forces, border security, and military readiness.' },
+    { id: 'justice', name: 'Minister of Justice', description: 'Administers the legal system, courts, and rule of law enforcement.' },
+    { id: 'health', name: 'Minister of Health', description: 'Manages national hospitals, healthcare infrastructure, and epidemic response.' },
+    { id: 'education', name: 'Minister of National Education', description: 'Directs public education curricula, universities, and scientific research.' },
+    { id: 'economy', name: 'Minister of Economic Affairs', description: 'Supervises industrial output, domestic commerce, and trade policy.' }
+  ];
+
+  const positions = CABINET_POSITIONS_BY_COUNTRY[countryCode] || DEFAULT_POSITIONS;
+
+  // Build authentic candidate pool for this specific country
+  const baseCandidatesPool: MinisterCandidate[] = POLITICIAN_CANDIDATES_POOL[countryCode] || [
+    { name: party.leader || `${party.name} Leader`, party: party.name, loyalty: 98, competence: 90, popularity: 88 },
+    { name: `${party.name} General Secretary`, party: party.name, loyalty: 94, competence: 88, popularity: 82 },
+    { name: `${party.name} Chief Strategist`, party: party.name, loyalty: 92, competence: 92, popularity: 76 },
+    { name: `${party.name} Senior Deputy`, party: party.name, loyalty: 90, competence: 85, popularity: 78 },
+    ...country.rivals.map(r => ({
+      name: r.leader,
+      party: r.name,
+      loyalty: 65,
+      competence: 84,
+      popularity: Math.min(95, Math.max(60, Math.round(r.baseSupport * 2.2)))
+    })),
+    ...country.rivals.map(r => ({
+      name: `${r.name} Spokesperson`,
+      party: r.name,
+      loyalty: 60,
+      competence: 80,
+      popularity: Math.min(90, Math.max(50, Math.round(r.baseSupport * 1.8)))
+    }))
+  ];
 
   // Filter out rival party leaders unless they are in a coalition with the player
   const playerCoalition = coalitions.find(c => c.parties.includes(party.name));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation } from 'lucide-react';
+import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation, Bomb, Factory, Radio } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
-import { Country } from '../types';
+import { Country, ScenarioYear } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { playSound } from '../lib/sounds';
@@ -25,11 +25,47 @@ export interface PlayerArmy {
   targetRegionId?: string;
 }
 
+export interface HistoricalBomb {
+  id: string;
+  name: string;
+  era: ScenarioYear;
+  type: 'tactical' | 'heavy' | 'strategic' | 'nuclear';
+  damage: number;
+  cost: number;
+  description: string;
+  icon: string;
+}
+
+export const HISTORICAL_BOMBS: HistoricalBomb[] = [
+  // 2026
+  { id: 'b_sdb_2026', name: 'GBU-39 Small Diameter Bomb', era: '2026', type: 'tactical', damage: 65, cost: 25000, description: 'GPS-guided stand-off glide bomb with surgical strike accuracy.', icon: '🎯' },
+  { id: 'b_jdam_2026', name: 'JDAM 2000lb Guided Penetrator', era: '2026', type: 'heavy', damage: 120, cost: 45000, description: 'All-weather smart weapon kit converting free-fall bombs into precision munition.', icon: '💣' },
+  { id: 'b_fab3000_2026', name: 'FAB-3000 Heavy Glide Bomb', era: '2026', type: 'strategic', damage: 220, cost: 85000, description: 'High-explosive heavy demolition aerial bomb with deployable wing kit.', icon: '💥' },
+  
+  // 1950
+  { id: 'b_napalm_1950', name: 'M116 Incendiary Napalm Bomb', era: '1950', type: 'tactical', damage: 70, cost: 18000, description: 'Gelatinized fuel canister generating sustained intense combustion zones.', icon: '🔥' },
+  { id: 'b_tallboy_1950', name: 'Tallboy 12,000lb Earthquake Bomb', era: '1950', type: 'heavy', damage: 150, cost: 55000, description: 'Deep-penetration aerodynamic seismic bomb shattering underground fortifications.', icon: '💣' },
+  { id: 'b_mark4_1950', name: 'Mark 4 Strategic Atomic Device', era: '1950', type: 'nuclear', damage: 350, cost: 250000, description: 'First mass-produced post-war atomic implosion weapon with kiloton blast yield.', icon: '☢️' },
+
+  // 1936
+  { id: 'b_sc250_1936', name: 'SC 250 General-Purpose Bomb', era: '1936', type: 'tactical', damage: 50, cost: 12000, description: 'Standard high-explosive aerial bomb for tactical close support.', icon: '💣' },
+  { id: 'b_sc1000_1936', name: 'SC 1000 Hermann Heavy Demolition', era: '1936', type: 'heavy', damage: 110, cost: 40000, description: 'Thin-cased heavy blast bomb designed to flatten fortified sectors.', icon: '💥' },
+
+  // 1920
+  { id: 'b_cooper_1920', name: 'Cooper 20lb High-Explosive Bomb', era: '1920', type: 'tactical', damage: 35, cost: 6000, description: 'Interwar aerial fragmentation bomb dropped from biplane aircraft.', icon: '💣' },
+  { id: 'b_livens_1920', name: 'Livens Chemical Projector Canister', era: '1920', type: 'heavy', damage: 75, cost: 22000, description: 'Large-bore suppression projectile for entrenchment clearance.', icon: '⚠️' },
+
+  // 1914
+  { id: 'b_putilov_1914', name: 'Putilov 76mm Aerial Shrapnel Canister', era: '1914', type: 'tactical', damage: 25, cost: 4000, description: 'Early Great War hand-dropped canister with timer fuze.', icon: '💣' },
+  { id: 'b_zeppelin_1914', name: 'Carbonit 50kg Torpedo Aerobomb', era: '1914', type: 'heavy', damage: 60, cost: 16000, description: 'Dirigible Zeppelin heavy fragmentation bomb for strategic bombardment.', icon: '💥' }
+];
+
 interface TacticalBattleViewProps {
   country: Country;
   party: { name: string };
   civilWarRisk?: number;
   darkMode: boolean;
+  scenario?: ScenarioYear;
   onBattleFinished: (success: boolean) => void;
 }
 
@@ -38,16 +74,30 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   party,
   civilWarRisk = 50,
   darkMode,
+  scenario = '2026',
   onBattleFinished
 }) => {
   const [regionStatus, setRegionStatus] = useState<Record<string, RegionUnit>>({});
   const [armies, setArmies] = useState<PlayerArmy[]>([]);
-  const [militaryBudget, setMilitaryBudget] = useState<number>(120000);
+  const [militaryBudget, setMilitaryBudget] = useState<number>(180000);
   const [selectedArmyId, setSelectedArmyId] = useState<string | null>(null);
   const [recruitingProvinceId, setRecruitingProvinceId] = useState<string | null>(null);
 
+  // Casualties and Army tracking state
+  const [loyalCasualties, setLoyalCasualties] = useState<number>(57039);
+  const [rebelCasualties, setRebelCasualties] = useState<number>(82392);
+  const [loyalArmyCount, setLoyalArmyCount] = useState<number>(420000);
+  const [rebelArmyCount, setRebelArmyCount] = useState<number>(280000);
+
+  // Ordnance & Bomb Arsenal
+  const [inventoryBombs, setInventoryBombs] = useState<Record<string, number>>({
+    [scenario === '1950' ? 'b_napalm_1950' : scenario === '1936' ? 'b_sc250_1936' : scenario === '1920' ? 'b_cooper_1920' : scenario === '1914' ? 'b_putilov_1914' : 'b_jdam_2026']: 2
+  });
+  const [showOrdnanceFactory, setShowOrdnanceFactory] = useState<boolean>(false);
+  const [selectedBombToDrop, setSelectedBombToDrop] = useState<string | null>(null);
+
   const [battleLogs, setBattleLogs] = useState<string[]>([
-    'Tactical command center active! You can recruit new armies from provinces and issue attack or siege orders.'
+    'Tactical command center active! You can recruit new armies from provinces, manufacture era-specific bombs, and issue attack or siege orders.'
   ]);
   const [mapMode, setMapMode] = useState<'GIS' | 'CARDS'>('GIS');
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -291,7 +341,68 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     setRecruitingProvinceId(null);
   };
 
+  const handleManufactureBomb = (bombId: string) => {
+    const bomb = HISTORICAL_BOMBS.find(b => b.id === bombId);
+    if (!bomb) return;
+    if (militaryBudget < bomb.cost) {
+      playSound('error');
+      addLog(`⚠️ Insufficient Military Budget! ₺${bomb.cost.toLocaleString()} required to produce ${bomb.name}.`);
+      return;
+    }
+    setMilitaryBudget(prev => prev - bomb.cost);
+    setInventoryBombs(prev => ({
+      ...prev,
+      [bombId]: (prev[bombId] || 0) + 1
+    }));
+    playSound('success');
+    addLog(`🏭 MANUFACTURED: 1x ${bomb.name} ready for aerial deployment!`);
+  };
+
+  const handleLaunchBomb = (bombId: string, targetRegionId: string) => {
+    const bomb = HISTORICAL_BOMBS.find(b => b.id === bombId);
+    const count = inventoryBombs[bombId] || 0;
+    if (!bomb || count <= 0) return;
+
+    const target = regionStatus[targetRegionId];
+    if (!target || target.type !== 'rebel') return;
+
+    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
+    setInventoryBombs(prev => ({
+      ...prev,
+      [bombId]: Math.max(0, (prev[bombId] || 0) - 1)
+    }));
+    setSelectedBombToDrop(null);
+
+    const damage = bomb.damage;
+    const newHp = Math.max(0, target.hp - damage);
+
+    // Increase casualties!
+    const addedEnemyCasualties = Math.floor(damage * 180 + Math.random() * 400);
+    const addedFriendlyCasualties = Math.floor(Math.random() * 30);
+    setRebelCasualties(prev => prev + addedEnemyCasualties);
+    setLoyalCasualties(prev => prev + addedFriendlyCasualties);
+    setRebelArmyCount(prev => Math.max(0, prev - Math.floor(addedEnemyCasualties * 0.9)));
+
+    playSound('explosion');
+    addLog(`🚀 BOMB STRIKE: Deployed ${bomb.name} on ${regName}! ${damage} Demolition Damage (+${addedEnemyCasualties.toLocaleString()} enemy casualties).`);
+
+    setRegionStatus(prev => {
+      const next = { ...prev };
+      if (newHp === 0) {
+        addLog(`🟢 OBLITERATION: Rebel garrison eradicated in ${regName}! Province secured.`);
+        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
+      } else {
+        next[targetRegionId] = { ...target, hp: newHp };
+      }
+      return next;
+    });
+  };
+
   const handleAttack = (targetRegionId: string) => {
+    if (selectedBombToDrop) {
+      handleLaunchBomb(selectedBombToDrop, targetRegionId);
+      return;
+    }
     const army = selectedArmyId ? armies.find(a => a.id === selectedArmyId) : armies[0];
     if (army) {
       handleOrderAssault(army.id, targetRegionId);
@@ -309,8 +420,16 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     const damageDealt = Math.floor(army.attackPower * (0.8 + Math.random() * 0.4));
     const newHp = Math.max(0, target.hp - damageDealt);
 
+    // Dynamic casualties update
+    const addedRebelLosses = Math.floor(damageDealt * 120 + Math.random() * 300);
+    const addedLoyalLosses = Math.floor(180 + Math.random() * 250);
+    setRebelCasualties(prev => prev + addedRebelLosses);
+    setLoyalCasualties(prev => prev + addedLoyalLosses);
+    setRebelArmyCount(prev => Math.max(0, prev - Math.floor(addedRebelLosses * 0.7)));
+    setLoyalArmyCount(prev => Math.max(0, prev - Math.floor(addedLoyalLosses * 0.7)));
+
     playSound('battle');
-    addLog(`⚔️ ${army.name}, ${regName} launched an assault on rebel positions!`);
+    addLog(`⚔️ ${army.name} engaged rebel defenders in ${regName}!`);
 
     setRegionStatus(prev => {
       const next = { ...prev };
@@ -870,24 +989,139 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                 <span className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20"><Target className="w-3 h-3"/> Rebel</span>
               </div>
               
-              {(country.id === 'TR' || country.id === 'DE' || country.id === 'US') && (
-                <div className="flex items-center rounded-lg overflow-hidden border border-slate-700/50">
-                   <button 
-                     onClick={() => setMapMode('GIS')}
-                     className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'GIS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                   >
-                     <MapIcon className="w-3 h-3" /> GIS
-                   </button>
-                   <button 
-                     onClick={() => setMapMode('CARDS')}
-                     className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'CARDS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                   >
-                     <Compass className="w-3 h-3" /> Grid
-                   </button>
-                </div>
-              )}
+              <div className="flex items-center rounded-lg overflow-hidden border border-slate-700/50">
+                 <button 
+                   onClick={() => setMapMode('GIS')}
+                   className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'GIS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                 >
+                   <MapIcon className="w-3 h-3" /> GIS
+                 </button>
+                 <button 
+                   onClick={() => setMapMode('CARDS')}
+                   className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'CARDS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                 >
+                   <Compass className="w-3 h-3" /> Grid
+                 </button>
+              </div>
             </div>
           </div>
+
+          {/* ACTIVE GIS MAP CONTAINER WITH CASUALTIES HUD */}
+          {mapMode === 'GIS' ? (
+            <div className="relative w-full h-[460px] rounded-3xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950">
+              <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
+
+              {/* TOP-RIGHT LIVE CASUALTIES & ORDNANCE HUD */}
+              <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 pointer-events-auto max-w-xs w-full sm:w-auto">
+                <div className="p-3.5 rounded-2xl bg-slate-950/95 border border-slate-700/90 shadow-2xl backdrop-blur-md flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-black uppercase text-rose-400 font-mono tracking-tight">
+                      <AlertTriangle className="w-3.5 h-3.5 animate-pulse text-rose-500" />
+                      CASUALTIES (ACTIVE WAR)
+                    </div>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">LIVE FEED</span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1 pt-0.5 font-mono text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-emerald-400 font-bold uppercase text-[11px]">US (LOYAL):</span>
+                      <span className="font-black text-slate-100">{loyalCasualties.toLocaleString()} DEAD</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-rose-400 font-bold uppercase text-[11px]">REBELS:</span>
+                      <span className="font-black text-rose-300">{rebelCasualties.toLocaleString()} DEAD</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-1 pt-1.5 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
+                    <span>FORCES: <strong className="text-emerald-400">{loyalArmyCount.toLocaleString()}</strong></span>
+                    <span>ENEMY: <strong className="text-rose-400">{rebelArmyCount.toLocaleString()}</strong></span>
+                  </div>
+                </div>
+
+                {/* Bomb Launch Targeting Status Indicator */}
+                {selectedBombToDrop && (() => {
+                  const b = HISTORICAL_BOMBS.find(x => x.id === selectedBombToDrop);
+                  return (
+                    <div className="p-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-between shadow-lg animate-pulse">
+                      <div className="flex items-center gap-1.5">
+                        <Bomb className="w-4 h-4" />
+                        <span>TARGETING: Click Rebel Province</span>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedBombToDrop(null)}
+                        className="px-2 py-0.5 bg-slate-950 text-white rounded text-[10px]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {/* Quick Factory & Ordnance Arsenal Button */}
+                <button
+                  onClick={() => setShowOrdnanceFactory(true)}
+                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-600/30 transition-all cursor-pointer"
+                >
+                  <Factory className="w-4 h-4" />
+                  <span>Ordnance Factory & Bombs ({Object.values(inventoryBombs).reduce((a: number, b: number) => a + Number(b), 0)})</span>
+                </button>
+              </div>
+
+              {/* Bottom Instructions */}
+              <div className="absolute bottom-3 left-3 z-30 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[10px] font-mono text-slate-300 backdrop-blur-sm pointer-events-none">
+                💡 Drag green markers onto red rebel provinces to launch tactical assaults.
+              </div>
+            </div>
+          ) : (
+            /* GRID CARDS VIEW */
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {country.regions.map(r => {
+                const status = regionStatus[r.id];
+                const isRebel = status?.type === 'rebel';
+                return (
+                  <div
+                    key={r.id}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
+                      isRebel 
+                        ? 'bg-rose-950/30 border-rose-500/50' 
+                        : 'bg-emerald-950/30 border-emerald-500/50'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-xs">{r.name}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                          isRebel ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                        }`}>
+                          {isRebel ? 'REBEL' : 'LOYAL'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-400 mt-1">
+                        HP: {status?.hp || 200}/{status?.maxHp || 200}
+                      </div>
+                    </div>
+
+                    {isRebel ? (
+                      <button
+                        onClick={() => handleAttack(r.id)}
+                        className="w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold font-mono transition-all"
+                      >
+                        ⚔️ Attack
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setRecruitingProvinceId(r.id)}
+                        className="w-full py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold font-mono transition-all"
+                      >
+                        + Recruit Army
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           
           {/* ACTIVE STANDING ARMIES ROSTER & COMMAND PANEL */}
           <div className="mt-6 p-4 rounded-2xl bg-slate-900/90 border border-slate-700/60 shadow-xl flex flex-col gap-4">
@@ -1023,6 +1257,121 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         </div>
 
       </div>
+
+      {/* STRATEGIC ORDNANCE FACTORY & BOMB PRODUCTION MODAL */}
+      {showOrdnanceFactory && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full p-6 rounded-3xl bg-slate-900 border border-amber-500/40 text-slate-100 shadow-2xl flex flex-col gap-4 animate-scale-up max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <Factory className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg flex items-center gap-2 tracking-tight">
+                    HISTORICAL ORDNANCE FACTORY & ARSENAL
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded uppercase font-bold">
+                      ERA {scenario}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Manufacture authentic historical aerial bombs and munitions from {scenario} to bomb rebel fortifications.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowOrdnanceFactory(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Current Military Budget banner */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono">
+              <span className="text-xs text-slate-400">Available Military Operations Budget:</span>
+              <span className="text-base font-black text-amber-400">₺{militaryBudget.toLocaleString()}</span>
+            </div>
+
+            {/* Bombs List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {HISTORICAL_BOMBS.filter(b => b.era === scenario || (scenario === '2026' ? b.era === '2026' : b.era === scenario)).map(bomb => {
+                const owned = inventoryBombs[bomb.id] || 0;
+                const canAfford = militaryBudget >= bomb.cost;
+
+                return (
+                  <div 
+                    key={bomb.id}
+                    className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{bomb.icon}</span>
+                          <div>
+                            <div className="font-bold text-xs text-slate-100">{bomb.name}</div>
+                            <div className="text-[10px] text-amber-400 font-mono uppercase">{bomb.type} Ordnance</div>
+                          </div>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+                          x{owned} Owned
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                        {bomb.description}
+                      </p>
+                      <div className="mt-2 flex items-center gap-3 text-[10px] font-mono">
+                        <span className="text-rose-400 font-bold">💥 {bomb.damage} Blast Dmg</span>
+                        <span className="text-amber-400 font-bold">₺{bomb.cost.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                      <button
+                        onClick={() => handleManufactureBomb(bomb.id)}
+                        disabled={!canAfford}
+                        className={`py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          canAfford
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/20'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Produce (₺{bomb.cost / 1000}k)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedBombToDrop(bomb.id);
+                          setShowOrdnanceFactory(false);
+                          playSound('click');
+                          addLog(`🎯 TARGETING ACTIVE: Click any red rebel province to deploy ${bomb.name}!`);
+                        }}
+                        disabled={owned === 0}
+                        className={`py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          owned > 0
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20'
+                            : 'bg-slate-800/60 text-slate-600 cursor-not-allowed'
+                        }`}
+                      >
+                        <Radio className="w-3.5 h-3.5" /> Deploy Strike
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setShowOrdnanceFactory(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300"
+              >
+                Close Arsenal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

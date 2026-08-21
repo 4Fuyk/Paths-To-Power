@@ -558,20 +558,53 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                 No active legislative coalitions. Most seats are held by single political groups or there are no rival agreements.
               </div>
             ) : (
-              coalitions.map((coal, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex flex-col gap-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-black text-indigo-400 font-mono">{coal.name}</span>
-                    <span className="text-[10px] font-bold font-mono text-amber-500">{coal.totalSeats} Seats</span>
+              coalitions.map((coal, idx) => {
+                // Dynamically compute live total seats for this coalition from current seats of member parties
+                const liveSeats = coal.parties.reduce((sum, partyName) => {
+                  if (partyName === party.name || partyName === party.id) {
+                    return sum + playerSeatsCount;
+                  }
+                  const rival = rivalsSeatsData.find(r => r.name === partyName || r.id === partyName);
+                  return sum + (rival ? rival.seats : 0);
+                }, 0) || coal.totalSeats;
+
+                return (
+                  <div key={idx} className="p-3 rounded-xl bg-slate-500/5 border border-slate-500/10 flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-black text-indigo-400 font-mono flex items-center gap-1">
+                        🏛️ {coal.name}
+                      </span>
+                      <span className="text-[10px] font-bold font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        {liveSeats} / {country.seats} Seats ({((liveSeats / country.seats) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 mt-0.5">
+                      <strong className="text-slate-300">Alliance Members:</strong> 
+                      {coal.parties.map((pName, pIdx) => {
+                        let seats = 0;
+                        let pColor = '#6366f1';
+                        if (pName === party.name || pName === party.id) {
+                          seats = playerSeatsCount;
+                          pColor = party.color;
+                        } else {
+                          const rival = rivalsSeatsData.find(r => r.name === pName || r.id === pName);
+                          seats = rival ? rival.seats : 0;
+                          if (rival) pColor = rival.color;
+                        }
+                        return (
+                          <span key={pIdx} className="inline-flex items-center gap-1 font-mono text-[9px] bg-slate-800/60 px-1.5 py-0.5 rounded border border-slate-700">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pColor }}></span>
+                            {pName}: <strong className="text-slate-200">{seats}</strong>
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div className="text-[9px] text-slate-500 font-mono uppercase mt-0.5">
+                      {coal.ideologyAvg}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    <strong>Parties:</strong> {coal.parties.join(', ')}
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono uppercase mt-0.5">
-                    {coal.ideologyAvg}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

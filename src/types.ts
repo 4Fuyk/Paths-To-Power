@@ -3,7 +3,46 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type Ideology = 'Social Democrat' | 'Conservative' | 'Nationalist' | 'Liberal' | 'Socialist' | 'Ecologist' | 'Centrist' | 'Far Right' | 'Far Left' | 'Communist' | 'Social Conservative' | 'Progressive' | 'Alliance';
+export type Ideology = 
+  | 'Social Democrat' 
+  | 'Conservative' 
+  | 'Nationalist' 
+  | 'Liberal' 
+  | 'Socialist' 
+  | 'Ecologist' 
+  | 'Centrist' 
+  | 'Far Right' 
+  | 'Far Left' 
+  | 'Communist' 
+  | 'Social Conservative' 
+  | 'Progressive' 
+  | 'Alliance'
+  | 'Traditionalist'
+  | 'Populist'
+  | 'Monarchist'
+  | 'Fascist';
+
+export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD';
+
+export type GameFlowMode = 'TURN_BY_TURN' | 'PAUSABLE_REALTIME';
+export type SimulationSpeed = 1 | 2 | 3 | 4 | 5; // 1: very slow, 2: slow, 3: normal, 4: fast, 5: very fast
+
+export type ScenarioYear = '2026' | '1950' | '1936' | '1920' | '1914';
+
+export interface GameScenario {
+  id: ScenarioYear;
+  year: number;
+  title: string;
+  tagline: string;
+  description: string;
+  globalTension: 'Low' | 'Moderate' | 'Elevated' | 'Critical' | 'Extreme';
+  dominantIdeologies: string[];
+  keyEvents: string[];
+  economicClimate: string;
+  majorPowers: string[];
+  worldOrderSummary: string;
+  statusTag: 'PLAYABLE' | 'PREVIEW';
+}
 
 export type VoterGroup = 'Workers' | 'Youth' | 'Nationalists' | 'Liberals' | 'Traditionalists' | 'Shopkeepers';
 
@@ -77,7 +116,7 @@ export interface Country {
   description: string;
   flag: string;
   seats: number;
-  system: 'Hükümet Koalisyonu' | 'Başkanlık Sistemi' | 'Dar Bölge Meclisi' | 'Presidential System' | 'Coalition Government' | 'First-Past-The-Post' | 'Semi-Presidential' | 'Parliamentary Republic';
+  system: string;
   parliamentName: string;
   population: string;
   primaryColor: string; // Map color when unlocked
@@ -87,6 +126,7 @@ export interface Country {
   campaignTurns: number; // Total weeks or campaign actions allowed
   electionCycleYears: number; // election cycle frequency in years
   termLimit?: number; // Maximum number of terms allowed (e.g. 2 for US). Infinite if undefined.
+  freedomScore?: number;
 }
 
 export interface Coalition {

@@ -4,24 +4,34 @@
  */
 
 import React, { useState } from 'react';
-import { Country, Ideology, Party } from '../types';
+import { Country, Ideology, Party, GameDifficulty } from '../types';
 import { ChevronLeft, Award } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface PartyCreatorProps {
   country: Country;
   onBack: () => void;
   onCreateParty: (party: Party) => void;
   darkMode: boolean;
+  difficulty?: GameDifficulty;
 }
 
-
-const AVAILABLE_IDEOLOGIES: { value: Ideology; desc: string; focus: string }[] = [
-  { value: 'Social Democrat', desc: 'Social justice, robust state support programs, labor wellness, and comprehensive civil rights.', focus: 'Provides bonus support within Labor and Youth factions.' },
-  { value: 'Conservative', desc: 'Cultural patriotism, public order, preservation of heritage, and localized tax alleviation.', focus: 'Provides bonus support within Traditionalist and Merchant factions.' },
-  { value: 'Nationalist', desc: 'Robust border security, domestic high-tech industries, and sovereign defense posturing.', focus: 'Provides bonus support within Nationalist and Traditionalist factions.' },
-  { value: 'Liberal', desc: 'Free markets, maximum individual liberty, deregulation, and advanced digital integration.', focus: 'Provides bonus support within Liberal and Merchant factions.' },
-  { value: 'Socialist', desc: 'Nationalized essential infrastructure, progressive capital wealth taxes, and worker equity.', focus: 'Provides powerful base support within Labor and Youth factions.' },
-  { value: 'Ecologist', desc: 'Sustained green transition, carbon taxation, clean grid infrastructure, and conservation.', focus: 'Provides bonus support within Youth and Liberal factions.' },
+const ALL_IDEOLOGY_KEYS: Ideology[] = [
+  'Social Democrat',
+  'Conservative',
+  'Nationalist',
+  'Liberal',
+  'Socialist',
+  'Ecologist',
+  'Centrist',
+  'Traditionalist',
+  'Communist',
+  'Social Conservative',
+  'Progressive',
+  'Populist',
+  'Monarchist',
+  'Far Right',
+  'Far Left'
 ];
 
 const POLITICAL_COLORS = [
@@ -31,6 +41,10 @@ const POLITICAL_COLORS = [
   { hex: '#d97706' },
   { hex: '#7c3aed' },
   { hex: '#06b6d4' },
+  { hex: '#e11d48' },
+  { hex: '#4f46e5' },
+  { hex: '#16a34a' },
+  { hex: '#ea580c' },
 ];
 
 export const PartyCreator: React.FC<PartyCreatorProps> = ({
@@ -38,7 +52,9 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
   onBack,
   onCreateParty,
   darkMode,
+  difficulty = 'NORMAL',
 }) => {
+  const { t } = useLanguage();
   const [partyName, setPartyName] = useState('');
   const [leaderName, setLeaderName] = useState('');
   const [selectedIdeology, setSelectedIdeology] = useState<Ideology>('Social Democrat');
@@ -53,13 +69,12 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
     // Prevent selecting existing national rival parties as custom player party
     const lowerPartyName = partyName.trim().toLowerCase();
-    const lowerLeaderName = leaderName.trim().toLowerCase();
     const forbiddenParties = country.id === 'DE' ? [
       'cdu', 'csu', 'afd', 'spd', 'grüne', 'gruene', 'linke', 'die linke', 'bsw', 'fdp', 'ssw'
     ] : country.id === 'US' ? [
       'republican', 'democrat', 'libertarian', 'green', 'cumhuriyetçi', 'cumhuriyetci', 'demokrat', 'özgürlükçü', 'ozgurlukcu', 'yeşiller', 'yesiller', 'rep', 'dem_us', 'lp', 'gp'
     ] : [
-      'chp', 'akp', 'ak parti', 'yrp', 'yeniden refah', 'dem', 'dem parti', 'mhp',
+      'chp', 'yeni', 'yeni parti', 'akp', 'ak parti', 'yrp', 'yeniden refah', 'dem', 'dem parti', 'mhp',
       'zafer', 'zafer partisi', 'tip', 'tkp', 'saadet', 'saadet partisi', 'deva',
       'deva partisi', 'gelecek', 'gelecek partisi', 'vatan', 'vatan partisi'
     ];
@@ -72,22 +87,26 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
       return;
     }
 
-    // Attributes are automatically preset to solid campaign values
+    // Attributes scaled according to chosen difficulty
+    const startingBudget = difficulty === 'EASY' ? 300000 : difficulty === 'HARD' ? 130000 : 200000;
+    const startingMembers = difficulty === 'EASY' ? 500 : difficulty === 'HARD' ? 300 : 400;
+    const startingTrait = difficulty === 'EASY' ? 6 : difficulty === 'HARD' ? 4 : 5;
+
     const newParty: Party = {
       id: 'player_party',
       name: partyName.trim(),
       leader: leaderName.trim(),
       ideology: selectedIdeology,
-      symbol: 'Flame', // Standard flame logo preassigned behind-the-scenes
+      symbol: 'Flame',
       color: selectedColor,
-      influence: 30, // solid, balanced, high-fidelity ratings
-      budget: 200000, 
-      members: 400,
+      influence: difficulty === 'EASY' ? 40 : difficulty === 'HARD' ? 20 : 30,
+      budget: startingBudget, 
+      members: startingMembers,
       traits: {
-        charisma: 5,
-        eloquence: 5,
-        organization: 5,
-        strategy: 5,
+        charisma: startingTrait,
+        eloquence: startingTrait,
+        organization: startingTrait,
+        strategy: startingTrait,
       },
       photo: ((country.id === 'TR' || country.id === 'DE' || country.id === 'US') ? (isPresetSelected ? selectedPhoto : '') : selectedPhoto),
     };
@@ -96,7 +115,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-4 lg:p-6 animate-fade-in">
+    <div className="w-full max-w-4xl mx-auto p-4 lg:p-6 animate-fade-in">
       {/* Return Row */}
       <button
         id="party-creator-back-btn"
@@ -107,7 +126,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
         }`}
       >
-        <ChevronLeft className="w-4 h-4" /> Return to World Map
+        <ChevronLeft className="w-4 h-4" /> {t.returnToMap}
       </button>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -117,23 +136,23 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
         }`}>
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="text-3xl filter drop-shadow-sm select-none">{country.flag}</span>
+              <span className="text-3xl filter drop-shadow-sm select-none">{country?.flag || '🌐'}</span>
               <div>
-                <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold">ESTABLISH NEW MOVEMENT</span>
-                <h2 className="text-xl font-bold tracking-tight">{country.name} Political Headquarters</h2>
+                <span className="text-[10px] tracking-widest font-mono text-indigo-400 font-bold">{t.establishMovement}</span>
+                <h2 className="text-xl font-bold tracking-tight">{country?.name || 'Country'} Political Headquarters</h2>
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Form your political movement, select a campaign leader avatar icon, chose your official color, and draft your guiding manifesto to seek power in {country.name}.
+              Form your political movement, select a campaign leader avatar icon, choose your official color, and draft your guiding manifesto to seek power in {country?.name || 'the country'}.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* National leader presets / Avatar Selector */}
             {country.rivals && country.rivals.length > 0 && (
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">OFFICIAL NATIONAL LEADER TEMPLATES</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{t.leaderPresets}</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-56 overflow-y-auto pr-1">
                   {country.rivals.map((rival) => {
                     const isSelected = selectedPhoto === rival.photo;
                     return (
@@ -155,10 +174,10 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                               : 'bg-indigo-50 border-indigo-200 text-slate-900 shadow'
                             : darkMode
                             ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                            : 'bg-slate-55 border-slate-200 text-slate-600 hover:bg-slate-10 border'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                       >
-                        <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-700/50 relative">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-slate-700/50 relative">
                           {rival.photo ? (
                             <img
                               src={rival.photo}
@@ -200,15 +219,15 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                           : 'bg-indigo-50 border-indigo-200 text-slate-900 shadow'
                         : darkMode
                         ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                        : 'bg-slate-55 border-slate-200 text-slate-600 hover:bg-slate-10 border'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full border border-dashed border-slate-500 flex items-center justify-center text-lg text-slate-500 select-none">
                       ?
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-bold">Custom Leader</span>
-                      <span className="text-[10px] text-slate-400 font-medium">Design My Own</span>
+                      <span className="text-xs font-bold">{t.customLeader}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{t.designOwn}</span>
                     </div>
                   </button>
                 </div>
@@ -217,7 +236,7 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
 
             {/* Party Name */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">PARTY CHARTER NAME</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{t.partyCharterName}</label>
               <input
                 id="party-name-input"
                 type="text"
@@ -229,14 +248,14 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                 className={`w-full p-3 rounded-xl border text-sm font-semibold transition-all outline-none focus:ring-2 ${
                   darkMode
                     ? 'bg-slate-950 border-slate-800 text-slate-100 focus:ring-indigo-500/40 focus:border-indigo-500'
-                    : 'bg-slate-55 @border-slate-200 text-slate-850 focus:ring-indigo-500/10 focus:border-indigo-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500/10 focus:border-indigo-500'
                 }`}
               />
             </div>
 
             {/* Leader Name */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">GENERAL CHAIR / FOUNDER</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{t.founderLeader}</label>
               <input
                 id="leader-name-input"
                 type="text"
@@ -248,87 +267,87 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
                 className={`w-full p-3 rounded-xl border text-sm font-semibold transition-all outline-none focus:ring-2 ${
                   darkMode
                     ? 'bg-slate-950 border-slate-800 text-slate-100 focus:ring-indigo-500/40 focus:border-indigo-500'
-                    : 'bg-slate-55 @border-slate-200 text-slate-850 focus:ring-indigo-500/10 focus:border-indigo-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500/10 focus:border-indigo-500'
                 }`}
               />
             </div>
 
-            {/* Avatar & Color Layout Section */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              {/* Party Color picker */}
-              <div className="col-span-12">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">PARTY COLOR</label>
-                <div className={`p-3 rounded-2xl border flex flex-wrap items-center gap-3 justify-start min-h-[58px] ${
-                  darkMode ? 'bg-slate-950/50 border-slate-850' : 'bg-slate-50 border-slate-100/80'
-                }`}>
-                  {POLITICAL_COLORS.map((col) => {
-                    const isSelected = selectedColor === col.hex;
-                    return (
-                      <button
-                        key={col.hex}
-                        type="button"
-                        onClick={() => setSelectedColor(col.hex)}
-                        style={{ backgroundColor: col.hex }}
-                        className="w-8 h-8 rounded-full transition-all hover:scale-110 flex items-center justify-center relative cursor-pointer"
-                      >
-                        {isSelected && (
-                          <span className="w-2.5 h-2.5 bg-white rounded-full shadow-md"></span>
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* Party Color picker */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{t.partyColor}</label>
+              <div className={`p-3 rounded-2xl border flex flex-wrap items-center gap-3 justify-start min-h-[58px] ${
+                darkMode ? 'bg-slate-950/50 border-slate-850' : 'bg-slate-50 border-slate-100/80'
+              }`}>
+                {POLITICAL_COLORS.map((col) => {
+                  const isSelected = selectedColor === col.hex;
+                  return (
+                    <button
+                      key={col.hex}
+                      type="button"
+                      onClick={() => setSelectedColor(col.hex)}
+                      style={{ backgroundColor: col.hex }}
+                      className="w-8 h-8 rounded-full transition-all hover:scale-110 flex items-center justify-center relative cursor-pointer"
+                    >
+                      {isSelected && (
+                        <span className="w-2.5 h-2.5 bg-white rounded-full shadow-md"></span>
+                      )}
+                    </button>
+                  );
+                })}
 
-                  {/* HTML5 Native Custom Color Picker */}
-                  <div className="relative w-8 h-8 rounded-full border border-dashed border-slate-500 hover:border-slate-350 flex items-center justify-center cursor-pointer group bg-slate-500/5 hover:bg-slate-500/10 transition-all">
-                    <input
-                      type="color"
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                    />
-                    {!POLITICAL_COLORS.some((c) => c.hex === selectedColor) ? (
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center relative shadow-inner" style={{ backgroundColor: selectedColor }}>
-                        <span className="w-1.5 h-1.5 bg-white rounded-full shadow-md"></span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-slate-400 group-hover:text-slate-200 font-bold font-mono">+</span>
-                    )}
-                  </div>
+                {/* HTML5 Native Custom Color Picker */}
+                <div className="relative w-8 h-8 rounded-full border border-dashed border-slate-500 hover:border-slate-350 flex items-center justify-center cursor-pointer group bg-slate-500/5 hover:bg-slate-500/10 transition-all">
+                  <input
+                    type="color"
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                  />
+                  {!POLITICAL_COLORS.some((c) => c.hex === selectedColor) ? (
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center relative shadow-inner" style={{ backgroundColor: selectedColor }}>
+                      <span className="w-1.5 h-1.5 bg-white rounded-full shadow-md"></span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400 group-hover:text-slate-200 font-bold font-mono">+</span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Manifesto Ideology */}
+            {/* Manifesto Ideology Selection - Complete List */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">PARTY MANIFESTO IDEOLOGY</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {[...AVAILABLE_IDEOLOGIES, ...(AVAILABLE_IDEOLOGIES.some(i => i.value === selectedIdeology) ? [] : [{ value: selectedIdeology, desc: 'Special Ideology Template', focus: 'Unique bonus attributes.' }])].map((ideo) => {
-                  const isSelected = selectedIdeology === ideo.value;
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{t.manifestoIdeology}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
+                {ALL_IDEOLOGY_KEYS.map((ideoKey) => {
+                  const isSelected = selectedIdeology === ideoKey;
+                  const localizedName = t.ideologyNames[ideoKey] || ideoKey;
+                  const info = t.ideologyDescriptions[ideoKey] || { desc: 'Comprehensive national platform', focus: 'Balanced voter appeal' };
+
                   return (
                     <button
-                      id={`ideology-select-${ideo.value.replace(/\s+/g, '-')}`}
-                      key={ideo.value}
+                      id={`ideology-select-${ideoKey.replace(/\s+/g, '-')}`}
+                      key={ideoKey}
                       type="button"
-                      onClick={() => setSelectedIdeology(ideo.value)}
+                      onClick={() => setSelectedIdeology(ideoKey)}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 cursor-pointer ${
                         isSelected
                           ? darkMode
-                            ? 'bg-indigo-950/30 border-indigo-500 text-slate-100'
+                            ? 'bg-indigo-950/40 border-indigo-500 text-slate-100 ring-1 ring-indigo-500/40'
                             : 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm'
                           : darkMode
                           ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                          : 'bg-slate-5 font-medium border-slate-200 text-slate-600 hover:bg-slate-50'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      <span className="text-sm font-bold flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedColor }}></span>
-                        {ideo.value}
+                      <span className="text-xs font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: selectedColor }}></span>
+                        {localizedName}
                       </span>
-                      <span className="text-[10px] leading-relaxed opacity-85 text-slate-400">
-                        {ideo.desc}
+                      <span className="text-[10px] leading-relaxed opacity-80 text-slate-400 line-clamp-2">
+                        {info.desc}
                       </span>
-                      <span className="text-[9px] font-mono font-semibold text-emerald-500 mt-1">
-                        {ideo.focus}
+                      <span className="text-[9px] font-mono font-semibold text-emerald-400 mt-0.5">
+                        {info.focus}
                       </span>
                     </button>
                   );
@@ -337,13 +356,13 @@ export const PartyCreator: React.FC<PartyCreatorProps> = ({
             </div>
 
             {/* Launch button */}
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 id="confirm-party-creation-btn"
                 type="submit"
-                className="w-full py-4 rounded-2xl font-bold transition-all shadow-lg text-sm flex items-center justify-center gap-2 bg-slate-800 text-white cursor-pointer hover:scale-[1.015] hover:shadow-indigo-600/25"
+                className="w-full py-4 rounded-2xl font-bold transition-all shadow-lg text-sm flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white cursor-pointer hover:scale-[1.01] hover:shadow-indigo-600/25"
               >
-                <Award className="w-5 h-5 animate-pulse" /> Establish Party & Launch Campaign!
+                <Award className="w-5 h-5 animate-pulse text-[#c9a26a]" /> {t.launchCampaign}
               </button>
             </div>
           </div>

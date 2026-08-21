@@ -3,12 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Play, Settings, Globe } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { 
+  Play, Settings, Globe, Zap, Shield, Flame, X, ChevronRight, 
+  ChevronLeft, Sparkles, AlertTriangle, Globe2, Crown, Check, Layers
+} from 'lucide-react';
+import { GameDifficulty, ScenarioYear } from '../types';
+import { HISTORICAL_SCENARIOS } from '../constants/scenarios';
 
 interface StartScreenProps {
   darkMode: boolean;
-  onPlay: () => void;
+  onPlay: (difficulty: GameDifficulty, scenario: ScenarioYear) => void;
   onSettings?: () => void;
   onLanguages?: () => void;
 }
@@ -92,6 +97,12 @@ function featurePaths(feature: any, stride: number): string[] {
 export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: StartScreenProps) {
   const [capitalScene, setCapitalScene] = useState(0);
   const [worldPaths, setWorldPaths] = useState<string[]>(CONTINENTS);
+  
+  // Game Setup Modal States
+  const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
+  const [setupStep, setSetupStep] = useState<'SCENARIO' | 'DIFFICULTY'>('SCENARIO');
+  const [selectedScenarioYear, setSelectedScenarioYear] = useState<ScenarioYear>('2026');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<GameDifficulty>('NORMAL');
 
   useEffect(() => {
     fetch(WORLD_URL)
@@ -112,6 +123,16 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
   }, []);
 
   const [, focusX, focusY] = CAPITALS[capitalScene];
+  const activeScenario = HISTORICAL_SCENARIOS.find(s => s.id === selectedScenarioYear) || HISTORICAL_SCENARIOS[0];
+
+  const handleProceedToDifficulty = () => {
+    setSetupStep('DIFFICULTY');
+  };
+
+  const handleStartGame = () => {
+    setShowSetupModal(false);
+    onPlay(selectedDifficulty, selectedScenarioYear);
+  };
 
   return (
     <div
@@ -129,8 +150,16 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
         .ptp-spot { transition: cx 3.5s cubic-bezier(0.22, 1, 0.36, 1), cy 3.5s cubic-bezier(0.22, 1, 0.36, 1); }
         .ptp-epoch-label { animation: ptp-fade-in 0.6s ease; }
         @keyframes ptp-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-pop-forward {
+          0% { opacity: 0; transform: perspective(1000px) translateZ(-50px) scale(0.95); }
+          100% { opacity: 1; transform: perspective(1000px) translateZ(0) scale(1); }
+        }
+        .animate-slide-pop {
+          animation: slide-pop-forward 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
 
+      {/* World Map Grid Background */}
       <div className={`absolute inset-0 z-0 ${darkMode ? 'opacity-[0.6]' : 'opacity-[0.35]'}`}>
         <svg viewBox="0 0 1000 500" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           <g>
@@ -185,6 +214,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
         }}
       />
 
+      {/* Main Title Center Hero */}
       <div className="z-10 flex flex-col items-center justify-center px-8 pt-6 pb-12 max-w-2xl text-center gap-6">
         <div className="flex items-center gap-3">
           <span className={`h-px w-10 ${darkMode ? 'bg-[#c9a26a]/50' : 'bg-slate-400'}`} />
@@ -235,8 +265,11 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
 
         <div className="flex flex-col gap-3 w-full max-w-sm">
           <button
-            onClick={onPlay}
-            className="group w-full px-12 py-5 bg-gradient-to-b from-[#dab97c] to-[#b8925a] hover:from-[#e6c78d] hover:to-[#c49f68] text-[#1a1206] font-black rounded-lg shadow-xl shadow-black/40 transition-all text-xl uppercase tracking-widest border border-[#8a6a3a] hover:scale-[1.02] flex items-center justify-center gap-3"
+            onClick={() => {
+              setSetupStep('SCENARIO');
+              setShowSetupModal(true);
+            }}
+            className="group w-full px-12 py-5 bg-gradient-to-b from-[#dab97c] to-[#b8925a] hover:from-[#e6c78d] hover:to-[#c49f68] text-[#1a1206] font-black rounded-lg shadow-xl shadow-black/40 transition-all text-xl uppercase tracking-widest border border-[#8a6a3a] hover:scale-[1.02] flex items-center justify-center gap-3 cursor-pointer"
           >
             <Play className="w-5 h-5 fill-current" />
             Play
@@ -244,7 +277,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={onSettings}
-              className={`px-6 py-3.5 font-bold rounded-lg transition-all text-sm border uppercase tracking-wider hover:scale-[1.02] flex items-center justify-center gap-2 ${
+              className={`px-6 py-3.5 font-bold rounded-lg transition-all text-sm border uppercase tracking-wider hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer ${
                 darkMode
                   ? 'bg-white/[0.03] border-white/10 text-slate-300 hover:bg-white/[0.07] hover:border-[#c9a26a]/40'
                   : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
@@ -255,7 +288,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
             </button>
             <button
               onClick={onLanguages}
-              className={`px-6 py-3.5 font-bold rounded-lg transition-all text-sm border uppercase tracking-wider hover:scale-[1.02] flex items-center justify-center gap-2 ${
+              className={`px-6 py-3.5 font-bold rounded-lg transition-all text-sm border uppercase tracking-wider hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer ${
                 darkMode
                   ? 'bg-white/[0.03] border-white/10 text-slate-300 hover:bg-white/[0.07] hover:border-[#c9a26a]/40'
                   : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
@@ -267,6 +300,428 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
           </div>
         </div>
       </div>
+
+      {/* Two-Step Setup Modal: Vertical Scenario Selection & Difficulty Selection */}
+      {showSetupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
+          <div
+            className={`relative w-full max-w-5xl h-[88vh] max-h-[850px] flex flex-col p-5 sm:p-7 rounded-2xl border shadow-2xl transition-all ${
+              darkMode
+                ? 'bg-[#0b0f19] border-[#c9a26a]/35 text-slate-100 shadow-black/80'
+                : 'bg-white border-slate-300 text-slate-900 shadow-2xl'
+            }`}
+          >
+            {/* Modal Header (Fixed at top) */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-white/10 shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className={`w-4 h-4 ${darkMode ? 'text-[#c9a26a]' : 'text-amber-600'}`} />
+                  <span className={`text-[11px] font-mono tracking-widest uppercase font-bold ${
+                    darkMode ? 'text-[#c9a26a]' : 'text-amber-700'
+                  }`}>
+                    CAMPAIGN SETUP • STEP {setupStep === 'SCENARIO' ? '1/2' : '2/2'}
+                  </span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight mt-1 font-mono">
+                  {setupStep === 'SCENARIO' ? 'Select Historical Scenario' : 'Select Campaign Difficulty'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSetupModal(false)}
+                className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                  darkMode
+                    ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'
+                    : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content Container to prevent any overlap with bottom bar */}
+            <div className="flex-1 overflow-y-auto min-h-0 py-4 pr-1">
+              {/* STEP 1: VERTICAL SCENARIO LIST + DETAILED POWERPOINT SLIDE PRESENTATION */}
+              {setupStep === 'SCENARIO' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                  {/* Left Column: VERTICAL STACK OF SCENARIOS */}
+                  <div className="lg:col-span-4 flex flex-col gap-2">
+                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 flex items-center gap-1.5 px-1 pb-1">
+                      <Layers className="w-3.5 h-3.5 text-[#c9a26a]" />
+                      Historical Eras ({HISTORICAL_SCENARIOS.length})
+                    </span>
+
+                    {HISTORICAL_SCENARIOS.map((scen) => {
+                      const isSelected = selectedScenarioYear === scen.id;
+                      return (
+                        <button
+                          key={scen.id}
+                          type="button"
+                          onClick={() => setSelectedScenarioYear(scen.id)}
+                          className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? darkMode
+                                ? 'bg-gradient-to-r from-[#c9a26a]/25 to-[#c9a26a]/10 border-[#c9a26a] text-[#dab97c] shadow-lg shadow-[#c9a26a]/10 ring-1 ring-[#c9a26a]/50 scale-[1.01]'
+                                : 'bg-gradient-to-r from-amber-100 to-amber-50 border-amber-600 text-amber-950 shadow-md ring-1 ring-amber-500/40 scale-[1.01]'
+                              : darkMode
+                              ? 'bg-white/[0.02] border-white/10 text-slate-400 hover:bg-white/[0.05] hover:text-slate-200 hover:border-white/20'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`px-2 py-1 rounded-md font-mono font-black text-sm border shrink-0 ${
+                              isSelected
+                                ? 'bg-[#c9a26a] text-[#1a1206] border-[#8a6a3a]'
+                                : darkMode
+                                ? 'bg-white/5 border-white/10 text-slate-300'
+                                : 'bg-white border-slate-300 text-slate-700'
+                            }`}>
+                              {scen.year}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-xs sm:text-sm truncate">{scen.title}</h4>
+                              <span className="text-[9px] uppercase font-mono opacity-70 block">
+                                Tension: {scen.globalTension}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            {scen.statusTag === 'PLAYABLE' ? (
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Ready to Play" />
+                            ) : (
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 uppercase opacity-60">
+                                Preview
+                              </span>
+                            )}
+                            {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Column: MAIN ACTIVE SCENARIO PRESENTATION SLIDE */}
+                  <div className="lg:col-span-8 flex flex-col">
+                    <div
+                      key={activeScenario.id}
+                      className={`animate-slide-pop p-5 sm:p-6 rounded-2xl border transition-all flex flex-col justify-between ${
+                        darkMode
+                          ? 'bg-gradient-to-br from-slate-900/95 via-[#0b1120] to-[#05070d] border-[#c9a26a]/40 shadow-2xl shadow-black/80'
+                          : 'bg-gradient-to-br from-slate-50 via-amber-50/40 to-white border-amber-300 shadow-xl'
+                      }`}
+                    >
+                      <div>
+                        {/* Era Top Badges */}
+                        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 border-b border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-md text-xs font-mono font-black uppercase tracking-wider bg-[#c9a26a]/20 text-[#dab97c] border border-[#c9a26a]/40">
+                              YEAR {activeScenario.year}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${
+                              activeScenario.statusTag === 'PLAYABLE'
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                            }`}>
+                              {activeScenario.statusTag === 'PLAYABLE' ? '● FULL MAP AVAILABLE' : '● ALPHA PREVIEW ERA'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-xs font-mono">
+                            <AlertTriangle className={`w-3.5 h-3.5 ${
+                              activeScenario.globalTension === 'Extreme' || activeScenario.globalTension === 'Critical'
+                                ? 'text-rose-400'
+                                : 'text-amber-400'
+                            }`} />
+                            <span className="text-slate-400">Global Tension:</span>
+                            <span className={`font-bold ${
+                              activeScenario.globalTension === 'Extreme' || activeScenario.globalTension === 'Critical'
+                                ? 'text-rose-400'
+                                : 'text-amber-400'
+                            }`}>
+                              {activeScenario.globalTension}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Title & Tagline */}
+                        <div className="mt-3.5">
+                          <h4 className="text-xl sm:text-2xl font-black tracking-tight font-mono">
+                            {activeScenario.title}
+                          </h4>
+                          <p className={`text-xs sm:text-sm italic mt-1 font-serif ${darkMode ? 'text-[#c9a26a]/90' : 'text-amber-800'}`}>
+                            "{activeScenario.tagline}"
+                          </p>
+                        </div>
+
+                        {/* Historical Briefing & World Order */}
+                        <p className="text-xs sm:text-sm leading-relaxed text-slate-300 mt-2.5">
+                          {activeScenario.description}
+                        </p>
+
+                        {/* World Order Summary Box */}
+                        <div className={`mt-3.5 p-3 rounded-xl border flex items-start gap-2.5 ${
+                          darkMode ? 'bg-white/[0.02] border-white/10' : 'bg-slate-100/70 border-slate-200'
+                        }`}>
+                          <Globe2 className="w-4 h-4 text-[#c9a26a] shrink-0 mt-0.5" />
+                          <div className="text-xs text-slate-300 leading-relaxed">
+                            <span className="font-bold text-slate-200 block mb-0.5">Geopolitical Order & Borders:</span>
+                            {activeScenario.worldOrderSummary}
+                          </div>
+                        </div>
+
+                        {/* Two-Column Grid: Flashpoints & Major Powers */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3.5 pt-3.5 border-t border-white/10">
+                          <div className={`p-3 rounded-xl border ${darkMode ? 'bg-white/[0.02] border-white/10' : 'bg-white border-slate-200'}`}>
+                            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400 block mb-1.5">
+                              Key Historical Dynamics
+                            </span>
+                            <ul className="space-y-1 text-xs text-slate-300">
+                              {activeScenario.keyEvents.map((evt, idx) => (
+                                <li key={idx} className="flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#c9a26a] shrink-0" />
+                                  <span className="truncate">{evt}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border ${darkMode ? 'bg-white/[0.02] border-white/10' : 'bg-white border-slate-200'}`}>
+                            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5">
+                              <Crown className="w-3 h-3 text-[#c9a26a]" /> Major Powers of {activeScenario.year}
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {activeScenario.majorPowers.map((pwr, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/5 border border-white/10 text-slate-300"
+                                >
+                                  {pwr}
+                                </span>
+                              ))}
+                            </div>
+
+                            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400 block mt-2.5 mb-1">
+                              Dominant Ideologies
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {activeScenario.dominantIdeologies.map((ideo, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#c9a26a]/10 border border-[#c9a26a]/20 text-[#dab97c]"
+                                >
+                                  {ideo}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Prominent Era Selection Footer info inside Slide */}
+                      <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                        <div className="text-xs text-slate-400 font-mono truncate">
+                          Active Selection: <strong className="text-[#dab97c]">{activeScenario.year} — {activeScenario.title}</strong>
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-400">
+                          {activeScenario.statusTag === 'PLAYABLE' ? '✓ Ready to Simulate' : '● Preview Era'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: DIFFICULTY SELECTION */}
+              {setupStep === 'DIFFICULTY' && (
+                <div className="flex flex-col gap-3.5">
+                  {/* Active Scenario Indicator Banner */}
+                  <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                    darkMode ? 'bg-[#c9a26a]/10 border-[#c9a26a]/30 text-slate-200' : 'bg-amber-50 border-amber-300 text-amber-900'
+                  }`}>
+                    <div className="flex items-center gap-2.5 font-mono text-xs">
+                      <span className="font-bold uppercase tracking-wider text-[#dab97c]">Active Scenario:</span>
+                      <span className="font-black text-sm">{activeScenario.year} — {activeScenario.title}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSetupStep('SCENARIO')}
+                      className="text-xs font-bold underline cursor-pointer hover:opacity-80"
+                    >
+                      Change Era
+                    </button>
+                  </div>
+
+                  {/* EASY */}
+                  <div
+                    onClick={() => setSelectedDifficulty('EASY')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-4 ${
+                      selectedDifficulty === 'EASY'
+                        ? darkMode
+                          ? 'bg-emerald-950/40 border-emerald-500/80 ring-1 ring-emerald-500/50 scale-[1.01]'
+                          : 'bg-emerald-50/80 border-emerald-500 ring-1 ring-emerald-500/30 scale-[1.01]'
+                        : darkMode
+                        ? 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-lg flex items-center justify-center shrink-0 ${
+                        selectedDifficulty === 'EASY'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-800/40 text-slate-400 border border-white/5'
+                      }`}
+                    >
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-base flex items-center gap-2">
+                          Easy / Accessible
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            +50% Budget
+                          </span>
+                        </h4>
+                        <span className="text-xs font-mono text-emerald-400 font-bold">$300,000</span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        Generous initial campaign funds, amplified rally popularity gains, and mild opposition attack campaigns.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NORMAL */}
+                  <div
+                    onClick={() => setSelectedDifficulty('NORMAL')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-4 ${
+                      selectedDifficulty === 'NORMAL'
+                        ? darkMode
+                          ? 'bg-[#c9a26a]/15 border-[#c9a26a] ring-1 ring-[#c9a26a]/50 scale-[1.01]'
+                          : 'bg-amber-50/80 border-amber-500 ring-1 ring-amber-500/30 scale-[1.01]'
+                        : darkMode
+                        ? 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-lg flex items-center justify-center shrink-0 ${
+                        selectedDifficulty === 'NORMAL'
+                          ? 'bg-[#c9a26a]/20 text-[#dab97c] border border-[#c9a26a]/40'
+                          : 'bg-slate-800/40 text-slate-400 border border-white/5'
+                      }`}
+                    >
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-base flex items-center gap-2">
+                          Normal / Realistic
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-[#c9a26a]/20 text-[#dab97c] border border-[#c9a26a]/40">
+                            Standard Simulation
+                          </span>
+                        </h4>
+                        <span className="text-xs font-mono text-[#dab97c] font-bold">$200,000</span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        Authentic historical balance. Active rival movements, realistic voter volatility, and nuanced parliamentary math.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* HARD */}
+                  <div
+                    onClick={() => setSelectedDifficulty('HARD')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-4 ${
+                      selectedDifficulty === 'HARD'
+                        ? darkMode
+                          ? 'bg-rose-950/40 border-rose-500/80 ring-1 ring-rose-500/50 scale-[1.01]'
+                          : 'bg-rose-50/80 border-rose-500 ring-1 ring-rose-500/30 scale-[1.01]'
+                        : darkMode
+                        ? 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05]'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-lg flex items-center justify-center shrink-0 ${
+                        selectedDifficulty === 'HARD'
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : 'bg-slate-800/40 text-slate-400 border border-white/5'
+                      }`}
+                    >
+                      <Flame className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-base flex items-center gap-2">
+                          Hard / Political Hardcore
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                            Hardcore
+                          </span>
+                        </h4>
+                        <span className="text-xs font-mono text-rose-400 font-bold">$130,000</span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        Strict treasury limitations, intense opposition smear campaigns, high scandal vulnerability, and contested majorities.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Actions (Always pinned cleanly at bottom, completely separate from scroll area) */}
+            <div className="flex items-center justify-between gap-4 pt-3.5 border-t border-white/10 shrink-0">
+              {setupStep === 'SCENARIO' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowSetupModal(false)}
+                    className={`px-5 py-2.5 rounded-lg border font-semibold text-xs sm:text-sm transition-all cursor-pointer ${
+                      darkMode
+                        ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                        : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Cancel Setup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProceedToDifficulty}
+                    className="px-6 py-2.5 bg-gradient-to-b from-[#dab97c] to-[#b8925a] hover:from-[#e6c78d] hover:to-[#c49f68] text-[#1a1206] font-bold rounded-lg shadow-lg transition-all text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                  >
+                    Next: Choose Difficulty
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSetupStep('SCENARIO')}
+                    className={`px-5 py-2.5 rounded-lg border font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                      darkMode
+                        ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                        : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to Scenarios
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStartGame}
+                    className="px-7 py-2.5 bg-gradient-to-b from-[#dab97c] to-[#b8925a] hover:from-[#e6c78d] hover:to-[#c49f68] text-[#1a1206] font-bold rounded-lg shadow-lg transition-all text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                  >
+                    Launch Campaign
+                    <Play className="w-4 h-4 fill-current" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

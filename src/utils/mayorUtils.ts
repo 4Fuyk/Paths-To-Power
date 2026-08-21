@@ -85,6 +85,29 @@ export function getDeterministicName(seedString: string, countryId: string): str
 // Known regional party leaders/mayors/candidates table for ALL countries
 export const SPECIFIC_PARTY_MAYORS: Record<string, Record<string, Record<string, string>>> = {
   TR: {
+    YENI: {
+      'Manisa': 'Ferdi Zeyrek',
+      'İzmir': 'Cemil Tugay',
+      'Bursa': 'Mustafa Bozbey',
+      'Antalya': 'Muhittin Böcek',
+      'Eskişehir': 'Ayşe Ünlüce',
+      'Balıkesir': 'Ahmet Akın',
+      'Muğla': 'Ahmet Aras',
+      'Edirne': 'Filiz Gencan Akın',
+      'Tekirdağ': 'Candan Yüceer',
+      'Yalova': 'Mehmet Gürel',
+      'Kütahya': 'Eyüp Kahveci',
+      'Uşak': 'Özkan Yalım',
+      'Kırşehir': 'Selahattin Ekicioğlu',
+      'Çanakkale': 'Muharrem Erkek',
+      'Denizli': 'Bülent Nuri Çavuşoğlu',
+      'Bilecik': 'Melek Mızrak Subaşı',
+      'İstanbul': 'Ekrem İmamoğlu',
+      'Ankara': 'Mansur Yavaş',
+      'Adana': 'Zeydan Karalar',
+      'Aydın': 'Özlem Çerçioğlu',
+      'Mersin': 'Vahap Seçer'
+    },
     CHP: {
       'Adana': 'Zeydan Karalar',
       'Adıyaman': 'Abdurrahman Tutdere',

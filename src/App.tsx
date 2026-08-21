@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Country, Party, MinisterCandidate, Coalition } from './types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Country, Party, MinisterCandidate, Coalition, GameDifficulty, ScenarioYear } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
 import { ALL_PRESS_QUESTIONS } from './constants/pressQuestions';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -23,9 +23,10 @@ import { DiplomacyView } from './components/DiplomacyView';
 import { GovernanceView } from './components/GovernanceView';
 import { CivicWatchdogView } from './components/CivicWatchdogView';
 import { MilitaryView } from './components/MilitaryView';
+import { SettingsModal } from './components/SettingsModal';
 import { 
   Landmark, Megaphone, Users, Award, Calendar, 
-  Coins, HelpCircle, RefreshCw, LogOut, CheckCircle, Info, X, Play,
+  Coins, HelpCircle, RefreshCw, LogOut, CheckCircle, Info, X, Play, Pause, FastForward, Swords,
   Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield, Home
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
@@ -167,6 +168,10 @@ export default function App() {
   });
 
   const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS'>('START_SCREEN');
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'settings' | 'languages'>('settings');
+  const [gameDifficulty, setGameDifficulty] = useState<GameDifficulty>('NORMAL');
+  const [selectedScenario, setSelectedScenario] = useState<ScenarioYear>('2026');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [playerParty, setPlayerParty] = useState<Party | null>(null);
   const [campaignTurn, setCampaignTurn] = useState<number>(1); // 1 to country.campaignTurns
@@ -228,6 +233,15 @@ export default function App() {
   const [civilWarRisk, setCivilWarRisk] = useState<number>(0);
   const [internationalReputation, setInternationalReputation] = useState<number>(80);
 
+  // Auto-play time progression & speed controls
+  const [isAutoPlayingTime, setIsAutoPlayingTime] = useState<boolean>(false);
+  const [timeSpeed, setTimeSpeed] = useState<'1x' | '2x' | '5x'>('1x');
+  const hasTriggeredColonialEvent = useRef<Record<number, boolean>>({});
+
+  // Dynamic country ideologies and freedom indexes reflecting election & policy shifts
+  const [customCountryIdeologies, setCustomCountryIdeologies] = useState<Record<string, string>>({});
+  const [customCountryFreedomScores, setCustomCountryFreedomScores] = useState<Record<string, number>>({});
+
   const [diplomaticRelations, setDiplomaticRelations] = useState<Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>>({
     TR: { status: 'Neutral', opinion: 50 },
     US: { status: 'Neutral', opinion: 55 },
@@ -266,6 +280,40 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Compute realistic historical / modern game date display string
+  const getFormattedGameDate = () => {
+    const baseYear = parseInt(selectedScenario) || 2026;
+    if (isRuling) {
+      const totalMonths = rulingMonthsCount || 0;
+      const yr = baseYear + Math.floor(totalMonths / 12);
+      const mo = totalMonths % 12;
+      const d = new Date(yr, mo, 1);
+      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } else {
+      // 1 turn = 1 calendar week (7 days) starting January 10
+      const d = new Date(baseYear, 0, 10);
+      d.setDate(d.getDate() + ((campaignTurn - 1) * 7));
+      return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+  };
+
+  // Automated time progression engine
+  useEffect(() => {
+    if (!isAutoPlayingTime) return;
+    if (activeScreen !== 'MAIN_DASHBOARD' || currentEvent !== null || showPressConference) {
+      return;
+    }
+    const intervalMs = timeSpeed === '5x' ? 700 : timeSpeed === '2x' ? 1400 : 2200;
+    const timer = setInterval(() => {
+      if (isRuling) {
+        handleNextMonth();
+      } else {
+        handleSpendTurn();
+      }
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [isAutoPlayingTime, timeSpeed, activeScreen, currentEvent, showPressConference, isRuling, campaignTurn, rulingMonthsCount, selectedCountry, playerParty]);
 
   // Settle country picker
   const handleSelectCountry = (country: Country) => {
@@ -575,27 +623,46 @@ export default function App() {
       return; // Do not process taxes/events during term end
     }
 
-    // Check for extreme Civil War / Revolt Risk Rebellion
-    if (false) {
+    // Check for Civil War / Revolt Risk Rebellion
+    const rebellionRoll = Math.random() * 100;
+    if (civilWarRisk >= 100 || (civilWarRisk >= 40 && rebellionRoll < civilWarRisk)) {
       // Trigger a dramatic Rebellion / Coup crisis!
       playSound('error');
       setCurrentEvent({
-        title: "🔥 ARMED REBELLION AND COUP ATTEMPT!",
-        description: `CRITICAL WARNING! Due to political suppression or extreme unrest, the civil war risk has reached ${civilWarRisk}%! Armed rebel cells have barricaded the roads leading to the Presidential palace in the capital. How will you respond?`,
+        title: "🔥 ARMED REBELLION AND UPRISING!",
+        description: `CRITICAL CRISIS! Due to severe political suppression, opposition party bans, or extreme unrest, the civil war risk has surged to ${civilWarRisk}%! Armed rebel militias and resistance factions have taken up arms, barricading government ministries and marching on the Presidential Palace!`,
         options: [
           {
-            text: "Deploy the Military and engage rebels on the Tactical Map! (Cost: $200,000, Freedom -25)",
+            text: "Deploy Armed Forces to crush the revolt! (Treasury: -$150,000, Freedom -15, Risk -45%)",
             effect: () => {
-              setTreasury(prev => Math.max(0, prev - 200000));
-              setFreedomIndex(prev => Math.max(10, prev - 25));
+              setTreasury(prev => Math.max(0, prev - 150000));
+              setFreedomIndex(prev => Math.max(10, prev - 15));
+              setCivilWarRisk(prev => Math.max(0, prev - 45));
+              setWarningAlert("⚔️ MILITARY CRACKDOWN: Armed forces engaged rebel cells across major cities, quelling the uprising at high cost.");
+              setCurrentEvent(null);
+            }
+          },
+          {
+            text: "Enter Emergency Tactical Battle to defend the capital!",
+            effect: () => {
               setActiveScreen('TACTICAL_BATTLE');
               setCurrentEvent(null);
             }
           },
           {
-            text: "Flee the country and form a government in exile (Resign, lose the country)",
+            text: "Decree Political Amnesty & Lift Party Bans (Freedom +25, Risk -60%)",
             effect: () => {
-              setWarningAlert("✈️ ESCAPE: You fled to a friendly nation on a private jet. Your administration collapsed, and a transitional military council took control.");
+              setBannedParties([]);
+              setFreedomIndex(prev => Math.min(100, prev + 25));
+              setCivilWarRisk(prev => Math.max(0, prev - 60));
+              setWarningAlert("🕊️ GENERAL AMNESTY: Opposition party bans repealed and political detainees freed. The armed rebellion has stood down.");
+              setCurrentEvent(null);
+            }
+          },
+          {
+            text: "Resign and flee into exile (Resign from office, return to map)",
+            effect: () => {
+              setWarningAlert("✈️ EXILE: You fled the capital amidst the revolution. Your administration has collapsed.");
               setActiveScreen('MAP');
               setSelectedCountry(null);
               setPlayerParty(null);
@@ -992,6 +1059,74 @@ export default function App() {
           budget: playerParty.budget + subsidyPayout
         });
       }
+
+      // Check for 1951-1952 Colonial Independence Crisis Events
+      const baseYear = parseInt(selectedScenario) || 2026;
+      const currentYear = baseYear + Math.floor(((next - 1) * 7) / 365);
+      if (selectedScenario === '1950' && (currentYear === 1951 || currentYear === 1952) && !hasTriggeredColonialEvent.current[currentYear]) {
+        hasTriggeredColonialEvent.current[currentYear] = true;
+        if (selectedCountry.id === 'FR') {
+          playSound('error');
+          setCurrentEvent({
+            title: `🔥 ${currentYear} INDOCHINA & NORTH AFRICA DECOLONIZATION CRISIS!`,
+            description: `Historical Emergency (${currentYear}): Viet Minh insurgent divisions in Tonkin and nationalist independence factions in Algeria and Madagascar have launched coordinated assaults against French military garrisons! The National Assembly in Paris is in crisis.`,
+            options: [
+              {
+                text: "Deploy Expeditionary Heavy Air Wings & Bombers (Cost: ₺160,000, Freedom -10, War Risk +20%)",
+                effect: () => {
+                  setTreasury(prev => Math.max(0, prev - 160000));
+                  setFreedomIndex(prev => Math.max(10, prev - 10));
+                  setCivilWarRisk(prev => Math.min(100, prev + 20));
+                  setWarningAlert("⚔️ EXPEDITIONARY STRIKE: Air wings deployed to fortify colonial outposts and strike insurgent supply columns.");
+                  setCurrentEvent(null);
+                }
+              },
+              {
+                text: "Open Diplomatic Peace Talks in Geneva for Self-Rule (Reputation +25, Freedom +15)",
+                effect: () => {
+                  setInternationalReputation(prev => Math.min(100, prev + 25));
+                  setFreedomIndex(prev => Math.min(100, prev + 15));
+                  setWarningAlert("🕊️ GENEVA ACCORDS: Autonomy protocols drafted with local representatives, stabilizing international standing.");
+                  setCurrentEvent(null);
+                }
+              },
+              {
+                text: "Enter Regional Battlefield Command & Launch Munitions",
+                effect: () => {
+                  setDashboardTab('TACTICAL_BATTLE');
+                  setCurrentEvent(null);
+                }
+              }
+            ]
+          });
+        } else if (selectedCountry.id === 'GB') {
+          playSound('error');
+          setCurrentEvent({
+            title: `🔥 ${currentYear} MAU MAU & SUEZ CANAL CRISIS!`,
+            description: `Historical Emergency (${currentYear}): The Mau Mau anti-colonial rebellion in Kenya and nationalization riots in Egypt threaten British colonial garrisons across the Mediterranean and Africa!`,
+            options: [
+              {
+                text: "Declare Imperial State of Emergency & Reinforce (Cost: ₺140,000, Freedom -12)",
+                effect: () => {
+                  setTreasury(prev => Math.max(0, prev - 140000));
+                  setFreedomIndex(prev => Math.max(10, prev - 12));
+                  setWarningAlert("🛡️ IMPERIAL GARRISON: Military reinforcements dispatched to maintain maritime corridors and regional security.");
+                  setCurrentEvent(null);
+                }
+              },
+              {
+                text: "Accelerate Commonwealth Decolonization & Trade Treaties (Reputation +25, Freedom +20)",
+                effect: () => {
+                  setInternationalReputation(prev => Math.min(100, prev + 25));
+                  setFreedomIndex(prev => Math.min(100, prev + 20));
+                  setWarningAlert("🏛️ COMMONWEALTH TREATY: Diplomatic sovereignty agreements signed with regional assemblies.");
+                  setCurrentEvent(null);
+                }
+              }
+            ]
+          });
+        }
+      }
     }
   };
 
@@ -1009,6 +1144,16 @@ export default function App() {
       setCountryWinCounts(prev => ({
         ...prev,
         [selectedCountry.id]: (prev[selectedCountry.id] || 0) + 1
+      }));
+
+      // Update global map ideology and freedom ratings dynamically!
+      setCustomCountryIdeologies(prev => ({
+        ...prev,
+        [selectedCountry.id]: playerParty.ideology
+      }));
+      setCustomCountryFreedomScores(prev => ({
+        ...prev,
+        [selectedCountry.id]: freedomIndex
       }));
 
       // Generate dynamic AI-to-AI coalitions if no majority
@@ -1242,13 +1387,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
           <div 
             onClick={() => {
-              setActiveScreen('MAP');
+              playSound('click');
+              setActiveScreen('START_SCREEN');
               setSelectedCountry(null);
               setPlayerParty(null);
             }}
             className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-all"
             id="nav-logo"
-            title="Return to main world map"
+            title="Return to Main Menu"
           >
             <span className="text-3xl select-none animate-pulse">🗺️</span>
             <div>
@@ -1275,6 +1421,39 @@ export default function App() {
               >
                 <Home className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">Main Menu</span>
               </button>
+            )}
+
+            {/* Scenario & Difficulty Badges */}
+            {activeScreen !== 'START_SCREEN' && (
+              <div className="flex items-center gap-1.5">
+                <div
+                  className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold tracking-wider uppercase flex items-center gap-1.5 ${
+                    darkMode
+                      ? 'bg-slate-900/90 border-[#c9a26a]/40 text-[#dab97c]'
+                      : 'bg-amber-50 border-amber-300 text-amber-900'
+                  }`}
+                  title={`Active Scenario Era: ${selectedScenario}`}
+                >
+                  <span className="opacity-60 text-[9px]">ERA</span>
+                  <span>{selectedScenario}</span>
+                </div>
+
+                <div
+                  className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold tracking-wider uppercase flex items-center gap-1.5 ${
+                    gameDifficulty === 'EASY'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      : gameDifficulty === 'HARD'
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                      : darkMode
+                      ? 'bg-[#c9a26a]/10 border-[#c9a26a]/30 text-[#dab97c]'
+                      : 'bg-amber-50 border-amber-300 text-amber-800'
+                  }`}
+                  title={`Selected Difficulty: ${gameDifficulty}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  {gameDifficulty}
+                </div>
+              </div>
             )}
 
             {/* Play Guide */}
@@ -1326,9 +1505,22 @@ export default function App() {
         {activeScreen === 'START_SCREEN' && (
           <StartScreen
             darkMode={darkMode}
-            onPlay={() => { playSound('click'); setActiveScreen('MAP'); }}
-            onSettings={() => { playSound('click'); }}
-            onLanguages={() => { playSound('click'); }}
+            onPlay={(difficulty, scenario) => {
+              setGameDifficulty(difficulty);
+              setSelectedScenario(scenario);
+              playSound('click');
+              setActiveScreen('MAP');
+            }}
+            onSettings={() => { 
+              playSound('click'); 
+              setSettingsTab('settings');
+              setIsSettingsOpen(true);
+            }}
+            onLanguages={() => { 
+              playSound('click'); 
+              setSettingsTab('languages');
+              setIsSettingsOpen(true);
+            }}
           />
         )}
 
@@ -1338,6 +1530,9 @@ export default function App() {
             countryWinCounts={countryWinCounts}
             onSelectCountry={handleSelectCountry}
             darkMode={darkMode}
+            scenario={selectedScenario}
+            countryIdeologies={customCountryIdeologies}
+            countryFreedomScores={customCountryFreedomScores}
           />
         )}
 
@@ -1347,6 +1542,7 @@ export default function App() {
             onBack={() => setActiveScreen('MAP')}
             onCreateParty={handleCreateParty}
             darkMode={darkMode}
+            difficulty={gameDifficulty}
           />
         )}
 
@@ -1363,7 +1559,7 @@ export default function App() {
                 {/* 1. Brand info */}
                 <div className="flex items-center gap-4.5">
                   <div className="relative shrink-0 select-none">
-                    <span className="text-3xl absolute -bottom-1 -right-1 filter drop-shadow z-10">{selectedCountry.flag}</span>
+                    <span className="text-3xl absolute -bottom-1 -right-1 filter drop-shadow z-10">{selectedCountry?.flag || '🌐'}</span>
                     <div 
                       className="w-16 h-16 rounded-full overflow-hidden border-2 shadow-md relative bg-slate-800"
                       style={{ borderColor: playerParty.color }}
@@ -1468,17 +1664,78 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 3. General election day triggers / Exit Sovereign */}
-                <div className="flex flex-row sm:flex-col gap-2 shrink-0">
-                  {isRuling && (
+                {/* 3. General election day triggers / Time Flow / Exit Sovereign */}
+                <div className="flex flex-col gap-2 shrink-0 min-w-[220px]">
+                  {/* Current Date Display */}
+                  <div className={`px-3 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs font-mono font-bold ${
+                    darkMode ? 'bg-slate-950/80 border-slate-800 text-indigo-400' : 'bg-slate-50 border-slate-200 text-indigo-600'
+                  }`}>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                      <span>{getFormattedGameDate()}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      {isRuling ? `M${rulingMonthsCount + 1}` : `W${campaignTurn}`}
+                    </span>
+                  </div>
+
+                  {/* Auto Time Flow & Speed Controls */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      id="auto-time-flow-btn"
+                      onClick={() => {
+                        setIsAutoPlayingTime(!isAutoPlayingTime);
+                        playSound('click');
+                      }}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        isAutoPlayingTime
+                          ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md animate-pulse'
+                          : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                      }`}
+                    >
+                      {isAutoPlayingTime ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                      {isAutoPlayingTime ? 'Pause Time' : 'Flow Time'}
+                    </button>
+
+                    {/* Speed Selector */}
+                    <div className={`p-0.5 rounded-lg border flex gap-0.5 ${
+                      darkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+                    }`}>
+                      {(['1x', '2x', '5x'] as const).map(spd => (
+                        <button
+                          key={spd}
+                          onClick={() => { setTimeSpeed(spd); playSound('click'); }}
+                          className={`px-1.5 py-0.5 text-[9px] font-mono font-black rounded cursor-pointer transition-all ${
+                            timeSpeed === spd
+                              ? 'bg-indigo-600 text-white'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {spd}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Manual Advance Turn */}
+                  {isRuling ? (
                     <button
                       id="next-month-btn"
                       onClick={handleNextMonth}
-                      className="py-2.5 px-4 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 animate-pulse border border-emerald-500/50"
+                      className="py-2 px-3 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 border border-emerald-500/50"
                     >
                       <Calendar className="w-3.5 h-3.5" /> Next Month
                     </button>
+                  ) : (
+                    <button
+                      id="spend-turn-btn"
+                      onClick={handleSpendTurn}
+                      className="py-2 px-3 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-indigo-500/10 border border-indigo-500/50"
+                    >
+                      <FastForward className="w-3.5 h-3.5" /> Advance Week ({campaignTurn}/{selectedCountry.campaignTurns})
+                    </button>
                   )}
+
                   <button
                     onClick={() => {
                       const msg = isRuling 
@@ -1501,11 +1758,11 @@ export default function App() {
                         }
                       });
                     }}
-                    className={`py-2.5 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer ${
+                    className={`py-1.5 px-3 rounded-xl text-[11px] font-semibold border flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer ${
                       darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-slate-800' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
                     }`}
                   >
-                    <LogOut className="w-3.5 h-3.5" /> {isRuling ? 'Exit to Map' : 'Abort Campaign'}
+                    <LogOut className="w-3 h-3" /> {isRuling ? 'Exit to Map' : 'Abort Campaign'}
                   </button>
                 </div>
               </div>
@@ -1642,6 +1899,20 @@ export default function App() {
                     }`}
                   >
                     <Coins className="w-3.5 h-3.5" /> Finance & Treasury {isJuniorMember && '🔒'}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setDashboardTab('TACTICAL_BATTLE');
+                    }}
+                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                      dashboardTab === 'TACTICAL_BATTLE'
+                        ? 'bg-rose-600 text-white shadow-md'
+                        : darkMode ? 'text-rose-400 hover:text-rose-200 hover:bg-rose-950/40' : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50'
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" /> War Front & Ordnance
                   </button>
 
                   <button
@@ -1908,6 +2179,25 @@ export default function App() {
                 publicApprovalImpact={adjustPublicApproval}
                 onUpdateReputation={setInternationalReputation}
                 darkMode={darkMode}
+              />
+            )}
+
+            {dashboardTab === 'TACTICAL_BATTLE' && (
+              <TacticalBattleView
+                country={selectedCountry}
+                party={playerParty}
+                civilWarRisk={civilWarRisk}
+                darkMode={darkMode}
+                onBattleFinished={(success: boolean) => {
+                  if (success) {
+                    setCivilWarRisk(5);
+                    setWarningAlert("💥 FRONT-LINE VICTORY: Our military operations and ordnance strikes have successfully neutralized all hostile rebel nodes!");
+                  } else {
+                    setCivilWarRisk(prev => Math.min(100, prev + 25));
+                    setWarningAlert("⚠️ TACTICAL RETREAT: Insurgent counter-offensive caused severe friendly casualties. Fortify remaining sectors!");
+                  }
+                  setDashboardTab('CAMPAIGN');
+                }}
               />
             )}
 
@@ -2299,6 +2589,18 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Universal Game Settings & Languages Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        muted={muted}
+        onToggleMute={handleToggleMute}
+        onResetProgress={resetAllProgress}
+        initialTab={settingsTab}
+      />
 
       {/* Footer Copyright */}
       <footer className={`py-4 text-center text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.leaflet-container {
+  background: #0f172a !important;
+}
+
 .leaflet-interactive:focus,
 .leaflet-container:focus,
 path:focus {

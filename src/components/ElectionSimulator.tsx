@@ -420,6 +420,52 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
               </h3>
 
               <div className="space-y-4 py-2 flex-grow">
+                {/* Coalition Alliances Section if any exist */}
+                {coalitions && coalitions.length > 0 && (
+                  <div className="space-y-2 pb-2 border-b border-slate-500/10">
+                    <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider block">
+                      Active Coalitions
+                    </span>
+                    {coalitions.map((coal, cIdx) => {
+                      const coalSeats = coal.parties.reduce((sum, pName) => {
+                        if (pName === party.name || pName === party.id) return sum + (seatsWon[party.id] || 0);
+                        const r = country.rivals.find(riv => riv.name === pName || riv.id === pName);
+                        return sum + (r ? (seatsWon[r.id] || 0) : 0);
+                      }, 0);
+                      const isPlayerIn = coal.parties.includes(party.name);
+
+                      return (
+                        <div key={cIdx} className="p-2.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 flex flex-col gap-1">
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-200">
+                            <span className="flex items-center gap-1 text-indigo-300">
+                              🏛️ {coal.name} {isPlayerIn && <span className="text-[9px] text-amber-400 font-mono">(Your Alliance)</span>}
+                            </span>
+                            <span className="font-mono text-amber-400 font-bold">{coalSeats} Seats</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                            <div
+                              className="h-full rounded-full transition-all duration-300 bg-indigo-500"
+                              style={{ width: `${(coalSeats / country.seats) * 100}%` }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400 flex flex-wrap gap-1 mt-0.5">
+                            {coal.parties.map((pName, pIdx) => {
+                              const pSeats = (pName === party.name || pName === party.id) 
+                                ? (seatsWon[party.id] || 0) 
+                                : (seatsWon[country.rivals.find(r => r.name === pName || r.id === pName)?.id || ''] || 0);
+                              return (
+                                <span key={pIdx} className="text-[9px] bg-slate-800/70 px-1.5 py-0.2 rounded font-mono">
+                                  {pName}: {pSeats}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Own party seats */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-200">
@@ -444,7 +490,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                 </div>
 
                 {/* Rival parties list seats */}
-                {country.rivals.filter(rival => !(coalitions?.some(c => c.parties.includes(party.name) && c.parties.includes(rival.name)))).map((rival) => {
+                {country.rivals.map((rival) => {
                   const seats = seatsWon[rival.id] || 0;
                   return (
                     <div key={rival.id} className="space-y-1">
@@ -612,6 +658,64 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                       </p>
                     </div>
 
+                    {/* Coalition & Parliamentary Blocs Breakdown Card */}
+                    <div className="w-full max-w-md p-4 bg-slate-950/60 border border-slate-800 rounded-2xl text-left space-y-2">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-800 text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold">
+                        <span>🏛️ Coalition & Parliamentary Blocs</span>
+                        <span>Seats (% of House)</span>
+                      </div>
+                      
+                      {/* Player Coalition or Standalone Party */}
+                      {winningCoalition ? (
+                        <div className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/30 space-y-1.5">
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-200">
+                            <span className="text-amber-400 flex items-center gap-1">
+                              👑 {winningCoalition.name} (Ruling Majority)
+                            </span>
+                            <span className="font-mono text-amber-400">
+                              {winningCoalition.parties.reduce((sum, pName) => sum + (pName === party.name ? (seatsWon[party.id] || 0) : (seatsWon[country.rivals.find(r => r.name === pName)?.id || ''] || 0)), 0)} / {country.seats}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-300 flex flex-wrap gap-1.5 pt-1 border-t border-indigo-500/20">
+                            {winningCoalition.parties.map((pName, idx) => {
+                              const isMe = pName === party.name;
+                              const pSeats = isMe ? (seatsWon[party.id] || 0) : (seatsWon[country.rivals.find(r => r.name === pName)?.id || ''] || 0);
+                              return (
+                                <span key={idx} className="font-mono text-[9px] bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">
+                                  {pName}: <strong className="text-slate-200">{pSeats}</strong>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center text-xs font-semibold">
+                          <span className="flex items-center gap-1.5 text-slate-200">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: party.color }}></span>
+                            {party.name} (Single-Party Majority)
+                          </span>
+                          <span className="font-mono text-emerald-400 font-bold">{seatsWon[party.id] || 0} Seats</span>
+                        </div>
+                      )}
+
+                      {/* Opposition Parties */}
+                      <div className="space-y-1 pt-1">
+                        <span className="text-[9px] font-mono text-slate-400 uppercase">Opposition Benches:</span>
+                        {country.rivals.filter(r => !winningCoalition?.parties.includes(r.name)).map(r => {
+                          const seats = seatsWon[r.id] || 0;
+                          return (
+                            <div key={r.id} className="flex justify-between items-center text-[11px] px-2 py-1 rounded bg-slate-900/30 text-slate-300">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: r.color }}></span>
+                                {r.name}
+                              </span>
+                              <span className="font-mono text-slate-400">{seats} Seats ({((seats / country.seats) * 100).toFixed(1)}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-8 text-xs font-mono w-full max-w-sm justify-center">
                       <div>
                         <div className="text-slate-450">PARLIAMENT WON</div>
@@ -620,7 +724,9 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                       <div className="border-l border-slate-800 h-8"></div>
                       <div>
                         <div className="text-slate-450">{winningCoalition ? 'COALITION SEATS' : 'SEATS WON'}</div>
-                        <div className="text-lg font-black text-amber-500">{winningCoalition ? winningCoalition.totalSeats : seatsWon[party.id]} / {country.seats}</div>
+                        <div className="text-lg font-black text-amber-500">
+                          {winningCoalition ? winningCoalition.parties.reduce((sum, pName) => sum + (pName === party.name ? (seatsWon[party.id] || 0) : (seatsWon[country.rivals.find(r => r.name === pName)?.id || ''] || 0)), 0) : seatsWon[party.id]} / {country.seats}
+                        </div>
                       </div>
                     </div>
 
@@ -761,6 +867,28 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                           }`}>
                             <strong className="block mb-0.5">{coalitionSuccess ? '✓ Protocol Signed' : '✗ Protocol Rejected'}</strong>
                             {coalitionMessage}
+
+                            {coalitionSuccess && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const partnerNames = selectedCoalitionParties.map(id => country.rivals.find(r => r.id === id)?.name || id);
+                                  const partnerSeatsSum = selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0);
+                                  const totalCoalitionSeats = (seatsWon[party.id] || 0) + partnerSeatsSum;
+                                  const newCoalitionObj: Coalition = {
+                                    name: `National Coalition Alliance`,
+                                    parties: [party.name, ...partnerNames],
+                                    totalSeats: totalCoalitionSeats,
+                                    ideologyAvg: `${party.ideology} / Broad Coalition`
+                                  };
+                                  onElectionFinished(true, seatsWon, newCoalitionObj);
+                                }}
+                                className="w-full py-3 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-3 animate-pulse"
+                              >
+                                <Trophy className="w-4 h-4 text-slate-950" />
+                                Form Majority Coalition Government ({ (seatsWon[party.id] || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0) } Seats)
+                              </button>
+                            )}
                           </div>
                         )}
 

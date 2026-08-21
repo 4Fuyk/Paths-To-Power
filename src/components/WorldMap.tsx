@@ -4,12 +4,15 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Country } from '../types';
+import { Country, ScenarioYear } from '../types';
 import { PLAYABLE_COUNTRIES, countryColors } from '../constants/countries';
+import { getPlayableCountriesForScenario } from '../constants/eraCountries';
+import { HISTORICAL_SCENARIOS } from '../constants/scenarios';
 import { 
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon,
+  Calendar, ShieldAlert
 } from 'lucide-react';
 import L from 'leaflet';
 
@@ -18,13 +21,22 @@ interface WorldMapProps {
   countryWinCounts: Record<string, number>;
   onSelectCountry: (country: Country) => void;
   darkMode: boolean;
+  scenario?: ScenarioYear;
+  countryIdeologies?: Record<string, string>;
+  countryFreedomScores?: Record<string, number>;
 }
 
 const countryCoords: Record<string, [number, number]> = {
   US: [38.0, -97.0],
   BR: [-14.235, -51.925],
   GB: [55.378, -3.436],
-  DE: [51.165, 10.451],
+  DE: [50.7374, 7.0982], // Bonn / West Germany
+  DDR: [52.5200, 13.4050], // Berlin / East Germany
+  SU: [55.7558, 37.6173], // Moscow / Soviet Union
+  CS: [49.8175, 15.4730], // Prague / Czechoslovakia
+  PL: [52.0693, 19.4803], // Warsaw / Poland
+  CN: [35.8617, 104.1954], // Beijing / China
+  YU: [44.0165, 21.0059], // Belgrade / Yugoslavia
   TR: [38.963, 35.243],
   EG: [26.820, 30.802],
   JP: [36.204, 138.252],
@@ -40,13 +52,25 @@ const countryCoords: Record<string, [number, number]> = {
   AU: [-25.274, 133.775],
   FR: [46.227, 2.213],
   RO: [45.943, 24.966],
-  HU: [47.162, 19.503]
+  HU: [47.162, 19.503],
+  TW: [23.6978, 120.9605],
+  RU: [61.524, 105.3188],
+  CL: [-35.6751, -71.543],
+  IS: [64.9631, -19.0208],
+  PT: [39.3999, -8.2245],
+  GR: [39.0742, 21.8243]
 };
 
 const englishNames: Record<string, string> = {
   TR: "Turkey",
-  US: "United States",
-  DE: "Germany",
+  US: "United States of America",
+  DE: "Federal Republic of Germany",
+  DDR: "German Democratic Republic",
+  SU: "Union of Soviet Socialist Republics",
+  CS: "Czechoslovak Republic",
+  PL: "Poland",
+  CN: "People's Republic of China",
+  YU: "FPR Yugoslavia",
   GB: "United Kingdom",
   BR: "Brazil",
   EG: "Egypt",
@@ -55,22 +79,34 @@ const englishNames: Record<string, string> = {
   AR: "Argentina",
   ZA: "South Africa",
   IN: "India",
-  IT: "Italy",
+  IT: "Italian Republic",
   ID: "Indonesia",
   MX: "Mexico",
   ES: "Spain",
-  KR: "South Korea",
+  KR: "Korea",
   AU: "Australia",
   FR: "France",
   RO: "Romania",
-  HU: "Hungary"
+  HU: "Hungary",
+  TW: "Republic of China (Taiwan)",
+  RU: "Russian Federation",
+  CL: "Republic of Chile",
+  IS: "Iceland",
+  PT: "Portuguese Republic",
+  GR: "Hellenic Republic"
 };
 
 const countryRadii: Record<string, number> = {
   US: 850000,
   BR: 800000,
   GB: 380000,
-  DE: 350000,
+  DE: 320000,
+  DDR: 220000,
+  SU: 1300000,
+  CS: 260000,
+  PL: 360000,
+  CN: 950000,
+  YU: 300000,
   TR: 480000,
   EG: 450000,
   JP: 400000,
@@ -86,20 +122,45 @@ const countryRadii: Record<string, number> = {
   AU: 850000,
   FR: 350000,
   RO: 300000,
-  HU: 250000
+  HU: 250000,
+  TW: 200000,
+  RU: 1300000,
+  CL: 650000,
+  IS: 250000,
+  PT: 300000,
+  GR: 280000
 };
+
+export type MapFilterMode = 'POLITICAL' | 'FREEDOM' | 'IDEOLOGY' | 'ACTIVE_WAR';
 
 export const WorldMap: React.FC<WorldMapProps> = ({
   completedCountries,
   countryWinCounts,
   onSelectCountry,
   darkMode,
+  scenario = '2026',
+  countryIdeologies = {},
+  countryFreedomScores = {},
 }) => {
-  const [selectedPreview, setSelectedPreview] = useState<Country | null>(PLAYABLE_COUNTRIES[0]);
+  const activeScenarioId: ScenarioYear = (scenario as ScenarioYear) || '2026';
+  const activeCountries = getPlayableCountriesForScenario(activeScenarioId);
+  const activeScenarioMeta = HISTORICAL_SCENARIOS.find(s => s.id === activeScenarioId) || HISTORICAL_SCENARIOS[0];
+
+  const [mapMode, setMapMode] = useState<MapFilterMode>('POLITICAL');
+  const [selectedPreview, setSelectedPreview] = useState<Country | null>(activeCountries[0] || null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [cursorCoords, setCursorCoords] = useState({ lat: 0.0, lng: 0.0 });
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [germanStatesData, setGermanStatesData] = useState<any>(null);
   const [isLoadingGeoJson, setIsLoadingGeoJson] = useState<boolean>(true);
+
+  // Synchronize selectedPreview if scenario changes
+  useEffect(() => {
+    const list = getPlayableCountriesForScenario((scenario as ScenarioYear) || '2026');
+    if (list.length > 0) {
+      setSelectedPreview(list[0]);
+    }
+  }, [scenario]);
 
   // Keyboard based panning and zoom controls for WASD, Arrow Keys and +/-
   useEffect(() => {
@@ -133,7 +194,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     };
   }, []);
 
-  const filteredCountries = PLAYABLE_COUNTRIES.filter(country => 
+  const filteredCountries = activeCountries.filter(country => 
     country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     country.system.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -152,31 +213,146 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const id2 = String(feature.properties?.ISO_A2 || feature.properties?.iso_a2 || '').toUpperCase();
     const name = String(feature.properties?.name || feature.properties?.NAME || '').toUpperCase();
 
-    if (id3 === 'TUR' || id2 === 'TR' || name.includes('TURKEY')) return 'TR';
-    if (id3 === 'USA' || id2 === 'US' || name.includes('UNITED STATES') || name === 'USA') return 'US';
-    if (id3 === 'BRA' || id2 === 'BR' || name.includes('BRAZIL')) return 'BR';
-    if (id3 === 'DEU' || id2 === 'DE' || name.includes('GERMANY')) return 'DE';
-    if (id3 === 'GBR' || id2 === 'GB' || name.includes('UNITED KINGDOM') || name === 'GREAT BRITAIN' || name === 'UK') return 'GB';
-    if (id3 === 'FRA' || id2 === 'FR' || name.includes('FRANCE')) return 'FR';
-    if (id3 === 'ROU' || id2 === 'RO' || name.includes('ROMANIA')) return 'RO';
-    if (id3 === 'HUN' || id2 === 'HU' || name.includes('HUNGARY')) return 'HU';
-    if (id3 === 'EGY' || id2 === 'EG' || name.includes('EGYPT')) return 'EG';
-    if (id3 === 'JPN' || id2 === 'JP' || name.includes('JAPAN')) return 'JP';
-    if (id3 === 'CAN' || id2 === 'CA' || name.includes('CANADA')) return 'CA';
-    if (id3 === 'ARG' || id2 === 'AR' || name.includes('ARGENTINA')) return 'AR';
-    if (id3 === 'ZAF' || id2 === 'ZA' || name.includes('SOUTH AFRICA')) return 'ZA';
-    if (id3 === 'IND' || id2 === 'IN' || name.includes('INDIA')) return 'IN';
-    if (id3 === 'ITA' || id2 === 'IT' || name.includes('ITALY')) return 'IT';
-    if (id3 === 'IDN' || id2 === 'ID' || name.includes('INDONESIA')) return 'ID';
-    if (id3 === 'MEX' || id2 === 'MX' || name.includes('MEXICO')) return 'MX';
-    if (id3 === 'ESP' || id2 === 'ES' || name.includes('SPAIN')) return 'ES';
-    if (id3 === 'KOR' || id2 === 'KR' || name.includes('SOUTH KOREA') || name === 'KOREA, REPUBLIC OF') return 'KR';
-    if (id3 === 'AUS' || id2 === 'AU' || name.includes('AUSTRALIA')) return 'AU';
+    // 1. Check if Soviet Union / All 15 Republics unified under Soviet Union
+    const isSovietRepublic = 
+      id3 === 'RUS' || id3 === 'SUN' || id3 === 'BLR' || id3 === 'UKR' || id3 === 'KAZ' ||
+      id3 === 'UZB' || id3 === 'TKM' || id3 === 'TJK' || id3 === 'KGZ' || id3 === 'GEO' ||
+      id3 === 'ARM' || id3 === 'AZE' || id3 === 'MDA' || id3 === 'EST' || id3 === 'LVA' || id3 === 'LTU' ||
+      name.includes('RUSSIA') || name.includes('SOVIET') || name.includes('BELARUS') || name.includes('BYELORUSSIA') ||
+      name.includes('UKRAINE') || name.includes('KAZAKHSTAN') || name.includes('UZBEKISTAN') ||
+      name.includes('TURKMENISTAN') || name.includes('TAJIKISTAN') || name.includes('KYRGYZSTAN') ||
+      name.includes('GEORGIA') || name.includes('ARMENIA') || name.includes('AZERBAIJAN') ||
+      name.includes('MOLDOVA') || name.includes('ESTONIA') || name.includes('LATVIA') || name.includes('LITHUANIA');
+
+    if (isSovietRepublic && activeCountries.some(c => c.id === 'SU')) {
+      return 'SU';
+    }
+
+    // 2. Check Czechoslovakia
+    const isCzechoslovakia = 
+      id3 === 'CZE' || id3 === 'SVK' || id3 === 'CSK' ||
+      name.includes('CZECH') || name.includes('SLOVAKIA') || name.includes('CZECHOSLOVAKIA');
+
+    if (isCzechoslovakia && activeCountries.some(c => c.id === 'CS')) {
+      return 'CS';
+    }
+
+    // 3. Check Poland
+    if (id3 === 'POL' || id2 === 'PL' || name.includes('POLAND')) {
+      if (activeCountries.some(c => c.id === 'PL')) return 'PL';
+    }
+
+    // 4. Check China
+    if (id3 === 'CHN' || id2 === 'CN' || name.includes('CHINA')) {
+      if (activeCountries.some(c => c.id === 'CN')) return 'CN';
+    }
+
+    // 5. Check Yugoslavia
+    const isYugoslavia = 
+      id3 === 'SRB' || id3 === 'HRV' || id3 === 'SVN' || id3 === 'BIH' || id3 === 'MKD' || id3 === 'MNE' || id3 === 'KOS' || id3 === 'KVX' || id3 === 'YUG' ||
+      name.includes('SERBIA') || name.includes('CROATIA') || name.includes('SLOVENIA') || name.includes('BOSNIA') ||
+      name.includes('MACEDONIA') || name.includes('MONTENEGRO') || name.includes('KOSOVO') || name.includes('YUGOSLAVIA');
+
+    if (isYugoslavia && activeCountries.some(c => c.id === 'YU')) {
+      return 'YU';
+    }
+
+    // 6. Check East Germany (DDR) vs West Germany (DE)
+    if (id3 === 'DDR' || name === 'EAST GERMANY' || name === 'GERMAN DEMOCRATIC REPUBLIC' || name === 'DDR' || name === 'GDR' || name.includes('GERMAN DEMOCRATIC')) {
+      if (activeCountries.some(c => c.id === 'DDR')) return 'DDR';
+    }
+
+    if (id3 === 'DE_WEST' || name.includes('WEST GERMANY') || name === 'FEDERAL REPUBLIC OF GERMANY') {
+      if (activeCountries.some(c => c.id === 'DE')) return 'DE';
+    }
+
+    if (id3 === 'DEU' || id2 === 'DE' || name === 'GERMANY') {
+      if (activeCountries.some(c => c.id === 'DE')) return 'DE';
+      if (activeCountries.some(c => c.id === 'DDR')) return 'DDR';
+    }
+
+    if (id3 === 'TUR' || id2 === 'TR' || name.includes('TURKEY') || name.includes('TURKIYE')) {
+      if (activeCountries.some(c => c.id === 'TR')) return 'TR';
+    }
+    if (id3 === 'USA' || id2 === 'US' || name.includes('UNITED STATES') || name === 'USA') {
+      if (activeCountries.some(c => c.id === 'US')) return 'US';
+    }
+    if (id3 === 'BRA' || id2 === 'BR' || name.includes('BRAZIL')) {
+      if (activeCountries.some(c => c.id === 'BR')) return 'BR';
+    }
+    if (id3 === 'GBR' || id2 === 'GB' || name.includes('UNITED KINGDOM') || name === 'GREAT BRITAIN' || name === 'UK' ||
+        (activeScenarioId === '1950' && (['KEN', 'UGA', 'NGA', 'GHA', 'MYS', 'CYP', 'TZA', 'ZMB', 'ZWE', 'SLE'].includes(id3) || name.includes('KENYA') || name.includes('NIGERIA') || name.includes('MALAYA')))) {
+      if (activeCountries.some(c => c.id === 'GB')) return 'GB';
+    }
+    if (id3 === 'FRA' || id2 === 'FR' || name.includes('FRANCE') ||
+        (activeScenarioId === '1950' && (id3 === 'DZA' || id3 === 'MDG' || id3 === 'GUF' || name.includes('ALGERIA') || name.includes('MADAGASCAR') || name.includes('FRENCH GUIANA')))) {
+      if (activeCountries.some(c => c.id === 'FR')) return 'FR';
+    }
+    if (id3 === 'ITA' || id2 === 'IT' || name.includes('ITALY')) {
+      if (activeCountries.some(c => c.id === 'IT')) return 'IT';
+    }
+    if (id3 === 'ROU' || id2 === 'RO' || name.includes('ROMANIA')) {
+      if (activeCountries.some(c => c.id === 'RO')) return 'RO';
+    }
+    if (id3 === 'HUN' || id2 === 'HU' || name.includes('HUNGARY')) {
+      if (activeCountries.some(c => c.id === 'HU')) return 'HU';
+    }
+    if (id3 === 'EGY' || id2 === 'EG' || name.includes('EGYPT')) {
+      if (activeCountries.some(c => c.id === 'EG')) return 'EG';
+    }
+    if (id3 === 'JPN' || id2 === 'JP' || name.includes('JAPAN')) {
+      if (activeCountries.some(c => c.id === 'JP')) return 'JP';
+    }
+    if (id3 === 'CAN' || id2 === 'CA' || name.includes('CANADA')) {
+      if (activeCountries.some(c => c.id === 'CA')) return 'CA';
+    }
+    if (id3 === 'ARG' || id2 === 'AR' || name.includes('ARGENTINA')) {
+      if (activeCountries.some(c => c.id === 'AR')) return 'AR';
+    }
+    if (id3 === 'ZAF' || id2 === 'ZA' || name.includes('SOUTH AFRICA')) {
+      if (activeCountries.some(c => c.id === 'ZA')) return 'ZA';
+    }
+    if (id3 === 'IND' || id2 === 'IN' || name.includes('INDIA')) {
+      if (activeCountries.some(c => c.id === 'IN')) return 'IN';
+    }
+    if (id3 === 'IDN' || id2 === 'ID' || name.includes('INDONESIA')) {
+      if (activeCountries.some(c => c.id === 'ID')) return 'ID';
+    }
+    if (id3 === 'MEX' || id2 === 'MX' || name.includes('MEXICO')) {
+      if (activeCountries.some(c => c.id === 'MX')) return 'MX';
+    }
+    if (id3 === 'ESP' || id2 === 'ES' || name.includes('SPAIN')) {
+      if (activeCountries.some(c => c.id === 'ES')) return 'ES';
+    }
+    if (id3 === 'KOR' || id2 === 'KR' || name.includes('SOUTH KOREA') || name === 'KOREA, REPUBLIC OF') {
+      if (activeCountries.some(c => c.id === 'KR')) return 'KR';
+    }
+    if (id3 === 'AUS' || id2 === 'AU' || name.includes('AUSTRALIA')) {
+      if (activeCountries.some(c => c.id === 'AU')) return 'AU';
+    }
+    if (id3 === 'TWN' || id2 === 'TW' || name.includes('TAIWAN')) {
+      if (activeCountries.some(c => c.id === 'TW')) return 'TW';
+    }
+    if (id3 === 'RUS' || id2 === 'RU' || name.includes('RUSSIA') || name.includes('RUSSIAN FEDERATION')) {
+      if (activeCountries.some(c => c.id === 'RU')) return 'RU';
+    }
+    if (id3 === 'CHL' || id2 === 'CL' || name.includes('CHILE')) {
+      if (activeCountries.some(c => c.id === 'CL')) return 'CL';
+    }
+    if (id3 === 'ISL' || id2 === 'IS' || name.includes('ICELAND')) {
+      if (activeCountries.some(c => c.id === 'IS')) return 'IS';
+    }
+    if (id3 === 'PRT' || id2 === 'PT' || name.includes('PORTUGAL')) {
+      if (activeCountries.some(c => c.id === 'PT')) return 'PT';
+    }
+    if (id3 === 'GRC' || id2 === 'GR' || name.includes('GREECE')) {
+      if (activeCountries.some(c => c.id === 'GR')) return 'GR';
+    }
 
     return null;
   };
 
-  // Fetch beautiful low-res world boundaries
+  // Fetch beautiful low-res world boundaries + German states for precise 1950 DDR/FRG borders
   useEffect(() => {
     let active = true;
     fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
@@ -197,6 +373,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       .catch(err => {
         console.error("Could not load country polygons:", err);
         if (active) setIsLoadingGeoJson(false);
+      });
+
+    fetch('https://cdn.jsdelivr.net/gh/isellsoap/deutschlandGeoJSON@master/2_bundeslaender/4_niedrig.geo.json')
+      .then(res => res.json())
+      .then(data => {
+        if (active && data) {
+          setGermanStatesData(data);
+        }
+      })
+      .catch(err => {
+        console.warn("Could not load German federal states geojson:", err);
       });
 
     return () => { active = false; };
@@ -330,26 +517,176 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     if (geoJsonData && geoJsonData.features) {
       // 1. RENDER ACTUAL GEOGRAPHIC COUNTRY BORDER SURFACE POLYGONS!
-      const geoLayer = L.geoJSON(geoJsonData, {
-        filter: (feature) => {
-          return true;
-        },
+      let featuresToRender = [...geoJsonData.features];
+
+      // If DDR is active in the scenario (1950), replace monolithic DEU with the 16 German states
+      if (activeCountries.some(c => c.id === 'DDR')) {
+        if (germanStatesData && germanStatesData.features) {
+          // East Germany (DDR) strictly consists of the 5 historical eastern states + Berlin:
+          // Brandenburg (DE-BB), Mecklenburg-Vorpommern (DE-MV), Sachsen / Saxony (DE-SN), Sachsen-Anhalt (DE-ST), Thüringen (DE-TH), Berlin (DE-BE).
+          // LOWER SAXONY (Niedersachsen / DE-NI) is STRICTLY WEST GERMANY!
+          const isEastGermanState = (stId: string, stName: string): boolean => {
+            const normId = stId.toUpperCase();
+            const normName = stName.toLowerCase().trim();
+
+            if (['DE-BB', 'DE-MV', 'DE-SN', 'DE-ST', 'DE-TH', 'DE-BE'].includes(normId)) {
+              return true;
+            }
+            if (normName.includes('niedersachsen') || normName.includes('lower saxony')) {
+              return false;
+            }
+            if (
+              normName === 'brandenburg' ||
+              normName.includes('mecklenburg') ||
+              normName === 'sachsen' ||
+              normName === 'saxony' ||
+              normName.includes('sachsen-anhalt') ||
+              normName.includes('saxony-anhalt') ||
+              normName.includes('thüringen') ||
+              normName.includes('thueringen') ||
+              normName.includes('thuringia') ||
+              normName === 'berlin'
+            ) {
+              return true;
+            }
+            return false;
+          };
+
+          const germanStatesFormatted = germanStatesData.features.map((st: any) => {
+            const stId = String(st.properties?.id || st.id || '').toUpperCase();
+            const stName = String(st.properties?.name || '').toLowerCase();
+            const isEast = isEastGermanState(stId, stName);
+
+            return {
+              ...st,
+              id: isEast ? 'DDR' : 'DE_WEST',
+              properties: {
+                ...st.properties,
+                isSubDivision: true,
+                ISO_A3: isEast ? 'DDR' : 'DEU',
+                iso_a3: isEast ? 'DDR' : 'DEU',
+                name: isEast ? 'German Democratic Republic' : 'Federal Republic of Germany'
+              }
+            };
+          });
+
+          featuresToRender = featuresToRender.filter((f: any) => {
+            const id = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
+            const name = String(f.properties?.name || '').toUpperCase();
+            return id !== 'DEU' && name !== 'GERMANY';
+          }).concat(germanStatesFormatted);
+        }
+      }
+
+      // Check active war belligerents per scenario
+      const getWarStatus = (countryId: string) => {
+        if (activeScenarioId === '2026') {
+          return ['RU', 'UA', 'IL', 'PS', 'SD', 'MM'].includes(countryId);
+        }
+        if (activeScenarioId === '1950') {
+          return ['KR', 'CN', 'US', 'GB', 'TR', 'FR'].includes(countryId);
+        }
+        if (activeScenarioId === '1936') {
+          return ['ES', 'CN', 'JP', 'IT'].includes(countryId);
+        }
+        if (activeScenarioId === '1920') {
+          return ['TR', 'GR', 'PL', 'SU', 'GB'].includes(countryId);
+        }
+        if (activeScenarioId === '1914') {
+          return ['DE', 'TR', 'GB', 'FR', 'SU', 'YU'].includes(countryId);
+        }
+        return false;
+      };
+
+      // Freedom Index mapping (0-100 score)
+      const getFreedomColor = (countryId: string) => {
+        if (countryFreedomScores[countryId] !== undefined) {
+          const score = countryFreedomScores[countryId];
+          if (score >= 70) return '#16a34a'; // Free (Green)
+          if (score >= 40) return '#d97706'; // Partly Free (Amber)
+          return '#dc2626'; // Not Free (Red)
+        }
+        const country = activeCountries.find(c => c.id === countryId) || PLAYABLE_COUNTRIES.find(c => c.id === countryId);
+        const score = country?.freedomScore ?? (['SU', 'DDR', 'CN', 'CS'].includes(countryId) ? 18 : ['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS'].includes(countryId) ? 88 : 55);
+        if (score >= 70) return '#16a34a'; // Free (Green)
+        if (score >= 40) return '#d97706'; // Partly Free (Amber)
+        return '#dc2626'; // Not Free (Red)
+      };
+
+      // Ideology Color mapping
+      const getIdeologyColor = (countryId: string) => {
+        if (countryIdeologies[countryId]) {
+          const ideo = countryIdeologies[countryId].toLowerCase();
+          if (ideo.includes('communist') || ideo.includes('marxist') || ideo.includes('socialist') || ideo.includes('left')) return '#991b1b';
+          if (ideo.includes('conservative') || ideo.includes('republican') || ideo.includes('capitalist') || ideo.includes('tory')) return '#2563eb';
+          if (ideo.includes('liberal') || ideo.includes('democrat') || ideo.includes('green') || ideo.includes('social dem')) return '#0891b2';
+          if (ideo.includes('nationalist') || ideo.includes('centrist') || ideo.includes('kemalist')) return '#ca8a04';
+          return '#475569';
+        }
+        if (['SU', 'DDR', 'CN', 'CS', 'YU'].includes(countryId)) return '#991b1b'; // Communist / Marxist-Leninist
+        if (['PL', 'RO', 'HU'].includes(countryId)) return activeScenarioId === '1950' ? '#991b1b' : '#2563eb';
+        if (['US', 'GB', 'JP', 'CA', 'AU', 'IS', 'PT'].includes(countryId)) return '#2563eb'; // Conservative / Capitalist / Liberal Dem
+        if (['DE', 'FR', 'IT', 'ES', 'CL', 'GR'].includes(countryId)) return '#0891b2'; // Social / Liberal / Christian Dem
+        if (['TR', 'EG', 'ZA', 'BR', 'MX', 'AR', 'IN', 'ID'].includes(countryId)) return '#ca8a04'; // Centrist / Nationalist / Republic
+        if (['RU'].includes(countryId)) return '#7f1d1d'; // Illiberal / Traditionalist
+        return '#475569';
+      };
+
+      const geoLayer = L.geoJSON({ type: 'FeatureCollection', features: featuresToRender } as any, {
+        filter: () => true,
         style: (feature) => {
           const countryId = getPlayableCountryCode(feature);
-          if (!countryId) return { fillColor: darkMode ? '#1e293b' : '#cbd5e1', color: '#ffffff', weight: 1.0, opacity: 1.0, fillOpacity: 0.88, interactive: false };
+          if (!countryId) {
+            return {
+              fillColor: darkMode ? '#1e293b' : '#cbd5e1',
+              color: darkMode ? '#0f172a' : '#94a3b8',
+              weight: 0.5,
+              opacity: 0.85,
+              fillOpacity: mapMode === 'ACTIVE_WAR' ? 0.25 : (darkMode ? 0.75 : 0.85),
+              interactive: false
+            };
+          }
 
           const isCompleted = completedCountries.includes(countryId);
           const isSelected = selectedPreview?.id === countryId;
+          const isAtWar = getWarStatus(countryId);
+          const isComposite = Boolean((feature as any)?.properties?.isSubDivision) || ['SU', 'YU', 'CS', 'DE', 'DDR'].includes(countryId);
 
-          const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
-          const fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
-          const color = '#ffffff';
+          let fillColor = '#6366f1';
+          let fillOpacity = isSelected ? 0.95 : (isCompleted ? 0.90 : 0.84);
+          let borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
+          let borderWidth = isSelected ? (isComposite ? 0.4 : 2.2) : (isComposite ? 0.3 : 0.6);
+
+          if (mapMode === 'FREEDOM') {
+            fillColor = getFreedomColor(countryId);
+            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
+          } else if (mapMode === 'IDEOLOGY') {
+            fillColor = getIdeologyColor(countryId);
+            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
+          } else if (mapMode === 'ACTIVE_WAR') {
+            if (isAtWar) {
+              fillColor = '#dc2626';
+              fillOpacity = 0.95;
+              borderColor = '#fca5a5';
+              borderWidth = 2.0;
+            } else {
+              fillColor = darkMode ? '#1e293b' : '#64748b';
+              fillOpacity = 0.25;
+              borderColor = darkMode ? '#334155' : '#94a3b8';
+              borderWidth = 0.5;
+            }
+          } else {
+            // Standard Political
+            const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
+            fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
+            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : (['SU', 'YU', 'CS'].includes(countryId) ? (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') : fillColor);
+          }
 
           return {
             fillColor: fillColor,
-            fillOpacity: isSelected ? 0.95 : (isCompleted ? 0.90 : 0.82),
-            color: color,
-            weight: isSelected ? 3.0 : 1.2,
+            fillOpacity: fillOpacity,
+            color: borderColor,
+            weight: borderWidth,
             opacity: 1.0
           };
         },
@@ -357,16 +694,32 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           const countryId = getPlayableCountryCode(feature);
           if (!countryId) return;
 
-          const country = PLAYABLE_COUNTRIES.find(c => c.id === countryId)!;
+          const country = activeCountries.find(c => c.id === countryId) || PLAYABLE_COUNTRIES.find(c => c.id === countryId);
+          if (!country) return;
+
           const isCompleted = completedCountries.includes(countryId);
           const hoverEnglishName = englishNames[countryId] || country.name;
+          const isAtWar = getWarStatus(countryId);
+          const isComposite = Boolean((feature as any)?.properties?.isSubDivision) || ['SU', 'YU', 'CS', 'DE', 'DDR'].includes(countryId);
 
-          // English-only hover tooltip, absolutely no persistent overlays
+          // English tooltip with mode details
+          const modeDetailHtml = 
+            mapMode === 'FREEDOM' 
+              ? `<div style="color: ${getFreedomColor(countryId)}; font-size: 9px; font-weight: 700; margin-top: 2px;">Freedom Index: ${country.freedomScore ?? 75}/100</div>` 
+              : mapMode === 'IDEOLOGY'
+              ? `<div style="color: #93c5fd; font-size: 9px; font-weight: 700; margin-top: 2px;">Ruling: ${country.rivals?.[0]?.ideology || 'Constitutional'}</div>`
+              : mapMode === 'ACTIVE_WAR' && isAtWar
+              ? `<div style="color: #f87171; font-size: 9px; font-weight: 800; margin-top: 2px;">⚔️ ACTIVE WAR ZONE</div>`
+              : '';
+
           layer.bindTooltip(`
-            <div style="font-family: inherit; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 14px; line-height: 1;">${country.flag}</span>
-              <span style="font-weight: 950; letter-spacing: 0.05em; text-transform: uppercase;">${hoverEnglishName}</span>
-              ${isCompleted ? `<span style="color: #fbbf24; font-weight: 900; margin-left: 2px;">★</span>` : ''}
+            <div style="font-family: inherit; font-size: 11px; font-weight: 800; display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 14px; line-height: 1;">${country.flag || '🌐'}</span>
+                <span style="font-weight: 950; letter-spacing: 0.05em; text-transform: uppercase;">${hoverEnglishName}</span>
+                ${isCompleted ? `<span style="color: #fbbf24; font-weight: 900; margin-left: 2px;">★</span>` : ''}
+              </div>
+              ${modeDetailHtml}
             </div>
           `, {
             permanent: false,
@@ -375,14 +728,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             className: `custom-map-tooltip ${darkMode ? 'dark' : 'light'}`
           });
 
-          // Elegant visual interactive overrides on mouse hover
+          // Elegant visual interactive overrides on mouse hover - synchronously highlight all constituent features
           layer.on('mouseover', () => {
             const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
-            (layer as any).setStyle({
-              fillColor: scheme.selected,
-              fillOpacity: 0.95,
-              weight: 2.2,
-              color: scheme.selected
+            const hoverFill = mapMode === 'FREEDOM' ? getFreedomColor(countryId) : mapMode === 'IDEOLOGY' ? getIdeologyColor(countryId) : mapMode === 'ACTIVE_WAR' ? (isAtWar ? '#ef4444' : '#475569') : scheme.selected;
+
+            geoLayer.eachLayer((l: any) => {
+              if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+                l.setStyle({
+                  fillColor: hoverFill,
+                  fillOpacity: 0.96,
+                  weight: isComposite ? 0.4 : 1.8,
+                  color: isComposite ? hoverFill : '#ffffff'
+                });
+              }
             });
           });
 
@@ -391,14 +750,40 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             const isNowCompleted = completedCountries.includes(countryId);
             const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
 
-            const baseFill = isNowSelected ? scheme.selected : (isNowCompleted ? scheme.completed : scheme.default);
-            const baseBorder = isNowSelected ? scheme.selected : (isNowCompleted ? '#eab308' : scheme.completed);
+            let baseFill = isNowSelected ? scheme.selected : (isNowCompleted ? scheme.completed : scheme.default);
+            let baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
+            let baseOpacity = isNowSelected ? 0.95 : (isNowCompleted ? 0.90 : 0.84);
+            let baseWeight = isNowSelected ? (isComposite ? 0.4 : 2.2) : (isComposite ? 0.3 : 0.6);
 
-            (layer as any).setStyle({
-              fillColor: baseFill,
-              fillOpacity: isNowSelected ? 0.95 : (isNowCompleted ? 0.90 : 0.82),
-              weight: isNowSelected ? 2.2 : 1.2,
-              color: baseBorder
+            if (mapMode === 'FREEDOM') {
+              baseFill = getFreedomColor(countryId);
+              baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
+            } else if (mapMode === 'IDEOLOGY') {
+              baseFill = getIdeologyColor(countryId);
+              baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
+            } else if (mapMode === 'ACTIVE_WAR') {
+              if (isAtWar) {
+                baseFill = '#dc2626';
+                baseOpacity = 0.95;
+                baseBorder = '#fca5a5';
+                baseWeight = 2.0;
+              } else {
+                baseFill = darkMode ? '#1e293b' : '#64748b';
+                baseOpacity = 0.25;
+                baseBorder = darkMode ? '#334155' : '#94a3b8';
+                baseWeight = 0.5;
+              }
+            }
+
+            geoLayer.eachLayer((l: any) => {
+              if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+                l.setStyle({
+                  fillColor: baseFill,
+                  fillOpacity: baseOpacity,
+                  weight: baseWeight,
+                  color: baseBorder
+                });
+              }
             });
           });
 
@@ -420,7 +805,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
     } else {
       // 2. BACKUP INTERACTIVE COORDINATE CIRCLE LAYER SYSTEM (If geojson is still fetching)
-      PLAYABLE_COUNTRIES.forEach(country => {
+      activeCountries.forEach(country => {
         const coords = countryCoords[country.id];
         if (!coords) return;
 
@@ -447,7 +832,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         circlePr.bindTooltip(`
           <div style="font-family: inherit; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 14px; line-height: 1;">${country.flag}</span>
+            <span style="font-size: 14px; line-height: 1;">${country.flag || '🌐'}</span>
             <span style="font-weight: 950; letter-spacing: 0.05em; text-transform: uppercase;">${hoverEnglishName}</span>
             ${isCompleted ? `<span style="color: #fbbf24; font-weight: 900; margin-left: 2px;">★</span>` : ''}
           </div>
@@ -492,7 +877,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         markersRef.current.push(circlePr);
       });
     }
-  }, [completedCountries, selectedPreview, darkMode, geoJsonData]);
+  }, [completedCountries, selectedPreview, darkMode, geoJsonData, scenario, activeCountries]);
 
   // Zoom / Offset Navigation Triggers
   const handleZoomIn = () => {
@@ -613,26 +998,32 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       }`}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-400 font-mono tracking-widest uppercase">
-              STRATEGY MAP / GEOGRAPHICAL LOCATIONS
-            </span>
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-mono tracking-widest uppercase ml-2">
-              GEOGRAPHICAL SYSTEM
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-[#c9a26a]/20 text-[#dab97c] font-mono tracking-widest uppercase border border-[#c9a26a]/30 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                SCENARIO: {activeScenarioMeta.year} — {activeScenarioMeta.title}
+              </span>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-400 font-mono tracking-widest uppercase">
+                GEOGRAPHICAL STRATEGY
+              </span>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-mono tracking-widest uppercase">
+                {activeCountries.length} PLAYABLE NATIONS
+              </span>
+            </div>
             <h1 className="text-2xl md:text-3xl font-black mt-2 flex items-center gap-2 tracking-tight">
-              <Globe className="w-8 h-8 text-indigo-500 animate-spin-slow" /> Paths to Power
+              <Globe className="w-8 h-8 text-[#c9a26a] animate-spin-slow" /> Paths to Power ({activeScenarioMeta.year})
             </h1>
             <p className="text-xs mt-1 text-slate-400 max-w-2xl leading-relaxed">
-              Launch election campaigns in playable nations across the world. Control local target regions, sway delegates, and win general assembly voting!
+              {activeScenarioMeta.description}
             </p>
           </div>
 
           <div className="flex items-center gap-4 bg-slate-500/5 px-4 py-3 rounded-2xl border border-slate-500/10 self-start md:self-auto">
-            <Trophy className="w-9 h-9 text-amber-500 shrink-0" />
+            <Trophy className="w-9 h-9 text-[#c9a26a] shrink-0" />
             <div>
-              <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-wider">COUNTRIES SECURED</div>
+              <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-wider">CAMPAIGNS SECURED</div>
               <div className="text-sm font-black font-mono">
-                {completedCountries.length} / {PLAYABLE_COUNTRIES.length} Campaign Wins
+                {completedCountries.length} / {activeCountries.length} Nations Won
               </div>
             </div>
           </div>
@@ -641,6 +1032,71 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
       {/* Map Container and Layout */}
       <div className="col-span-12 lg:col-span-8 flex flex-col gap-3">
+        {/* Map Mode Filter Tabs & Legend */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setMapMode('POLITICAL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                mapMode === 'POLITICAL' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span>🗺️</span> Political Map
+            </button>
+            <button
+              onClick={() => setMapMode('FREEDOM')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                mapMode === 'FREEDOM' 
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span>🕊️</span> Freedom Index
+            </button>
+            <button
+              onClick={() => setMapMode('IDEOLOGY')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                mapMode === 'IDEOLOGY' 
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' 
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span>⚖️</span> Ideology
+            </button>
+            <button
+              onClick={() => setMapMode('ACTIVE_WAR')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                mapMode === 'ACTIVE_WAR' 
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 animate-pulse' 
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span>⚔️</span> Active War Zones
+            </button>
+          </div>
+
+          <div className="text-[10px] font-mono text-slate-400 px-2 flex items-center gap-2">
+            {mapMode === 'POLITICAL' && <span>Nations by Sovereign Color</span>}
+            {mapMode === 'FREEDOM' && (
+              <span className="flex items-center gap-2">
+                <span className="text-emerald-400">● Free</span>
+                <span className="text-amber-400">● Partly Free</span>
+                <span className="text-rose-400">● Not Free</span>
+              </span>
+            )}
+            {mapMode === 'IDEOLOGY' && (
+              <span className="flex items-center gap-2">
+                <span className="text-red-400">● Communist</span>
+                <span className="text-blue-400">● Dem/Cons</span>
+                <span className="text-yellow-400">● Centrist</span>
+              </span>
+            )}
+            {mapMode === 'ACTIVE_WAR' && <span className="text-rose-400 font-bold">Active Frontlines Highlighted Only</span>}
+          </div>
+        </div>
+
         <div className={`relative rounded-3xl border overflow-hidden aspect-[2/1] transition-all flex items-center justify-center ${
           darkMode 
             ? 'bg-slate-950 border-slate-900 shadow-inner' 

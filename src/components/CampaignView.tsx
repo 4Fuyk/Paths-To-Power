@@ -1503,7 +1503,9 @@ const getPolygonCenter = (feat: any) => {
       AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson',
       FR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson',
       RO: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson',
-      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson'
+      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson',
+      PL: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/poland.geojson',
+      CN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/china.geojson'
     };
 
     if (!geojsonMapUrls[country.id]) return;
@@ -1515,7 +1517,6 @@ const getPolygonCenter = (feat: any) => {
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          // Highcharts 'name' is in properties.name
           setGeoJsonData(data);
           return;
         }
@@ -1527,6 +1528,123 @@ const getPolygonCenter = (feat: any) => {
 
     tryFetch();
   }, [country.id]);
+
+  // Dedicated GeoJSON builder for historical 1950 nations (Soviet Union, Yugoslavia, Czechoslovakia, DDR)
+  useEffect(() => {
+    if (!worldGeoJsonData || !worldGeoJsonData.features) return;
+
+    if (country.id === 'SU') {
+      const suRepublicCodes: Record<string, string> = {
+        RUS: 'Russian SFSR (Moscow & Leningrad)',
+        UKR: 'Ukrainian SSR (Kyiv & Kharkiv)',
+        BLR: 'Byelorussian SSR (Minsk)',
+        KAZ: 'Kazakh SSR (Alma-Ata)',
+        UZB: 'Uzbek SSR (Tashkent)',
+        GEO: 'Transcaucasian SSRs (Georgia, Armenia, Azerbaijan)',
+        ARM: 'Transcaucasian SSRs (Georgia, Armenia, Azerbaijan)',
+        AZE: 'Transcaucasian SSRs (Georgia, Armenia, Azerbaijan)',
+        EST: 'Baltic SSRs (Estonia, Latvia, Lithuania)',
+        LVA: 'Baltic SSRs (Estonia, Latvia, Lithuania)',
+        LTU: 'Baltic SSRs (Estonia, Latvia, Lithuania)',
+        TKM: 'Central Asian SSRs (Turkmenistan, Tajikistan, Kyrgyzstan)',
+        TJK: 'Central Asian SSRs (Turkmenistan, Tajikistan, Kyrgyzstan)',
+        KGZ: 'Central Asian SSRs (Turkmenistan, Tajikistan, Kyrgyzstan)',
+        MDA: 'Moldavian SSR (Chisinau)',
+      };
+
+      const features: any[] = [];
+      worldGeoJsonData.features.forEach((f: any) => {
+        const id3 = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
+        const mappedName = suRepublicCodes[id3];
+        if (mappedName) {
+          features.push({
+            ...f,
+            properties: {
+              ...f.properties,
+              name: mappedName,
+              shapeName: mappedName,
+              id: id3
+            }
+          });
+        }
+      });
+
+      if (features.length > 0) {
+        setGeoJsonData({ type: 'FeatureCollection', features });
+      }
+    } else if (country.id === 'YU') {
+      const yuRepublicCodes: Record<string, string> = {
+        SRB: 'People\'s Republic of Serbia (Belgrade & Vojvodina)',
+        HRV: 'People\'s Republic of Croatia (Zagreb & Split)',
+        SVN: 'People\'s Republic of Slovenia (Ljubljana)',
+        BIH: 'People\'s Republic of Bosnia and Herzegovina (Sarajevo)',
+        MKD: 'People\'s Republic of Macedonia (Skopje)',
+        MNE: 'People\'s Republic of Montenegro (Titograd)',
+        KOS: 'People\'s Republic of Serbia (Belgrade & Vojvodina)',
+      };
+
+      const features: any[] = [];
+      worldGeoJsonData.features.forEach((f: any) => {
+        const id3 = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
+        const mappedName = yuRepublicCodes[id3];
+        if (mappedName) {
+          features.push({
+            ...f,
+            properties: {
+              ...f.properties,
+              name: mappedName,
+              shapeName: mappedName,
+              id: id3
+            }
+          });
+        }
+      });
+
+      if (features.length > 0) {
+        setGeoJsonData({ type: 'FeatureCollection', features });
+      }
+    } else if (country.id === 'CS') {
+      const csRepublicCodes: Record<string, string> = {
+        CZE: 'Prague & Central Bohemia',
+        SVK: 'Western Slovakia (Bratislava & Trnava)'
+      };
+
+      const features: any[] = [];
+      worldGeoJsonData.features.forEach((f: any) => {
+        const id3 = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
+        const mappedName = csRepublicCodes[id3];
+        if (mappedName) {
+          features.push({
+            ...f,
+            properties: {
+              ...f.properties,
+              name: mappedName,
+              shapeName: mappedName,
+              id: id3
+            }
+          });
+        }
+      });
+
+      if (features.length > 0) {
+        setGeoJsonData({ type: 'FeatureCollection', features });
+      }
+    } else if (country.id === 'DDR') {
+      fetch('https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/germany.geojson')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.features) {
+            const eastGermanStates = ['Berlin', 'Brandenburg', 'Mecklenburg-Vorpommern', 'Sachsen', 'Sachsen-Anhalt', 'Thüringen'];
+            const features = data.features.filter((f: any) => {
+              const name = f.properties?.name || '';
+              return eastGermanStates.some(s => name.includes(s));
+            });
+            setGeoJsonData({ type: 'FeatureCollection', features });
+          }
+        })
+        .catch(err => console.warn('Failed to load DDR states:', err));
+    }
+  }, [country.id, worldGeoJsonData]);
 
   // Fetch online Turkey Districts GeoJSON on-demand or background
   useEffect(() => {
@@ -1676,26 +1794,46 @@ const getPolygonCenter = (feat: any) => {
     }
   }, [darkMode]);
 
-  // Main Turkey/Germany Leaflet map builder and sync
+  // Main Turkey/Germany/Soviet/Yugoslavia/World Leaflet map builder and sync
   useEffect(() => {
-    const supportedCountries = ['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR', 'FR', 'RO', 'HU'];
-    if (!supportedCountries.includes(country.id) || !turkeyMapRef.current) {
+    if (!country.regions || country.regions.length === 0 || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
     }
 
+    const defaultCoordsMap: Record<string, [number, number, number]> = {
+      TR: [38.9637, 35.2433, 6],
+      DE: [51.1657, 10.4515, 6],
+      DDR: [52.3, 12.6, 6.8],
+      SU: [56.0, 52.0, 3.5],
+      YU: [44.0, 18.5, 6.2],
+      CS: [49.8, 15.5, 6.8],
+      PL: [52.0, 19.5, 6.0],
+      CN: [35.8, 104.2, 4.0],
+      US: [37.0902, -95.7129, 4],
+      BR: [-14.235, -51.9253, 4],
+      JP: [36.2048, 138.2529, 5],
+      EG: [26.8206, 30.8025, 5],
+      GB: [54.3781, -3.4360, 5],
+      FR: [46.2276, 2.2137, 5.5],
+      RO: [45.9432, 24.9668, 6.2],
+      HU: [47.1625, 19.5033, 6.8],
+      IT: [41.8719, 12.5674, 5.5],
+      ES: [40.4637, -3.7492, 5.5],
+      IN: [20.5937, 78.9629, 4.5],
+      CA: [56.1304, -106.3468, 3.5],
+      AU: [-25.2744, 133.7751, 4.0],
+      MX: [23.6345, -102.5528, 5.0],
+      ID: [-0.7893, 113.9213, 4.5],
+      KR: [35.9078, 127.7669, 6.5],
+      AR: [-38.4161, -63.6167, 4.0],
+      ZA: [-30.5595, 22.9375, 5.0],
+    };
+
     if (!turkeyMapInstanceRef.current) {
-      let initialCenter: [number, number] = [38.9637, 35.2433];
-      let initialZoom = 6;
-      if (country.id === 'DE') { initialCenter = [51.1657, 10.4515]; initialZoom = 6; }
-      else if (country.id === 'US') { initialCenter = [37.0902, -95.7129]; initialZoom = 4; }
-      else if (country.id === 'BR') { initialCenter = [-14.235, -51.9253]; initialZoom = 4; }
-      else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
-      else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
-      else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
-      else if (country.id === 'FR') { initialCenter = [46.2276, 2.2137]; initialZoom = 5.5; }
-      else if (country.id === 'RO') { initialCenter = [45.9432, 24.9668]; initialZoom = 6.2; }
-      else if (country.id === 'HU') { initialCenter = [47.1625, 19.5033]; initialZoom = 6.8; }
+      const coordEntry = defaultCoordsMap[country.id] || [38.9637, 35.2433, 5];
+      let initialCenter: [number, number] = [coordEntry[0], coordEntry[1]];
+      let initialZoom = coordEntry[2];
       
       let mapOptions: any = {
         center: initialCenter,
@@ -1765,6 +1903,18 @@ const getPolygonCenter = (feat: any) => {
       lastCountryIdRef.current = country.id;
       if (country.id === 'DE') {
         map.setView([51.1657, 10.4515], 6);
+      } else if (country.id === 'DDR') {
+        map.setView([52.3, 12.6], 6.8);
+      } else if (country.id === 'SU') {
+        map.setView([56.0, 52.0], 3.5);
+      } else if (country.id === 'YU') {
+        map.setView([44.0, 18.5], 6.2);
+      } else if (country.id === 'CS') {
+        map.setView([49.8, 15.5], 6.8);
+      } else if (country.id === 'PL') {
+        map.setView([52.0, 19.5], 6.0);
+      } else if (country.id === 'CN') {
+        map.setView([35.8, 104.2], 4.0);
       } else if (country.id === 'US') {
         map.setView([37.0902, -95.7129], 4);
       } else if (country.id === 'BR') {
@@ -1795,6 +1945,12 @@ const getPolygonCenter = (feat: any) => {
         map.setView([-0.7893, 113.9213], 5);
       } else if (country.id === 'KR') {
         map.setView([35.9078, 127.7669], 6);
+      } else if (country.id === 'FR') {
+        map.setView([46.2276, 2.2137], 5.5);
+      } else if (country.id === 'RO') {
+        map.setView([45.9432, 24.9668], 6.2);
+      } else if (country.id === 'HU') {
+        map.setView([47.1625, 19.5033], 6.8);
       } else {
         map.setView([38.9637, 35.2433], 6);
       }
@@ -1937,19 +2093,35 @@ const getPolygonCenter = (feat: any) => {
       if (worldGeoJsonData && worldGeoJsonData.features) {
         const filteredFeatures = worldGeoJsonData.features.filter((f: any) => {
           const fName = String(f?.properties?.name || f?.properties?.NAME || f?.id || '').toLowerCase();
-          if (country.id === 'TR' && (fName.includes('turkey') || fName.includes('turkiye') || f?.id === 'TUR')) return false;
-          if (country.id === 'DE' && (fName.includes('germany') || f?.id === 'DEU')) return false;
-          if (country.id === 'US' && (fName.includes('united states') || fName.includes('usa') || f?.id === 'USA')) return false;
+          const fId = String(f?.id || f?.properties?.ISO_A3 || '').toUpperCase();
+          if (country.id === 'TR' && (fName.includes('turkey') || fName.includes('turkiye') || fId === 'TUR')) return false;
+          if ((country.id === 'DE' || country.id === 'DDR') && (fName.includes('germany') || fId === 'DEU' || fId === 'DDR')) return false;
+          if (country.id === 'US' && (fName.includes('united states') || fName.includes('usa') || fId === 'USA')) return false;
+          if (country.id === 'SU' && (['RUS', 'UKR', 'BLR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU', 'SUN'].includes(fId) || fName.includes('russia') || fName.includes('soviet'))) return false;
+          if (country.id === 'YU' && (['SRB', 'HRV', 'SVN', 'BIH', 'MKD', 'MNE', 'KOS', 'KVX', 'YUG'].includes(fId) || fName.includes('yugoslavia') || fName.includes('serbia') || fName.includes('croatia') || fName.includes('kosovo') || fName.includes('bosnia') || fName.includes('slovenia') || fName.includes('macedonia') || fName.includes('montenegro'))) return false;
+          if (country.id === 'CS' && (['CZE', 'SVK', 'CSK'].includes(fId) || fName.includes('czech') || fName.includes('slovak'))) return false;
+          if (country.id === 'PL' && (fId === 'POL' || fName.includes('poland'))) return false;
+          if (country.id === 'CN' && (fId === 'CHN' || fName.includes('china'))) return false;
+          if (country.id === 'FR' && (fName.includes('france') || fId === 'FRA' || fId === 'DZA' || fId === 'MDG' || fId === 'GUF' || fName.includes('algeria') || fName.includes('madagascar'))) return false;
+          if (country.id === 'GB' && (fName.includes('united kingdom') || fId === 'GBR' || fId === 'GB' || (['KEN', 'UGA', 'NGA', 'GHA', 'MYS', 'CYP', 'TZA', 'ZMB', 'ZWE', 'SLE'].includes(fId)))) return false;
+          if (country.id === 'IT' && (fId === 'ITA' || fName.includes('italy') || fName.includes('italia'))) return false;
           return true;
         });
 
         worldBgLayerRef.current = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures } as any, {
-          style: () => {
+          style: (feature: any) => {
+            const fId = String(feature?.id || feature?.properties?.ISO_A3 || '').toUpperCase();
+            const fName = String(feature?.properties?.name || feature?.properties?.NAME || '').toLowerCase();
+            const isSovietUnion = ['RUS', 'UKR', 'BLR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU', 'SUN'].includes(fId) || fName.includes('russia') || fName.includes('soviet');
+            const isYugo = ['SRB', 'HRV', 'SVN', 'BIH', 'MKD', 'MNE', 'KOS', 'KVX', 'YUG'].includes(fId) || fName.includes('serbia') || fName.includes('croatia') || fName.includes('bosnia') || fName.includes('slovenia') || fName.includes('macedonia') || fName.includes('montenegro');
+            const isCzecho = ['CZE', 'SVK', 'CSK'].includes(fId) || fName.includes('czech') || fName.includes('slovakia');
+            const isHistoricalUnified = isSovietUnion || isYugo || isCzecho;
+
             return {
-              fillColor: darkMode ? "#0f172a" : "#cbd5e1",
-              color: darkMode ? "#1e293b" : "#94a3b8",
-              weight: 0.8,
-              opacity: 0.8,
+              fillColor: darkMode ? "#334155" : "#94a3b8",
+              color: isHistoricalUnified ? (darkMode ? "#334155" : "#94a3b8") : "#ffffff",
+              weight: isHistoricalUnified ? 0.2 : 0.8,
+              opacity: 0.85,
               fillOpacity: 0.85,
               interactive: false
             };
@@ -2282,14 +2454,31 @@ const getPolygonCenter = (feat: any) => {
     worldBgLayerRef.current = null;
     } else {
       // Fallback: Render point check markers if geoJsonData hasn't finished loading over network yet
-      TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.forEach((prov) => {
-        const reg = country.regions.find(r => r.id === prov.id);
-        if (!reg) return;
+      const coordEntry = defaultCoordsMap[country.id] || [38.9637, 35.2433, 5];
+      country.regions.forEach((reg, idx) => {
+        let lat = 0;
+        let lng = 0;
+        const centerCoord = provinceCentersRef.current[reg.id];
+        const geoProv = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
+
+        if (centerCoord) {
+          lat = centerCoord.lat;
+          lng = centerCoord.lng;
+        } else if (geoProv) {
+          lat = geoProv.lat;
+          lng = geoProv.lng;
+        } else {
+          const total = Math.max(1, country.regions.length);
+          const angle = (idx / total) * 2 * Math.PI;
+          const radius = 1.2 + (idx % 3) * 0.7;
+          lat = coordEntry[0] + Math.sin(angle) * radius;
+          lng = coordEntry[1] + Math.cos(angle) * radius * 1.35;
+        }
 
         // Save center coordinates dynamically
-        provinceCentersRef.current[prov.id] = { lat: prov.lat, lng: prov.lng };
+        provinceCentersRef.current[reg.id] = { lat, lng };
 
-        const isSelected = selectedRegion && selectedRegion.id === prov.id;
+        const isSelected = selectedRegion && selectedRegion.id === reg.id;
         
         let maxSupport = 0;
         let leadingPartyId = reg.ownerPartyId;
@@ -2308,7 +2497,7 @@ const getPolygonCenter = (feat: any) => {
           color = getRivalColor(leadingPartyId);
         }
 
-        const marker = L.circleMarker([prov.lat, prov.lng], {
+        const marker = L.circleMarker([lat, lng], {
           radius: isSelected ? 14 : 9,
           fillColor: color,
           fillOpacity: isSelected ? 0.95 : 0.75,
@@ -2738,8 +2927,8 @@ const getPolygonCenter = (feat: any) => {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
       `}</style>
-      {/* 1. INTERACTIVE MAP SECTION (ONLY IF IN TURKEY, GERMANY, OR USA) */}
-      {(['TR', 'DE', 'US', 'BR', 'JP', 'EG', 'GB', 'CA', 'ZA', 'IN', 'MX', 'ES', 'AU', 'AR', 'IT', 'ID', 'KR', 'FR', 'RO', 'HU'].includes(country.id)) && (
+      {/* 1. INTERACTIVE MAP SECTION (ALL SCENARIOS AND REGIONAL COUNTRIES) */}
+      {Boolean(country.regions && country.regions.length > 0) && (
         <div className={`p-4 md:p-6 rounded-3xl border flex flex-col gap-5 relative overflow-hidden transition-all ${
           darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
         }`}>
