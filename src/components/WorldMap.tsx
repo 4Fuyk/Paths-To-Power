@@ -519,17 +519,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       // 1. RENDER ACTUAL GEOGRAPHIC COUNTRY BORDER SURFACE POLYGONS!
       let featuresToRender = [...geoJsonData.features];
 
-      // If DDR is active in the scenario (1950), replace monolithic DEU with the 16 German states
+      // If DDR is active in the scenario (1950), replace monolithic DEU with the 16 German states and partition Berlin!
       if (activeCountries.some(c => c.id === 'DDR')) {
         if (germanStatesData && germanStatesData.features) {
-          // East Germany (DDR) strictly consists of the 5 historical eastern states + Berlin:
-          // Brandenburg (DE-BB), Mecklenburg-Vorpommern (DE-MV), Sachsen / Saxony (DE-SN), Sachsen-Anhalt (DE-ST), Thüringen (DE-TH), Berlin (DE-BE).
-          // LOWER SAXONY (Niedersachsen / DE-NI) is STRICTLY WEST GERMANY!
+          // East Germany (DDR) strictly consists of the 5 historical eastern states + East Berlin:
+          // Brandenburg (DE-BB), Mecklenburg-Vorpommern (DE-MV), Sachsen / Saxony (DE-SN), Sachsen-Anhalt (DE-ST), Thüringen (DE-TH).
+          // LOWER SAXONY (Niedersachsen / DE-NI), NRW, Bavaria, Hesse, Baden-Wurttemberg, etc. are STRICTLY WEST GERMANY!
           const isEastGermanState = (stId: string, stName: string): boolean => {
             const normId = stId.toUpperCase();
             const normName = stName.toLowerCase().trim();
 
-            if (['DE-BB', 'DE-MV', 'DE-SN', 'DE-ST', 'DE-TH', 'DE-BE'].includes(normId)) {
+            if (['DE-BB', 'DE-MV', 'DE-SN', 'DE-ST', 'DE-TH'].includes(normId)) {
               return true;
             }
             if (normName.includes('niedersachsen') || normName.includes('lower saxony')) {
@@ -544,37 +544,83 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               normName.includes('saxony-anhalt') ||
               normName.includes('thüringen') ||
               normName.includes('thueringen') ||
-              normName.includes('thuringia') ||
-              normName === 'berlin'
+              normName.includes('thuringia')
             ) {
               return true;
             }
             return false;
           };
 
-          const germanStatesFormatted = germanStatesData.features.map((st: any) => {
+          const formattedFeatures: any[] = [];
+
+          germanStatesData.features.forEach((st: any) => {
             const stId = String(st.properties?.id || st.id || '').toUpperCase();
             const stName = String(st.properties?.name || '').toLowerCase();
-            const isEast = isEastGermanState(stId, stName);
 
-            return {
-              ...st,
-              id: isEast ? 'DDR' : 'DE_WEST',
-              properties: {
-                ...st.properties,
-                isSubDivision: true,
-                ISO_A3: isEast ? 'DDR' : 'DEU',
-                iso_a3: isEast ? 'DDR' : 'DEU',
-                name: isEast ? 'German Democratic Republic' : 'Federal Republic of Germany'
-              }
-            };
+            // Berlin Partition (West Berlin for FRG, East Berlin for DDR)
+            if (stId === 'DE-BE' || stName === 'berlin') {
+              // 1. West Berlin (Western Allied Sectors / FRG)
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DE_WEST',
+                properties: {
+                  id: 'DE-BE-W',
+                  isSubDivision: true,
+                  ISO_A3: 'DEU',
+                  iso_a3: 'DEU',
+                  name: 'West Berlin (Federal Republic of Germany / Western Sectors)'
+                },
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [[
+                    [13.088, 52.420], [13.120, 52.380], [13.200, 52.410], [13.310, 52.390],
+                    [13.385, 52.400], [13.385, 52.516], [13.380, 52.550], [13.330, 52.600],
+                    [13.220, 52.620], [13.120, 52.580], [13.088, 52.480], [13.088, 52.420]
+                  ]]
+                }
+              });
+
+              // 2. East Berlin (Capital of GDR / DDR)
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DDR',
+                properties: {
+                  id: 'DE-BE-E',
+                  isSubDivision: true,
+                  ISO_A3: 'DDR',
+                  iso_a3: 'DDR',
+                  name: 'East Berlin (German Democratic Republic / Capital of DDR)'
+                },
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [[
+                    [13.385, 52.400], [13.450, 52.410], [13.600, 52.380], [13.761, 52.430],
+                    [13.720, 52.550], [13.620, 52.620], [13.480, 52.675], [13.350, 52.650],
+                    [13.330, 52.600], [13.380, 52.550], [13.385, 52.516], [13.385, 52.400]
+                  ]]
+                }
+              });
+            } else {
+              const isEast = isEastGermanState(stId, stName);
+              formattedFeatures.push({
+                ...st,
+                id: isEast ? 'DDR' : 'DE_WEST',
+                properties: {
+                  ...st.properties,
+                  isSubDivision: true,
+                  ISO_A3: isEast ? 'DDR' : 'DEU',
+                  iso_a3: isEast ? 'DDR' : 'DEU',
+                  name: isEast ? 'German Democratic Republic' : 'Federal Republic of Germany'
+                }
+              });
+            }
           });
 
           featuresToRender = featuresToRender.filter((f: any) => {
             const id = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
             const name = String(f.properties?.name || '').toUpperCase();
             return id !== 'DEU' && name !== 'GERMANY';
-          }).concat(germanStatesFormatted);
+          }).concat(formattedFeatures);
         }
       }
 
@@ -642,45 +688,22 @@ export const WorldMap: React.FC<WorldMapProps> = ({
               color: darkMode ? '#0f172a' : '#94a3b8',
               weight: 0.5,
               opacity: 0.85,
-              fillOpacity: mapMode === 'ACTIVE_WAR' ? 0.25 : (darkMode ? 0.75 : 0.85),
+              fillOpacity: darkMode ? 0.75 : 0.85,
               interactive: false
             };
           }
 
           const isCompleted = completedCountries.includes(countryId);
           const isSelected = selectedPreview?.id === countryId;
-          const isAtWar = getWarStatus(countryId);
-          const isComposite = Boolean((feature as any)?.properties?.isSubDivision) || ['SU', 'YU', 'CS', 'DE', 'DDR'].includes(countryId);
+          const isSubDivision = Boolean((feature as any)?.properties?.isSubDivision);
 
-          let fillColor = '#6366f1';
-          let fillOpacity = isSelected ? 0.95 : (isCompleted ? 0.90 : 0.84);
-          let borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
-          let borderWidth = isSelected ? (isComposite ? 0.4 : 2.2) : (isComposite ? 0.3 : 0.6);
-
-          if (mapMode === 'FREEDOM') {
-            fillColor = getFreedomColor(countryId);
-            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
-          } else if (mapMode === 'IDEOLOGY') {
-            fillColor = getIdeologyColor(countryId);
-            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : fillColor;
-          } else if (mapMode === 'ACTIVE_WAR') {
-            if (isAtWar) {
-              fillColor = '#dc2626';
-              fillOpacity = 0.95;
-              borderColor = '#fca5a5';
-              borderWidth = 2.0;
-            } else {
-              fillColor = darkMode ? '#1e293b' : '#64748b';
-              fillOpacity = 0.25;
-              borderColor = darkMode ? '#334155' : '#94a3b8';
-              borderWidth = 0.5;
-            }
-          } else {
-            // Standard Political
-            const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
-            fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
-            borderColor = isSelected ? (isComposite ? fillColor : '#ffffff') : (['SU', 'YU', 'CS'].includes(countryId) ? (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') : fillColor);
-          }
+          const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
+          const fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
+          const fillOpacity = isSelected ? 0.95 : (isCompleted ? 0.90 : 0.84);
+          
+          // Seamless borders for composite subdivisions like 1950 German states
+          const borderColor = isSubDivision ? fillColor : (isSelected ? '#ffffff' : fillColor);
+          const borderWidth = isSubDivision ? 0.1 : (isSelected ? 2.2 : 0.6);
 
           return {
             fillColor: fillColor,
@@ -699,47 +722,39 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
           const isCompleted = completedCountries.includes(countryId);
           const hoverEnglishName = englishNames[countryId] || country.name;
-          const isAtWar = getWarStatus(countryId);
-          const isComposite = Boolean((feature as any)?.properties?.isSubDivision) || ['SU', 'YU', 'CS', 'DE', 'DDR'].includes(countryId);
 
-          // English tooltip with mode details
-          const modeDetailHtml = 
-            mapMode === 'FREEDOM' 
-              ? `<div style="color: ${getFreedomColor(countryId)}; font-size: 9px; font-weight: 700; margin-top: 2px;">Freedom Index: ${country.freedomScore ?? 75}/100</div>` 
-              : mapMode === 'IDEOLOGY'
-              ? `<div style="color: #93c5fd; font-size: 9px; font-weight: 700; margin-top: 2px;">Ruling: ${country.rivals?.[0]?.ideology || 'Constitutional'}</div>`
-              : mapMode === 'ACTIVE_WAR' && isAtWar
-              ? `<div style="color: #f87171; font-size: 9px; font-weight: 800; margin-top: 2px;">⚔️ ACTIVE WAR ZONE</div>`
-              : '';
-
-          layer.bindTooltip(`
-            <div style="font-family: inherit; font-size: 11px; font-weight: 800; display: flex; flex-direction: column; gap: 2px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 14px; line-height: 1;">${country.flag || '🌐'}</span>
-                <span style="font-weight: 950; letter-spacing: 0.05em; text-transform: uppercase;">${hoverEnglishName}</span>
-                ${isCompleted ? `<span style="color: #fbbf24; font-weight: 900; margin-left: 2px;">★</span>` : ''}
+          const tooltipHtml = `
+            <div style="font-family: sans-serif; padding: 4px 6px; min-width: 140px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span style="font-size: 16px;">${country.flag}</span>
+                <span style="font-weight: 800; font-size: 12px; color: #ffffff;">${hoverEnglishName}</span>
               </div>
-              ${modeDetailHtml}
+              <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">${country.system}</div>
+              ${isCompleted ? '<div style="color: #fbbf24; font-size: 9px; font-weight: 700; margin-top: 2px;">★ Campaign Secured</div>' : ''}
+              <div style="font-size: 8px; color: #cbd5e1; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2px;">Click to select nation</div>
             </div>
-          `, {
+          `;
+
+          layer.bindTooltip(tooltipHtml, {
             permanent: false,
             sticky: true,
             direction: 'top',
             className: `custom-map-tooltip ${darkMode ? 'dark' : 'light'}`
           });
 
-          // Elegant visual interactive overrides on mouse hover - synchronously highlight all constituent features
+          // Interactive overrides on mouse hover
           layer.on('mouseover', () => {
             const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
-            const hoverFill = mapMode === 'FREEDOM' ? getFreedomColor(countryId) : mapMode === 'IDEOLOGY' ? getIdeologyColor(countryId) : mapMode === 'ACTIVE_WAR' ? (isAtWar ? '#ef4444' : '#475569') : scheme.selected;
+            const hoverFill = scheme.selected;
 
             geoLayer.eachLayer((l: any) => {
               if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+                const sub = Boolean(l.feature.properties?.isSubDivision);
                 l.setStyle({
                   fillColor: hoverFill,
                   fillOpacity: 0.96,
-                  weight: isComposite ? 0.4 : 1.8,
-                  color: isComposite ? hoverFill : '#ffffff'
+                  weight: sub ? 0.1 : 1.8,
+                  color: sub ? hoverFill : '#ffffff'
                 });
               }
             });
@@ -750,33 +765,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             const isNowCompleted = completedCountries.includes(countryId);
             const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
 
-            let baseFill = isNowSelected ? scheme.selected : (isNowCompleted ? scheme.completed : scheme.default);
-            let baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
-            let baseOpacity = isNowSelected ? 0.95 : (isNowCompleted ? 0.90 : 0.84);
-            let baseWeight = isNowSelected ? (isComposite ? 0.4 : 2.2) : (isComposite ? 0.3 : 0.6);
-
-            if (mapMode === 'FREEDOM') {
-              baseFill = getFreedomColor(countryId);
-              baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
-            } else if (mapMode === 'IDEOLOGY') {
-              baseFill = getIdeologyColor(countryId);
-              baseBorder = isNowSelected ? (isComposite ? baseFill : '#ffffff') : baseFill;
-            } else if (mapMode === 'ACTIVE_WAR') {
-              if (isAtWar) {
-                baseFill = '#dc2626';
-                baseOpacity = 0.95;
-                baseBorder = '#fca5a5';
-                baseWeight = 2.0;
-              } else {
-                baseFill = darkMode ? '#1e293b' : '#64748b';
-                baseOpacity = 0.25;
-                baseBorder = darkMode ? '#334155' : '#94a3b8';
-                baseWeight = 0.5;
-              }
-            }
+            const baseFill = isNowSelected ? scheme.selected : (isNowCompleted ? scheme.completed : scheme.default);
+            const baseOpacity = isNowSelected ? 0.95 : (isNowCompleted ? 0.90 : 0.84);
 
             geoLayer.eachLayer((l: any) => {
               if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+                const sub = Boolean(l.feature.properties?.isSubDivision);
+                const baseBorder = sub ? baseFill : (isNowSelected ? '#ffffff' : baseFill);
+                const baseWeight = sub ? 0.1 : (isNowSelected ? 2.2 : 0.6);
+
                 l.setStyle({
                   fillColor: baseFill,
                   fillOpacity: baseOpacity,
@@ -1032,68 +1029,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
       {/* Map Container and Layout */}
       <div className="col-span-12 lg:col-span-8 flex flex-col gap-3">
-        {/* Map Mode Filter Tabs & Legend */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-slate-900/80 border border-slate-800">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => setMapMode('POLITICAL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                mapMode === 'POLITICAL' 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span>🗺️</span> Political Map
-            </button>
-            <button
-              onClick={() => setMapMode('FREEDOM')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                mapMode === 'FREEDOM' 
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span>🕊️</span> Freedom Index
-            </button>
-            <button
-              onClick={() => setMapMode('IDEOLOGY')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                mapMode === 'IDEOLOGY' 
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' 
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span>⚖️</span> Ideology
-            </button>
-            <button
-              onClick={() => setMapMode('ACTIVE_WAR')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                mapMode === 'ACTIVE_WAR' 
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 animate-pulse' 
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span>⚔️</span> Active War Zones
-            </button>
+        {/* Scenario Borders Status Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-xl bg-indigo-600/30 text-indigo-300 font-bold border border-indigo-500/30 flex items-center gap-1.5 font-mono text-[11px]">
+              <span>🗺️</span> {activeScenarioMeta.year} Historical Political Borders
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+              Hover over or click any sovereign territory to select your nation.
+            </span>
           </div>
 
           <div className="text-[10px] font-mono text-slate-400 px-2 flex items-center gap-2">
-            {mapMode === 'POLITICAL' && <span>Nations by Sovereign Color</span>}
-            {mapMode === 'FREEDOM' && (
-              <span className="flex items-center gap-2">
-                <span className="text-emerald-400">● Free</span>
-                <span className="text-amber-400">● Partly Free</span>
-                <span className="text-rose-400">● Not Free</span>
-              </span>
-            )}
-            {mapMode === 'IDEOLOGY' && (
-              <span className="flex items-center gap-2">
-                <span className="text-red-400">● Communist</span>
-                <span className="text-blue-400">● Dem/Cons</span>
-                <span className="text-yellow-400">● Centrist</span>
-              </span>
-            )}
-            {mapMode === 'ACTIVE_WAR' && <span className="text-rose-400 font-bold">Active Frontlines Highlighted Only</span>}
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Playable Nations</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-600" /> Non-Playable</span>
           </div>
         </div>
 

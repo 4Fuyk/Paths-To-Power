@@ -87,6 +87,8 @@ export interface Region {
   campaignLevel: number; // Player's rally level
   ownerPartyId?: string; // Winner party id in 2024
   mayorName?: string;    // Winner mayor name
+  playerCandidate?: string; // Nominated candidate for the player's party
+  nominatedCandidates?: Record<string, string>; // Party-specific nominated regional leaders
 }
 
 export interface Bill {

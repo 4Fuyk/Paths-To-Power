@@ -141,7 +141,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [gameSpeed, setGameSpeed] = useState<number>(1);
-  const [gameDate, setGameDate] = useState<Date>(new Date(2025, 0, 1));
+  const [gameDate, setGameDate] = useState<Date>(new Date(Number(scenario) || 2026, 0, 1));
 
   useEffect(() => {
     if (isInitialized) return;
@@ -152,53 +152,60 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     }
 
     const initialStatus: Record<string, RegionUnit> = {};
+    const isUnderCivilWar = civilWarRisk >= 40;
     
-    if (mapMode === 'GIS') {
-       const epicenterIdx = Math.floor(Math.random() * (regions.length - 1)) + 1;
-       const epicenterId = regions[epicenterIdx].id;
-       const epiCenterCoords = regionCentersRef.current[epicenterId] || {lat: 0, lng: 0};
-       
-       const getDist = (id: string) => {
-          const c = regionCentersRef.current[id];
-          if (!c) return 999;
-          return Math.sqrt(Math.pow(c.lat - epiCenterCoords.lat, 2) + Math.pow(c.lng - epiCenterCoords.lng, 2));
-       };
+    if (isUnderCivilWar) {
+      if (mapMode === 'GIS') {
+        const epicenterIdx = Math.floor(Math.random() * (regions.length - 1)) + 1;
+        const epicenterId = regions[epicenterIdx].id;
+        const epiCenterCoords = regionCentersRef.current[epicenterId] || {lat: 0, lng: 0};
+        
+        const getDist = (id: string) => {
+           const c = regionCentersRef.current[id];
+           if (!c) return 999;
+           return Math.sqrt(Math.pow(c.lat - epiCenterCoords.lat, 2) + Math.pow(c.lng - epiCenterCoords.lng, 2));
+        };
 
-       const sorted = [...regions].sort((a,b) => getDist(a.id) - getDist(b.id));
-       const rebelProportion = Math.max(0.1, Math.min(0.8, civilWarRisk / 120)); 
-       const rebelCount = Math.floor(regions.length * rebelProportion); 
-       
-       sorted.forEach((reg, idx) => {
-         const isRebel = idx < rebelCount;
-         initialStatus[reg.id] = {
-           regionId: reg.id,
-           type: isRebel ? 'rebel' : 'loyal',
-           hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
-           maxHp: isRebel ? 250 : 200,
-         };
-       });
+        const sorted = [...regions].sort((a,b) => getDist(a.id) - getDist(b.id));
+        const rebelProportion = Math.max(0.15, Math.min(0.7, (civilWarRisk - 30) / 100)); 
+        const rebelCount = Math.max(1, Math.floor(regions.length * rebelProportion)); 
+        
+        sorted.forEach((reg, idx) => {
+          const isRebel = idx < rebelCount;
+          initialStatus[reg.id] = {
+            regionId: reg.id,
+            type: isRebel ? 'rebel' : 'loyal',
+            hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
+            maxHp: isRebel ? 250 : 200,
+          };
+        });
+      } else {
+        const rebelProportion = Math.max(0.15, Math.min(0.7, (civilWarRisk - 30) / 100)); 
+        regions.forEach((reg, idx) => {
+          const isRebel = idx > 0 && Math.random() < rebelProportion;
+          initialStatus[reg.id] = {
+            regionId: reg.id,
+            type: isRebel ? 'rebel' : 'loyal',
+            hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
+            maxHp: isRebel ? 250 : 200,
+          };
+        });
+      }
     } else {
-       const rebelProportion = Math.max(0.1, Math.min(0.8, civilWarRisk / 120)); 
-       regions.forEach((reg, idx) => {
-         const isRebel = idx > 0 && Math.random() < rebelProportion;
-         initialStatus[reg.id] = {
-           regionId: reg.id,
-           type: isRebel ? 'rebel' : 'loyal',
-           hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
-           maxHp: isRebel ? 250 : 200,
-         };
-       });
-    }
-
-    const finalRebelCount = Object.values(initialStatus).filter(s => s.type === 'rebel').length;
-    if (finalRebelCount === 0 && regions.length > 1) {
-      initialStatus[regions[regions.length - 1].id].type = 'rebel';
-      initialStatus[regions[regions.length - 1].id].hp = 160;
+      // Sovereign Peace: all regions loyal, ready for national defense
+      regions.forEach((reg) => {
+        initialStatus[reg.id] = {
+          regionId: reg.id,
+          type: 'loyal',
+          hp: 200,
+          maxHp: 200,
+        };
+      });
     }
 
     setRegionStatus(initialStatus);
 
-    // Initial 2 standing national armies in loyal provinces
+    // Initial standing national defense armies in loyal provinces
     const loyalProvinces = regions.filter(r => initialStatus[r.id]?.type === 'loyal');
     const initialArmies: PlayerArmy[] = [];
     if (loyalProvinces.length > 0) {
@@ -239,7 +246,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
     setArmies(initialArmies);
     setIsInitialized(true);
-  }, [country, isInitialized, mapMode, centersReady]); // run when centersReady changes
+  }, [country, isInitialized, mapMode, centersReady, civilWarRisk, scenario]);
 
 
   useEffect(() => {
@@ -840,12 +847,12 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
           <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900/80 border border-slate-700/60 rounded-xl">
             <div className="flex flex-col">
               <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Military Operations Budget</span>
-              <span className="text-xs font-black font-mono text-amber-400">₺{militaryBudget.toLocaleString()}</span>
+              <span className="text-xs font-black font-mono text-amber-400">${militaryBudget.toLocaleString()}</span>
             </div>
             <div className="h-6 w-px bg-slate-700/50" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Active Brigades/Divisions</span>
-              <span className="text-xs font-black font-mono text-emerald-400">{armies.length} Birlik</span>
+              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Active Divisions</span>
+              <span className="text-xs font-black font-mono text-emerald-400">{armies.length} Divisions</span>
             </div>
           </div>
 
@@ -864,17 +871,17 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                   <span className="relative flex h-2 w-2">
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
                   </span>
-                  ⏱️ DURDUR
+                  ⏱️ PAUSE
                 </>
               ) : (
                 <>
                   <span className="relative flex h-2 w-2 bg-slate-950 rounded-full" />
-                  ▶ ZAMANI BAŞLAT
+                  ▶ ADVANCE TIME
                 </>
               )}
             </button>
             <div className="text-xs font-bold font-mono px-2 opacity-80 border-l border-slate-700/30">
-              📅 {gameDate.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
+              📅 {gameDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
           </div>
         </div>

@@ -1855,10 +1855,58 @@ export function generateName(countryId: string): string {
   const zaFirst = ['Sipho', 'Thabo', 'Kagiso', 'Lethabo', 'Bandile', 'Melokuhle', 'Zama', 'Naledi', 'Buhle', 'Lerato'];
   const zaLast = ['Dlamini', 'Ndlovu', 'Khumalo', 'Mthembu', 'Mokoena', 'Smit', 'Botha', 'Pretorius', 'Naidoo', 'Govender'];
 
+  const ruFirst = ['Sergey', 'Dmitry', 'Boris', 'Lev', 'Alexei', 'Nikolai', 'Mikhail', 'Alexander', 'Ilya', 'Oleg', 'Vasily', 'Vladislav', 'Yaroslav', 'Maksim', 'Evgeny'];
+  const ruLast = ['Vishnevsky', 'Shlosberg', 'Mitrokhin', 'Yavlinsky', 'Bondarenko', 'Sobyanin', 'Beglov', 'Furgal', 'Davankov', 'Zyuganov', 'Lokot', 'Kurinny', 'Khabirov', 'Teksler', 'Nikitina'];
+
+  const uaFirst = ['Vitali', 'Ihor', 'Hennadiy', 'Borys', 'Andriy', 'Ivan', 'Oleksandr', 'Serhiy', 'Vladyslav', 'Roman', 'Ruslan', 'Oleh', 'Petro', 'Tamila'];
+  const uaLast = ['Klitschko', 'Terekhov', 'Trukhanov', 'Filatov', 'Sadovyi', 'Fedorov', 'Senkevych', 'Morhunov', 'Bondarenko', 'Symchyshyn', 'Martsinkiv', 'Synyutka', 'Honcharenko'];
+
+  const plFirst = ['Rafał', 'Jacek', 'Aleksandra', 'Hanna', 'Aleksander', 'Marcin', 'Piotr', 'Krzysztof', 'Tadeusz', 'Arkadiusz', 'Agata', 'Robert', 'Donald'];
+  const plLast = ['Trzaskowski', 'Jaśkowiak', 'Dulkiewicz', 'Sutryk', 'Zdanowska', 'Miszalski', 'Krupa', 'Bruski', 'Krzystek', 'Żuk', 'Truskolaski', 'Wiśniewski', 'Tusk'];
+
+  const frFirst = ['Gabriel', 'Emmanuel', 'Xavier', 'Laurent', 'Alain', 'Carole', 'Valérie', 'Marine', 'Jordan', 'Jean-Luc', 'Anne', 'Benoît'];
+  const frLast = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Macron', 'Attal', 'Hidalgo'];
+
+  const seFirst = ['Ulf', 'Magdalena', 'Jimmie', 'Nooshi', 'Johan', 'Ebba', 'Per', 'Karin', 'Anna', 'Lars', 'Erik', 'Mikael'];
+  const seLast = ['Kristersson', 'Andersson', 'Åkesson', 'Dadgostar', 'Pehrson', 'Busch', 'Bolund', 'Wanngård', 'Johansson', 'Nilsson'];
+
+  const ptFirst = ['Luís', 'Pedro', 'André', 'Rui', 'Mariana', 'Paulo', 'Carlos', 'Inês', 'António', 'Fernando', 'Manuel'];
+  const ptLast = ['Montenegro', 'Santos', 'Ventura', 'Rocha', 'Mortágua', 'Raimundo', 'Moedas', 'Moreira', 'Rodrigues', 'Ferreira'];
+
+  const grFirst = ['Kyriakos', 'Nikos', 'Stefanos', 'Dimitris', 'Kostas', 'Haris', 'Pavlos', 'Elena', 'Rena', 'Yannis'];
+  const grLast = ['Mitsotakis', 'Androulakis', 'Kasselakis', 'Koutsoumbas', 'Velopoulos', 'Natsios', 'Bakoyannis', 'Doukas', 'Boutaris'];
+
+  const isFirst = ['Bjarni', 'Katrín', 'Kristrún', 'Sigurður', 'Þorgerður', 'Dagur', 'Einar', 'Ásmundur', 'Halla', 'Gunnar'];
+  const isLast = ['Benediktsson', 'Jakobsdóttir', 'Frostadóttir', 'Ingi', 'Eggertsson', 'Þorsteinsson', 'Einarsson', 'Jónsdóttir'];
+
+  const cnFirst = ['Xi', 'Li', 'Wang', 'Zhang', 'Chen', 'Liu', 'Yang', 'Huang', 'Zhao', 'Wu'];
+  const cnLast = ['Jinping', 'Qiang', 'Huning', 'Zhaolei', 'Keqiang', 'Yangjie', 'Ming', 'Wei', 'Jun'];
+
+  const twFirst = ['Lai', 'Hou', 'Ko', 'Han', 'Chen', 'Chiang', 'Lin', 'Cheng', 'Lu', 'Kao'];
+  const twLast = ['Ching-te', 'Yu-ih', 'Wen-je', 'Kuo-yu', 'Chi-mai', 'Wan-an', 'Chia-lung', 'Wen-tsan'];
+
+  const saFirst = ['Mohammed', 'Faisal', 'Khalid', 'Abdulaziz', 'Turki', 'Badr', 'Saud', 'Abdullah'];
+  const saLast = ['bin Salman', 'bin Farhan', 'Al-Falih', 'Al-Saud', 'Al-Sheikh', 'Al-Jadaan', 'Al-Ghamdi'];
+
+  const irFirst = ['Masoud', 'Saeed', 'Mohammad', 'Ali', 'Ebrahim', 'Hassan', 'Hossein', 'Javad'];
+  const irLast = ['Pezeshkian', 'Jalili', 'Ghalibaf', 'Bagheri', 'Khamenei', 'Rouhani', 'Zarif', 'Zakani'];
+
+  const ilFirst = ['Benjamin', 'Yair', 'Benny', 'Itamar', 'Bezalel', 'Avigdor', 'Ron', 'Mansour'];
+  const ilLast = ['Netanyahu', 'Lapid', 'Gantz', 'Ben-Gvir', 'Smotrich', 'Lieberman', 'Huldai', 'Abbas'];
+
+  const psFirst = ['Mahmoud', 'Mohammad', 'Mustafa', 'Yahya', 'Ismail', 'Khaled', 'Rawhi', 'Husam'];
+  const psLast = ['Abbas', 'Mustafa', 'Shtayyeh', 'Sinwar', 'Haniyeh', 'Meshaal', 'Fattouh', 'Barghouti'];
+
+  const roFirst = ['Nicuşor', 'Emil', 'Marcel', 'Nicolae', 'Klaus', 'George', 'Mihai', 'Elena'];
+  const roLast = ['Popa', 'Popescu', 'Radu', 'Ionescu', 'Dumitru', 'Stoica', 'Ciolacu', 'Dan'];
+
+  const huFirst = ['Gergely', 'László', 'Péter', 'Viktor', 'Ferenc', 'Klára', 'Pál', 'János'];
+  const huLast = ['Nagy', 'Kovács', 'Tóth', 'Szabó', 'Horváth', 'Varga', 'Orbán', 'Magyar'];
+
   const sample = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
   if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
-  if (countryId === 'DE') return `${sample(deFirst)} ${sample(deLast)}`;
+  if (countryId === 'DE' || countryId === 'DDR') return `${sample(deFirst)} ${sample(deLast)}`;
   if (countryId === 'US') return `${sample(usFirst)} ${sample(usLast)}`;
   if (countryId === 'BR') return `${sample(brFirst)} ${sample(brLast)}`;
   if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
@@ -1867,10 +1915,26 @@ export function generateName(countryId: string): string {
   if (countryId === 'IN') return `${sample(inFirst)} ${sample(inLast)}`;
   if (countryId === 'IT') return `${sample(itFirst)} ${sample(itLast)}`;
   if (countryId === 'ID') return `${sample(idFirst)} ${sample(idLast)}`;
-  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR') return `${sample(esFirst)} ${sample(esLast)}`;
+  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR' || countryId === 'CL') return `${sample(esFirst)} ${sample(esLast)}`;
   if (countryId === 'KR') return `${sample(krFirst)} ${sample(krLast)}`;
   if (countryId === 'ZA') return `${sample(zaFirst)} ${sample(zaLast)}`;
   if (countryId === 'CA' || countryId === 'AU') return `${sample(gbFirst)} ${sample(gbLast)}`;
+  if (countryId === 'FR') return `${sample(frFirst)} ${sample(frLast)}`;
+  if (countryId === 'RO') return `${sample(roFirst)} ${sample(roLast)}`;
+  if (countryId === 'HU') return `${sample(huFirst)} ${sample(huLast)}`;
+  if (countryId === 'RU' || countryId === 'SU') return `${sample(ruFirst)} ${sample(ruLast)}`;
+  if (countryId === 'UA') return `${sample(uaFirst)} ${sample(uaLast)}`;
+  if (countryId === 'PL' || countryId === 'CS') return `${sample(plFirst)} ${sample(plLast)}`;
+  if (countryId === 'SE') return `${sample(seFirst)} ${sample(seLast)}`;
+  if (countryId === 'PT') return `${sample(ptFirst)} ${sample(ptLast)}`;
+  if (countryId === 'GR') return `${sample(grFirst)} ${sample(grLast)}`;
+  if (countryId === 'IS') return `${sample(isFirst)} ${sample(isLast)}`;
+  if (countryId === 'CN') return `${sample(cnFirst)} ${sample(cnLast)}`;
+  if (countryId === 'TW') return `${sample(twFirst)} ${sample(twLast)}`;
+  if (countryId === 'SA') return `${sample(saFirst)} ${sample(saLast)}`;
+  if (countryId === 'IR') return `${sample(irFirst)} ${sample(irLast)}`;
+  if (countryId === 'IL') return `${sample(ilFirst)} ${sample(ilLast)}`;
+  if (countryId === 'PS') return `${sample(psFirst)} ${sample(psLast)}`;
 
   return `${sample(usFirst)} ${sample(usLast)}`;
 }
@@ -1915,6 +1979,54 @@ export function getDeterministicMayorName(regionName: string, countryId: string)
   const zaFirst = ['Sipho', 'Thabo', 'Kagiso', 'Lethabo', 'Bandile', 'Melokuhle', 'Zama', 'Naledi', 'Buhle', 'Lerato'];
   const zaLast = ['Dlamini', 'Ndlovu', 'Khumalo', 'Mthembu', 'Mokoena', 'Smit', 'Botha', 'Pretorius', 'Naidoo', 'Govender'];
 
+  const ruFirst = ['Sergey', 'Dmitry', 'Boris', 'Lev', 'Alexei', 'Nikolai', 'Mikhail', 'Alexander', 'Ilya', 'Oleg', 'Vasily', 'Vladislav', 'Yaroslav', 'Maksim'];
+  const ruLast = ['Vishnevsky', 'Shlosberg', 'Mitrokhin', 'Yavlinsky', 'Bondarenko', 'Sobyanin', 'Beglov', 'Furgal', 'Davankov', 'Zyuganov', 'Lokot', 'Kurinny'];
+
+  const uaFirst = ['Vitali', 'Ihor', 'Hennadiy', 'Borys', 'Andriy', 'Ivan', 'Oleksandr', 'Serhiy', 'Vladyslav', 'Roman', 'Ruslan', 'Oleh', 'Petro'];
+  const uaLast = ['Klitschko', 'Terekhov', 'Trukhanov', 'Filatov', 'Sadovyi', 'Fedorov', 'Senkevych', 'Morhunov', 'Bondarenko', 'Symchyshyn', 'Martsinkiv'];
+
+  const plFirst = ['Rafał', 'Jacek', 'Aleksandra', 'Hanna', 'Aleksander', 'Marcin', 'Piotr', 'Krzysztof', 'Tadeusz', 'Arkadiusz', 'Agata', 'Robert'];
+  const plLast = ['Trzaskowski', 'Jaśkowiak', 'Dulkiewicz', 'Sutryk', 'Zdanowska', 'Miszalski', 'Krupa', 'Bruski', 'Krzystek', 'Żuk', 'Truskolaski'];
+
+  const frFirst = ['Gabriel', 'Emmanuel', 'Xavier', 'Laurent', 'Alain', 'Carole', 'Valérie', 'Marine', 'Jordan', 'Jean-Luc', 'Anne', 'Benoît'];
+  const frLast = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Macron', 'Attal'];
+
+  const seFirst = ['Ulf', 'Magdalena', 'Jimmie', 'Nooshi', 'Johan', 'Ebba', 'Per', 'Karin', 'Anna', 'Lars', 'Erik'];
+  const seLast = ['Kristersson', 'Andersson', 'Åkesson', 'Dadgostar', 'Pehrson', 'Busch', 'Bolund', 'Wanngård', 'Johansson', 'Nilsson'];
+
+  const ptFirst = ['Luís', 'Pedro', 'André', 'Rui', 'Mariana', 'Paulo', 'Carlos', 'Inês', 'António', 'Fernando'];
+  const ptLast = ['Montenegro', 'Santos', 'Ventura', 'Rocha', 'Mortágua', 'Raimundo', 'Moedas', 'Moreira', 'Rodrigues', 'Ferreira'];
+
+  const grFirst = ['Kyriakos', 'Nikos', 'Stefanos', 'Dimitris', 'Kostas', 'Haris', 'Pavlos', 'Elena', 'Rena', 'Yannis'];
+  const grLast = ['Mitsotakis', 'Androulakis', 'Kasselakis', 'Koutsoumbas', 'Velopoulos', 'Natsios', 'Bakoyannis', 'Doukas', 'Boutaris'];
+
+  const isFirst = ['Bjarni', 'Katrín', 'Kristrún', 'Sigurður', 'Þorgerður', 'Dagur', 'Einar', 'Ásmundur', 'Halla', 'Gunnar'];
+  const isLast = ['Benediktsson', 'Jakobsdóttir', 'Frostadóttir', 'Ingi', 'Eggertsson', 'Þorsteinsson', 'Einarsson', 'Jónsdóttir'];
+
+  const cnFirst = ['Xi', 'Li', 'Wang', 'Zhang', 'Chen', 'Liu', 'Yang', 'Huang', 'Zhao', 'Wu'];
+  const cnLast = ['Jinping', 'Qiang', 'Huning', 'Zhaolei', 'Keqiang', 'Yangjie', 'Ming', 'Wei', 'Jun'];
+
+  const twFirst = ['Lai', 'Hou', 'Ko', 'Han', 'Chen', 'Chiang', 'Lin', 'Cheng', 'Lu', 'Kao'];
+  const twLast = ['Ching-te', 'Yu-ih', 'Wen-je', 'Kuo-yu', 'Chi-mai', 'Wan-an', 'Chia-lung', 'Wen-tsan'];
+
+  const saFirst = ['Mohammed', 'Faisal', 'Khalid', 'Abdulaziz', 'Turki', 'Badr', 'Saud', 'Abdullah'];
+  const saLast = ['bin Salman', 'bin Farhan', 'Al-Falih', 'Al-Saud', 'Al-Sheikh', 'Al-Jadaan', 'Al-Ghamdi'];
+
+  const irFirst = ['Masoud', 'Saeed', 'Mohammad', 'Ali', 'Ebrahim', 'Hassan', 'Hossein', 'Javad'];
+  const irLast = ['Pezeshkian', 'Jalili', 'Ghalibaf', 'Bagheri', 'Khamenei', 'Rouhani', 'Zarif', 'Zakani'];
+
+  const ilFirst = ['Benjamin', 'Yair', 'Benny', 'Itamar', 'Bezalel', 'Avigdor', 'Ron', 'Mansour'];
+  const ilLast = ['Netanyahu', 'Lapid', 'Gantz', 'Ben-Gvir', 'Smotrich', 'Lieberman', 'Huldai', 'Abbas'];
+
+  const psFirst = ['Mahmoud', 'Mohammad', 'Mustafa', 'Yahya', 'Ismail', 'Khaled', 'Rawhi', 'Husam'];
+  const psLast = ['Abbas', 'Mustafa', 'Shtayyeh', 'Sinwar', 'Haniyeh', 'Meshaal', 'Fattouh', 'Barghouti'];
+
+  const roFirst = ['Nicuşor', 'Emil', 'Marcel', 'Nicolae', 'Klaus', 'George', 'Mihai', 'Elena'];
+  const roLast = ['Popa', 'Popescu', 'Radu', 'Ionescu', 'Dumitru', 'Stoica', 'Ciolacu', 'Dan'];
+
+  const huFirst = ['Gergely', 'László', 'Péter', 'Viktor', 'Ferenc', 'Klára', 'Pál', 'János'];
+  const huLast = ['Nagy', 'Kovács', 'Tóth', 'Szabó', 'Horváth', 'Varga', 'Orbán', 'Magyar'];
+
   let hash = 0;
   for (let i = 0; i < regionName.length; i++) {
     hash = regionName.charCodeAt(i) + ((hash << 5) - hash);
@@ -1924,7 +2036,7 @@ export function getDeterministicMayorName(regionName: string, countryId: string)
   const sample = (arr: string[]) => arr[hash % arr.length];
 
   if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
-  if (countryId === 'DE') return `${sample(deFirst)} ${sample(deLast)}`;
+  if (countryId === 'DE' || countryId === 'DDR') return `${sample(deFirst)} ${sample(deLast)}`;
   if (countryId === 'US') return `${sample(usFirst)} ${sample(usLast)}`;
   if (countryId === 'BR') return `${sample(brFirst)} ${sample(brLast)}`;
   if (countryId === 'JP') return `${sample(jpFirst)} ${sample(jpLast)}`;
@@ -1933,10 +2045,26 @@ export function getDeterministicMayorName(regionName: string, countryId: string)
   if (countryId === 'IN') return `${sample(inFirst)} ${sample(inLast)}`;
   if (countryId === 'IT') return `${sample(itFirst)} ${sample(itLast)}`;
   if (countryId === 'ID') return `${sample(idFirst)} ${sample(idLast)}`;
-  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR') return `${sample(esFirst)} ${sample(esLast)}`;
+  if (countryId === 'MX' || countryId === 'ES' || countryId === 'AR' || countryId === 'CL') return `${sample(esFirst)} ${sample(esLast)}`;
   if (countryId === 'KR') return `${sample(krFirst)} ${sample(krLast)}`;
   if (countryId === 'ZA') return `${sample(zaFirst)} ${sample(zaLast)}`;
   if (countryId === 'CA' || countryId === 'AU') return `${sample(gbFirst)} ${sample(gbLast)}`;
+  if (countryId === 'FR') return `${sample(frFirst)} ${sample(frLast)}`;
+  if (countryId === 'RO') return `${sample(roFirst)} ${sample(roLast)}`;
+  if (countryId === 'HU') return `${sample(huFirst)} ${sample(huLast)}`;
+  if (countryId === 'RU' || countryId === 'SU') return `${sample(ruFirst)} ${sample(ruLast)}`;
+  if (countryId === 'UA') return `${sample(uaFirst)} ${sample(uaLast)}`;
+  if (countryId === 'PL' || countryId === 'CS') return `${sample(plFirst)} ${sample(plLast)}`;
+  if (countryId === 'SE') return `${sample(seFirst)} ${sample(seLast)}`;
+  if (countryId === 'PT') return `${sample(ptFirst)} ${sample(ptLast)}`;
+  if (countryId === 'GR') return `${sample(grFirst)} ${sample(grLast)}`;
+  if (countryId === 'IS') return `${sample(isFirst)} ${sample(isLast)}`;
+  if (countryId === 'CN') return `${sample(cnFirst)} ${sample(cnLast)}`;
+  if (countryId === 'TW') return `${sample(twFirst)} ${sample(twLast)}`;
+  if (countryId === 'SA') return `${sample(saFirst)} ${sample(saLast)}`;
+  if (countryId === 'IR') return `${sample(irFirst)} ${sample(irLast)}`;
+  if (countryId === 'IL') return `${sample(ilFirst)} ${sample(ilLast)}`;
+  if (countryId === 'PS') return `${sample(psFirst)} ${sample(psLast)}`;
 
   return `${sample(usFirst)} ${sample(usLast)}`;
 }

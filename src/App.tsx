@@ -18,6 +18,7 @@ import { FinanceView } from './components/FinanceView';
 import { ElectionSimulator } from './components/ElectionSimulator';
 import { PartyCongressView } from './components/PartyCongressView';
 import { TacticalBattleView } from './components/TacticalBattleView';
+import { TacticalOperationsMap } from './components/TacticalOperationsMap';
 import { CabinetView } from './components/CabinetView';
 import { DiplomacyView } from './components/DiplomacyView';
 import { GovernanceView } from './components/GovernanceView';
@@ -236,6 +237,9 @@ export default function App() {
   // Auto-play time progression & speed controls
   const [isAutoPlayingTime, setIsAutoPlayingTime] = useState<boolean>(false);
   const [timeSpeed, setTimeSpeed] = useState<'1x' | '2x' | '5x'>('1x');
+  const [timeAdvanceMode, setTimeAdvanceMode] = useState<'FLOW' | 'MANUAL'>('MANUAL');
+  const [hasPromptedTimeMode, setHasPromptedTimeMode] = useState<boolean>(false);
+  const [showTimeModeModal, setShowTimeModeModal] = useState<boolean>(false);
   const hasTriggeredColonialEvent = useRef<Record<number, boolean>>({});
 
   // Dynamic country ideologies and freedom indexes reflecting election & policy shifts
@@ -483,6 +487,10 @@ export default function App() {
     } else {
       setDashboardTab('CAMPAIGN');
       setActiveScreen('MAIN_DASHBOARD');
+      if (!hasPromptedTimeMode) {
+        setShowTimeModeModal(true);
+        setHasPromptedTimeMode(true);
+      }
     }
   };
 
@@ -547,6 +555,10 @@ export default function App() {
     setIsJuniorMember(false);
     setDashboardTab('CAMPAIGN');
     setActiveScreen('MAIN_DASHBOARD');
+    if (!hasPromptedTimeMode) {
+      setShowTimeModeModal(true);
+      setHasPromptedTimeMode(true);
+    }
 
     // Trigger state governance alert or news report event for the polling shift
     setCurrentEvent({
@@ -1664,77 +1676,104 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 3. General election day triggers / Time Flow / Exit Sovereign */}
-                <div className="flex flex-col gap-2 shrink-0 min-w-[220px]">
+                {/* 3. Top-Right Date & Selected Time Advancement Controls */}
+                <div className="flex flex-col gap-2 shrink-0 min-w-[240px] items-end">
                   {/* Current Date Display */}
-                  <div className={`px-3 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs font-mono font-bold ${
+                  <div className={`w-full px-3 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs font-mono font-bold ${
                     darkMode ? 'bg-slate-950/80 border-slate-800 text-indigo-400' : 'bg-slate-50 border-slate-200 text-indigo-600'
                   }`}>
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
                       <span>{getFormattedGameDate()}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      {isRuling ? `M${rulingMonthsCount + 1}` : `W${campaignTurn}`}
+                    <span className="text-[10px] text-slate-500 font-normal px-2 py-0.5 rounded bg-slate-800/40">
+                      {isRuling ? `Month ${rulingMonthsCount + 1}` : `Week ${campaignTurn} / ${selectedCountry.campaignTurns}`}
                     </span>
                   </div>
 
-                  {/* Auto Time Flow & Speed Controls */}
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      id="auto-time-flow-btn"
-                      onClick={() => {
-                        setIsAutoPlayingTime(!isAutoPlayingTime);
-                        playSound('click');
-                      }}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        isAutoPlayingTime
-                          ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md animate-pulse'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                      }`}
-                    >
-                      {isAutoPlayingTime ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                      {isAutoPlayingTime ? 'Pause Time' : 'Flow Time'}
-                    </button>
+                  {/* Active Time Mode Badge & Controls Container */}
+                  <div className={`w-full p-2 rounded-xl border flex flex-col gap-1.5 ${
+                    darkMode ? 'bg-slate-950/90 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                        {timeAdvanceMode === 'FLOW' ? '⏱️ Auto Flow Time' : '📅 Manual Turn Advance'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const nextMode = timeAdvanceMode === 'FLOW' ? 'MANUAL' : 'FLOW';
+                          setTimeAdvanceMode(nextMode);
+                          if (nextMode === 'FLOW') setIsAutoPlayingTime(true);
+                          else setIsAutoPlayingTime(false);
+                          playSound('click');
+                        }}
+                        className="text-[9px] font-mono text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                        title="You can also adjust this anytime in settings"
+                      >
+                        {timeAdvanceMode === 'FLOW' ? 'Switch to Manual' : 'Switch to Flow'}
+                      </button>
+                    </div>
 
-                    {/* Speed Selector */}
-                    <div className={`p-0.5 rounded-lg border flex gap-0.5 ${
-                      darkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-                    }`}>
-                      {(['1x', '2x', '5x'] as const).map(spd => (
+                    {/* Controls Row */}
+                    {timeAdvanceMode === 'FLOW' ? (
+                      <div className="flex items-center gap-1.5">
                         <button
-                          key={spd}
-                          onClick={() => { setTimeSpeed(spd); playSound('click'); }}
-                          className={`px-1.5 py-0.5 text-[9px] font-mono font-black rounded cursor-pointer transition-all ${
-                            timeSpeed === spd
-                              ? 'bg-indigo-600 text-white'
-                              : 'text-slate-400 hover:text-slate-200'
+                          id="auto-time-flow-btn"
+                          onClick={() => {
+                            setIsAutoPlayingTime(!isAutoPlayingTime);
+                            playSound('click');
+                          }}
+                          className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            isAutoPlayingTime
+                              ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md animate-pulse'
+                              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                           }`}
                         >
-                          {spd}
+                          {isAutoPlayingTime ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                          {isAutoPlayingTime ? 'Pause Time' : 'Start Time Flow'}
                         </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Manual Advance Turn */}
-                  {isRuling ? (
-                    <button
-                      id="next-month-btn"
-                      onClick={handleNextMonth}
-                      className="py-2 px-3 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 border border-emerald-500/50"
-                    >
-                      <Calendar className="w-3.5 h-3.5" /> Next Month
-                    </button>
-                  ) : (
-                    <button
-                      id="spend-turn-btn"
-                      onClick={handleSpendTurn}
-                      className="py-2 px-3 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-indigo-500/10 border border-indigo-500/50"
-                    >
-                      <FastForward className="w-3.5 h-3.5" /> Advance Week ({campaignTurn}/{selectedCountry.campaignTurns})
-                    </button>
-                  )}
+                        {/* Speed Selector */}
+                        <div className={`p-0.5 rounded-lg border flex gap-0.5 ${
+                          darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-200 border-slate-300'
+                        }`}>
+                          {(['1x', '2x', '5x'] as const).map(spd => (
+                            <button
+                              key={spd}
+                              onClick={() => { setTimeSpeed(spd); playSound('click'); }}
+                              className={`px-1.5 py-0.5 text-[9px] font-mono font-black rounded cursor-pointer transition-all ${
+                                timeSpeed === spd
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              {spd}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {isRuling ? (
+                          <button
+                            id="next-month-btn"
+                            onClick={handleNextMonth}
+                            className="w-full py-1.5 px-3 rounded-lg text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-emerald-500/10 border border-emerald-500/50"
+                          >
+                            <Calendar className="w-3.5 h-3.5" /> Next Month
+                          </button>
+                        ) : (
+                          <button
+                            id="spend-turn-btn"
+                            onClick={handleSpendTurn}
+                            className="w-full py-1.5 px-3 rounded-lg text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-indigo-500/10 border border-indigo-500/50"
+                          >
+                            <FastForward className="w-3.5 h-3.5" /> Advance Week ({campaignTurn}/{selectedCountry.campaignTurns})
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <button
                     onClick={() => {
@@ -1758,8 +1797,8 @@ export default function App() {
                         }
                       });
                     }}
-                    className={`py-1.5 px-3 rounded-xl text-[11px] font-semibold border flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer ${
-                      darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-slate-800' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                    className={`w-full py-1 px-3 rounded-lg text-[10px] font-semibold border flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer ${
+                      darkMode ? 'bg-slate-900/60 hover:bg-slate-800 text-slate-400 border-slate-800' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
                     }`}
                   >
                     <LogOut className="w-3 h-3" /> {isRuling ? 'Exit to Map' : 'Abort Campaign'}
@@ -1900,39 +1939,6 @@ export default function App() {
                   >
                     <Coins className="w-3.5 h-3.5" /> Finance & Treasury {isJuniorMember && '🔒'}
                   </button>
-
-                  <button
-                    onClick={() => {
-                      playSound('click');
-                      setDashboardTab('TACTICAL_BATTLE');
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'TACTICAL_BATTLE'
-                        ? 'bg-rose-600 text-white shadow-md'
-                        : darkMode ? 'text-rose-400 hover:text-rose-200 hover:bg-rose-950/40' : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50'
-                    }`}
-                  >
-                    <Swords className="w-3.5 h-3.5" /> War Front & Ordnance
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("You must win the general election first to unlock Diplomatic Actions!");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('DIPLOMACY');
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'DIPLOMACY'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <Globe className="w-3.5 h-3.5" /> Diplomatic Actions {!isRuling && '🔒'}
-                  </button>
                 </div>
               </div>
 
@@ -1940,7 +1946,7 @@ export default function App() {
               {(completedCountries.length > 0 || isRuling) && (
                 <div>
                   <span className="text-[9px] font-mono font-bold text-rose-450 uppercase tracking-wider block mb-1.5 ml-1">
-                    Sovereign Governance {isRuling ? '• Unlocked' : '• 🔒 Locked (Opposition Phase)'}
+                    Sovereign Governance & Tactical Ops {isRuling ? '• Unlocked (Ruling)' : '• 🔒 Locked (Opposition Phase)'}
                   </span>
                   <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
                     darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
@@ -2044,6 +2050,46 @@ export default function App() {
                     >
                       <Scale className="w-3.5 h-3.5" /> Watchdogs {isRuling ? '' : '🔒'}
                     </button>
+
+                    {/* TACTICAL OPERATIONS MAP */}
+                    <button
+                      onClick={() => {
+                        if (!isRuling) {
+                          playSound('error');
+                          setWarningAlert('Tactical Operations Map is unlocked after winning the election as head of state!');
+                          return;
+                        }
+                        playSound('click'); 
+                        setDashboardTab('TACTICAL_MAP'); 
+                      }}
+                      className={`flex-1 min-w-[140px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                        dashboardTab === 'TACTICAL_MAP'
+                          ? 'bg-cyan-600 text-white shadow-md'
+                          : darkMode ? 'text-cyan-400 hover:text-cyan-200 hover:bg-cyan-950/40' : 'text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50'
+                      }`}
+                    >
+                      <Globe className="w-3.5 h-3.5" /> Tactical Map {isRuling ? '' : '🔒'}
+                    </button>
+
+                    {/* WAR FRONT & ORDNANCE */}
+                    <button
+                      onClick={() => {
+                        if (!isRuling) {
+                          playSound('error');
+                          setWarningAlert('War Front & Ordnance operations are unlocked after winning the election!');
+                          return;
+                        }
+                        playSound('click'); 
+                        setDashboardTab('TACTICAL_BATTLE'); 
+                      }}
+                      className={`flex-1 min-w-[140px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                        dashboardTab === 'TACTICAL_BATTLE'
+                          ? 'bg-rose-600 text-white shadow-md'
+                          : darkMode ? 'text-rose-400 hover:text-rose-200 hover:bg-rose-950/40' : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <Swords className="w-3.5 h-3.5" /> War Front {isRuling ? '' : '🔒'}
+                    </button>
                   </div>
                 </div>
               )}
@@ -2109,6 +2155,7 @@ export default function App() {
                 onUpdateTreasury={setTreasury}
                 darkMode={darkMode}
                 coalitions={coalitions}
+                scenario={selectedScenario}
               />
             )}
 
@@ -2178,6 +2225,20 @@ export default function App() {
                 bannedPartiesCount={bannedParties.length}
                 publicApprovalImpact={adjustPublicApproval}
                 onUpdateReputation={setInternationalReputation}
+                darkMode={darkMode}
+              />
+            )}
+
+            {dashboardTab === 'TACTICAL_MAP' && selectedCountry && playerParty && (
+              <TacticalOperationsMap
+                country={selectedCountry}
+                party={playerParty}
+                civilWarRisk={civilWarRisk}
+                freedomIndex={freedomIndex}
+                internationalReputation={internationalReputation}
+                countryIdeologies={customCountryIdeologies}
+                countryFreedomScores={customCountryFreedomScores}
+                scenario={selectedScenario}
                 darkMode={darkMode}
               />
             )}
@@ -2585,6 +2646,115 @@ export default function App() {
                   <span className="text-indigo-400 group-hover:translate-x-1 transition-transform">➔</span>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TIME PROGRESSION MODE SELECTION MODAL */}
+      {showTimeModeModal && (
+        <div className="fixed inset-0 z-[140] h-full w-full bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className={`w-full max-w-lg rounded-3xl border p-7 flex flex-col gap-5 text-center animate-scale-up shadow-2xl ${
+            darkMode ? 'bg-slate-950 border-indigo-500/30' : 'bg-white border-slate-200'
+          }`}>
+            <div className="mx-auto p-4 rounded-2xl bg-indigo-500/10 text-indigo-400">
+              <Calendar className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className={`text-xl font-black uppercase tracking-tight ${
+                darkMode ? 'text-slate-100' : 'text-slate-900'
+              }`}>
+                Zaman İlerleme Tipini Seçin
+              </h3>
+              <p className="text-xs text-indigo-400 font-medium">
+                (Dilediğiniz zaman ayarlardan veya harita/panel üstünden değiştirebilirsiniz)
+              </p>
+              <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Oyun boyunca siyasi takvim ve seçim sürecinin nasıl akmasını istersiniz?
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {/* Option 1: Advance Week */}
+              <button
+                onClick={() => {
+                  setTimeAdvanceMode('MANUAL');
+                  setIsAutoPlayingTime(false);
+                  setShowTimeModeModal(false);
+                  playSound('click');
+                }}
+                className={`p-4 rounded-2xl border text-left flex flex-col gap-2 transition-all cursor-pointer group ${
+                  timeAdvanceMode === 'MANUAL'
+                    ? 'border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20'
+                    : darkMode
+                    ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400">
+                    <FastForward className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">
+                    Manuel
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                    Advance Week
+                  </h4>
+                  <p className={`text-[11px] leading-tight ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Her hamlenizi planlayıp 'Advance Week' butonuna basarak hafta hafta ilerleyin.
+                  </p>
+                </div>
+              </button>
+
+              {/* Option 2: Flow Time */}
+              <button
+                onClick={() => {
+                  setTimeAdvanceMode('FLOW');
+                  setIsAutoPlayingTime(true);
+                  setShowTimeModeModal(false);
+                  playSound('click');
+                }}
+                className={`p-4 rounded-2xl border text-left flex flex-col gap-2 transition-all cursor-pointer group ${
+                  timeAdvanceMode === 'FLOW'
+                    ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20'
+                    : darkMode
+                    ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                    <Play className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
+                    Otomatik
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                    Flow Time
+                  </h4>
+                  <p className={`text-[11px] leading-tight ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Zaman gerçek zamanlı aksın. 1x, 2x, 5x hız ve duraklatma seçenekleriyle yönetin.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setShowTimeModeModal(false);
+                  playSound('click');
+                }}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider cursor-pointer shadow-md"
+              >
+                Seçimi Onayla ve Başla
+              </button>
             </div>
           </div>
         </div>

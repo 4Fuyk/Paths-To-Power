@@ -8,7 +8,8 @@ import { Country, Party, Region, Coalition } from '../types';
 import { playSound } from '../lib/sounds';
 import { 
   Vote, Award, Trophy, ArrowRight, HelpCircle, AlertTriangle, 
-  Tv, BarChart2, CheckCircle2, ChevronRight, RefreshCw, XCircle 
+  Tv, BarChart2, CheckCircle2, ChevronRight, RefreshCw, XCircle,
+  Flame, Shield, Swords, Users, Landmark, Flag, Zap, Radio, Crosshair
 } from 'lucide-react';
 
 interface ElectionSimulatorProps {
@@ -18,6 +19,8 @@ interface ElectionSimulatorProps {
   darkMode: boolean;
   coalitions?: Coalition[];
 }
+
+export type RegimeChangeType = 'POPULAR_UPRISING' | 'MILITARY_COUP' | 'POLITBURO_OPERATION';
 
 export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   country,
@@ -32,12 +35,22 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [popularVotes, setPopularVotes] = useState<Record<string, number>>({});
   const [totalSeatsCounted, setTotalSeatsCounted] = useState<number>(0);
   const [newsTicker, setNewsTicker] = useState<string>('Polls closed, counting phase begins...');
-  const [step, setStep] = useState<'intro' | 'counting' | 'results'>('intro');
+  const [step, setStep] = useState<'intro' | 'counting' | 'results' | 'regime_operation'>('intro');
   const [userSpeed, setUserSpeed] = useState<number>(2000); // ms per region
+
+  // Regime change states for communist / non-democratic countries
+  const [selectedOperation, setSelectedOperation] = useState<RegimeChangeType | null>(null);
+  const [operationExecuting, setOperationExecuting] = useState<boolean>(false);
+  const [operationResult, setOperationResult] = useState<{ success: boolean; title: string; message: string; details: string[] } | null>(null);
+
+  const isOnePartyOrCommunist = ['SU', 'DDR', 'CN', 'CS'].includes(country.id) || 
+    (country.system && (country.system.includes('One-Party') || country.system.includes('Tek Parti') || country.system.includes('Communist') || country.system.includes('Socialist State')));
+  
+  const isAuthoritarian = ['RU', 'BY', 'TR', 'EG'].includes(country.id) || 
+    (country.freedomScore !== undefined && country.freedomScore < 45);
 
   // Coalition Negotiation States
   const [selectedCoalitionParties, setSelectedCoalitionParties] = useState<string[]>(() => {
-    // If we are already in a coalition with any rival parties, pre-select them!
     const activeCoalition = coalitions?.find(c => c.parties.includes(party.name));
     if (activeCoalition) {
       return country.rivals
@@ -49,6 +62,91 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [coalitionNegotiated, setCoalitionNegotiated] = useState<boolean>(false);
   const [coalitionSuccess, setCoalitionSuccess] = useState<boolean | null>(null);
   const [coalitionMessage, setCoalitionMessage] = useState<string>('');
+
+  const calculateOperationOdds = (opType: RegimeChangeType) => {
+    let baseOdds = 45;
+    const traits = party.traits;
+
+    if (opType === 'POPULAR_UPRISING') {
+      // Influenced by Charisma, Eloquence, and party membership / budget
+      baseOdds += (traits.charisma * 4) + (traits.eloquence * 3);
+      if (party.members > 50000) baseOdds += 10;
+      if (party.influence > 60) baseOdds += 10;
+    } else if (opType === 'MILITARY_COUP') {
+      // Influenced by Strategy, Organization, and Defense investments
+      baseOdds += (traits.strategy * 5) + (traits.organization * 3);
+      if (party.budget > 100000) baseOdds += 10;
+      if (party.influence > 50) baseOdds += 10;
+    } else if (opType === 'POLITBURO_OPERATION') {
+      // Influenced by Strategy, Charisma, and Political Influence
+      baseOdds += (traits.strategy * 5) + (traits.charisma * 3);
+      if (party.influence > 70) baseOdds += 15;
+    }
+
+    return Math.min(92, Math.max(20, Math.round(baseOdds)));
+  };
+
+  const handleExecuteOperation = (opType: RegimeChangeType) => {
+    setOperationExecuting(true);
+    playSound('click');
+
+    const odds = calculateOperationOdds(opType);
+    const roll = Math.random() * 100;
+    const isSuccess = roll <= odds;
+
+    setTimeout(() => {
+      setOperationExecuting(false);
+      if (isSuccess) {
+        playSound('success');
+        if (opType === 'POPULAR_UPRISING') {
+          setOperationResult({
+            success: true,
+            title: "VICTORY: The Popular Revolution Prevails!",
+            message: `Hundreds of thousands of workers, students, and citizens occupied the central square in ${country.name}. Security garrisons laid down their weapons and joined the movement. The authoritarian regime has formally surrendered executive authority!`,
+            details: [
+              "General Strike halted all state rail and broadcasting systems.",
+              "State ministries conceded authority to the Provisional Democratic Assembly.",
+              `Your party, ${party.name}, has been mandated by the people to govern!`
+            ]
+          });
+        } else if (opType === 'MILITARY_COUP') {
+          setOperationResult({
+            success: true,
+            title: "VICTORY: Military Garrison & Reformist Staff Secures Power!",
+            message: `Key armored divisions and senior commanders defected to your cause overnight. Crucial government broadcasting transmitters, communications hubs, and state ministries in ${country.name} are now secured under your command!`,
+            details: [
+              "Armored columns secured the presidential palace without major bloodshed.",
+              "The old regime apparatus was peacefully detained and disarmed.",
+              `State Radio confirms: ${party.name} assumes executive governance over ${country.name}!`
+            ]
+          });
+        } else {
+          setOperationResult({
+            success: true,
+            title: "VICTORY: Executive Politburo Operation Succeeded!",
+            message: `Through supreme strategic maneuvering, your faction outvoted and ousted the old regime leadership inside the Central Committee. A historic decree appointed ${party.leader || party.name} as the new sovereign leader!`,
+            details: [
+              "Central Committee passed a decisive Vote of No Confidence against the old guard.",
+              "Key department heads pledged loyalty to the new reformist cabinet.",
+              `Official Gazette confirms the transition of ${country.name} to ${party.name} leadership!`
+            ]
+          });
+        }
+      } else {
+        playSound('error');
+        setOperationResult({
+          success: false,
+          title: "FAILED: The Regime Apparatus Counter-Attacked!",
+          message: `The state security forces caught wind of the operation and reinforced key checkpoints. The movement was suppressed before reaching the central palace.`,
+          details: [
+            "Regime loyalists deployed elite riot police and locked down broadcasting towers.",
+            "Key operational contacts were forced into hiding.",
+            "You may attempt another regime transition vector or regroup your grassroots organization."
+          ]
+        });
+      }
+    }, 2400);
+  };
 
   const getAgreementChance = (rivalId: string) => {
     const rival = country.rivals.find(r => r.id === rivalId);
@@ -97,7 +195,21 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
         
         // Calculate seats obtained in this region based on local supports
         const regionSeats = region.seats;
-        const regionSupports = region.supports;
+        const rawSupports: Record<string, number> = { ...(region.supports as Record<string, number>) };
+
+        // In authoritarian regimes, state apparatus applies suppression pressure against opposition
+        if (isAuthoritarian) {
+          const playerResistance = (party.traits.organization + party.traits.charisma) / 2;
+          const statePressure = Math.max(0, 8 - (playerResistance * 0.7));
+          if (statePressure > 0 && country.rivals.length > 0) {
+            const incumbentRival = country.rivals[0];
+            const playerOld = rawSupports[party.id] || 0;
+            const suppressionShift = Math.min(playerOld * 0.15, statePressure);
+            rawSupports[party.id] = Math.max(0, playerOld - suppressionShift);
+            rawSupports[incumbentRival.id] = (rawSupports[incumbentRival.id] || 0) + suppressionShift;
+          }
+        }
+        const regionSupports = rawSupports;
 
         // Initialize local changes
         const localSeatResult: Record<string, number> = {};
@@ -342,26 +454,258 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
         darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200'
       }`}>
         <div className="text-rose-500 animate-pulse text-xs font-mono font-bold uppercase tracking-widest flex items-center justify-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> ELECTION DAY / GENERAL ELECTIONS IN PROGRESS
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> {isOnePartyOrCommunist ? 'POLITICAL TRANSITION & REGIME COMMAND' : 'ELECTION DAY / GENERAL ELECTIONS IN PROGRESS'}
         </div>
-        <h2 className="text-2xl font-black mt-1.5">{country.name} Ballot Counting Center</h2>
+        <h2 className="text-2xl font-black mt-1.5">{country.name} {isOnePartyOrCommunist ? 'State Transition Center' : 'Ballot Counting Center'}</h2>
         <p className="text-xs text-slate-400 mt-1 max-w-lg mx-auto font-medium">
-          It is time to reap the rewards of your rallies, organization efforts, and legislative works in parliament. The public is voting!
+          {isOnePartyOrCommunist 
+            ? 'In a non-democratic or one-party state, power changes require revolutionary mobilization, military defection, internal politburo moves, or constituent assembly pressure.'
+            : 'It is time to reap the rewards of your rallies, organization efforts, and legislative works in parliament. The public is voting!'}
         </p>
       </div>
+
+      {/* SPECIAL REGIME OPERATION SCREEN (Communist / One-Party States) */}
+      {step === 'regime_operation' && selectedOperation && (
+        <div className={`p-6 rounded-3xl border flex flex-col items-center gap-6 ${
+          darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-xl'
+        }`}>
+          {!operationResult ? (
+            <div className="w-full max-w-xl flex flex-col items-center gap-5 text-center">
+              <div className="p-4 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                {selectedOperation === 'POPULAR_UPRISING' && <Users className="w-12 h-12 text-indigo-400 mx-auto" />}
+                {selectedOperation === 'MILITARY_COUP' && <Swords className="w-12 h-12 text-rose-400 mx-auto" />}
+                {selectedOperation === 'POLITBURO_OPERATION' && <Landmark className="w-12 h-12 text-amber-400 mx-auto" />}
+              </div>
+
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-400">COVERT TRANSITION PROTOCOL</span>
+                <h3 className="text-xl font-black text-slate-100 mt-1">
+                  {selectedOperation === 'POPULAR_UPRISING' && 'Launch Mass Popular Uprising & General Strike'}
+                  {selectedOperation === 'MILITARY_COUP' && 'Execute Military Garrison Coup & Defection'}
+                  {selectedOperation === 'POLITBURO_OPERATION' && 'Execute Politburo & Central Committee Putsch'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  {selectedOperation === 'POPULAR_UPRISING' && 'Mobilize civil disobedience, university strikes, and trade union walkouts to surround state ministries and force the regime to step down.'}
+                  {selectedOperation === 'MILITARY_COUP' && 'Enlist patriotic tank brigades, mechanized divisions, and border garrisons to secure communication transmitters and state television.'}
+                  {selectedOperation === 'POLITBURO_OPERATION' && 'Orchestrate an internal vote of no confidence and strategic executive action against the General Secretary / Chairman inside the palace.'}
+                </p>
+              </div>
+
+              {/* Odds Calculation Card */}
+              <div className="w-full p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-around text-center">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Estimated Success</span>
+                  <span className={`text-2xl font-black font-mono ${
+                    calculateOperationOdds(selectedOperation) >= 65 ? 'text-emerald-400' :
+                    calculateOperationOdds(selectedOperation) >= 45 ? 'text-amber-400' : 'text-rose-400'
+                  }`}>
+                    {calculateOperationOdds(selectedOperation)}%
+                  </span>
+                </div>
+                <div className="border-r border-slate-800 h-10"></div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Key Traits Active</span>
+                  <span className="text-xs font-bold text-slate-200">
+                    {selectedOperation === 'POPULAR_UPRISING' && `Charisma (${party.traits.charisma}) & Eloquence (${party.traits.eloquence})`}
+                    {selectedOperation === 'MILITARY_COUP' && `Strategy (${party.traits.strategy}) & Organization (${party.traits.organization})`}
+                    {selectedOperation === 'POLITBURO_OPERATION' && `Strategy (${party.traits.strategy}) & Influence (${party.influence})`}
+                  </span>
+                </div>
+              </div>
+
+              {operationExecuting ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin" />
+                  <span className="text-xs font-mono font-bold text-indigo-300 animate-pulse">
+                    Deploying operatives & broadcasting revolutionary decree...
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 w-full max-w-sm">
+                  <button
+                    onClick={() => setStep('intro')}
+                    className="flex-1 py-3 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleExecuteOperation(selectedOperation)}
+                    className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                  >
+                    Execute Command
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Operation Results View */
+            <div className="w-full max-w-lg flex flex-col items-center gap-5 text-center animate-fade-in">
+              <div className={`p-4 rounded-full border ${
+                operationResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 animate-bounce' : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+              }`}>
+                {operationResult.success ? <Trophy className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
+              </div>
+
+              <div>
+                <h3 className={`text-xl font-black ${operationResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {operationResult.title}
+                </h3>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed font-medium">
+                  {operationResult.message}
+                </p>
+              </div>
+
+              <div className="w-full p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-left space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block pb-1 border-b border-slate-800">Operational Log:</span>
+                {operationResult.details.map((d, i) => (
+                  <div key={i} className="text-xs text-slate-300 flex items-start gap-2">
+                    <span className={operationResult.success ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>•</span>
+                    <span>{d}</span>
+                  </div>
+                ))}
+              </div>
+
+              {operationResult.success ? (
+                <button
+                  onClick={() => {
+                    const simulatedSeats: Record<string, number> = {
+                      [party.id]: Math.ceil(country.seats * 0.65)
+                    };
+                    country.rivals.forEach((r, idx) => {
+                      simulatedSeats[r.id] = Math.floor((country.seats * 0.35) / Math.max(1, country.rivals.length));
+                    });
+                    onElectionFinished(true, simulatedSeats);
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all cursor-pointer animate-pulse"
+                >
+                  Assume State Leadership & Paint the Map!
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 w-full">
+                  <button
+                    onClick={() => { setOperationResult(null); setStep('intro'); }}
+                    className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Try Another Strategy
+                  </button>
+                  <button
+                    onClick={() => onElectionFinished(false)}
+                    className="flex-1 py-3 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Abort & Regroup
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* PHASE 1: GAME INTRO TO ELECTION DAY */}
       {step === 'intro' && (
         <div className={`p-6 rounded-3xl border flex flex-col items-center gap-6 ${
           darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
         }`}>
-          <div className="text-center space-y-2">
-            <Vote className="w-16 h-16 text-indigo-500 animate-bounce mx-auto" />
-            <h3 className="text-xl font-bold tracking-tight">Are you ready to count the ballots?</h3>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-md font-medium">
-              Welcome to the celebration of democracy. Your campaign budget has been locked and all districts have completed sealing the ballot boxes. Now, results from each district will be broadcast on live television one by one.
-            </p>
-          </div>
+          {/* Authoritarian Regime Alert Banner */}
+          {isAuthoritarian && !isOnePartyOrCommunist && (
+            <div className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-3 text-left">
+              <AlertTriangle className="w-6 h-6 shrink-0 text-amber-400" />
+              <div>
+                <strong className="block font-bold">Authoritarian Regime Alert (Heavy State Pressure)</strong>
+                <span>In {country.name}, the incumbent state apparatus controls media outlets and administrative levers. Winning requires superior voter mobilization and grassroots popularity!</span>
+              </div>
+            </div>
+          )}
+
+          {/* Non-Democratic Communist Regime Selection Cards */}
+          {isOnePartyOrCommunist ? (
+            <div className="w-full space-y-4">
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-3 text-left">
+                <Shield className="w-6 h-6 shrink-0 text-rose-400" />
+                <div>
+                  <strong className="block font-bold">One-Party State / Non-Democratic Governance</strong>
+                  <span>Direct multi-party parliamentary elections are constitutionally prohibited in {country.name}. Select a historical regime change vector below:</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Popular Uprising */}
+                <button
+                  onClick={() => { setSelectedOperation('POPULAR_UPRISING'); setStep('regime_operation'); }}
+                  className="p-4 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 hover:bg-indigo-900/30 text-left transition-all flex flex-col justify-between gap-3 group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <span className="text-[9px] font-mono uppercase bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-300 font-bold">Civic</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-100 text-sm group-hover:text-indigo-300 transition-colors">Popular Uprising</h4>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-snug">Mobilize workers, students, and general strikes to occupy the central square and force regime surrender.</p>
+                  </div>
+                  <div className="text-[10px] text-indigo-400 font-mono font-bold flex items-center justify-between pt-2 border-t border-indigo-500/20">
+                    <span>Charisma & Eloquence</span>
+                    <span>{calculateOperationOdds('POPULAR_UPRISING')}% Odds →</span>
+                  </div>
+                </button>
+
+                {/* 2. Military Coup */}
+                <button
+                  onClick={() => { setSelectedOperation('MILITARY_COUP'); setStep('regime_operation'); }}
+                  className="p-4 rounded-2xl border border-rose-500/30 bg-rose-950/20 hover:bg-rose-900/30 text-left transition-all flex flex-col justify-between gap-3 group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400">
+                      <Swords className="w-6 h-6" />
+                    </div>
+                    <span className="text-[9px] font-mono uppercase bg-rose-500/20 px-2 py-0.5 rounded text-rose-300 font-bold">Military</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-100 text-sm group-hover:text-rose-300 transition-colors">Military Garrison Coup</h4>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-snug">Enlist reformist colonels and armored units to secure state television and executive ministries.</p>
+                  </div>
+                  <div className="text-[10px] text-rose-400 font-mono font-bold flex items-center justify-between pt-2 border-t border-rose-500/20">
+                    <span>Strategy & Organization</span>
+                    <span>{calculateOperationOdds('MILITARY_COUP')}% Odds →</span>
+                  </div>
+                </button>
+
+                {/* 3. Politburo Operation */}
+                <button
+                  onClick={() => { setSelectedOperation('POLITBURO_OPERATION'); setStep('regime_operation'); }}
+                  className="p-4 rounded-2xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-900/30 text-left transition-all flex flex-col justify-between gap-3 group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                      <Landmark className="w-6 h-6" />
+                    </div>
+                    <span className="text-[9px] font-mono uppercase bg-amber-500/20 px-2 py-0.5 rounded text-amber-300 font-bold">Palace</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-100 text-sm group-hover:text-amber-300 transition-colors">Politburo Putsch</h4>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-snug">Pass a no-confidence vote inside the Central Committee to depose the General Secretary from within.</p>
+                  </div>
+                  <div className="text-[10px] text-amber-400 font-mono font-bold flex items-center justify-between pt-2 border-t border-amber-500/20">
+                    <span>Strategy & Influence</span>
+                    <span>{calculateOperationOdds('POLITBURO_OPERATION')}% Odds →</span>
+                  </div>
+                </button>
+              </div>
+
+              <div className="pt-2 text-center">
+                <span className="text-xs text-slate-400">Or simulate a contested Constitutional Assembly referendum:</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center space-y-2">
+              <Vote className="w-16 h-16 text-indigo-500 animate-bounce mx-auto" />
+              <h3 className="text-xl font-bold tracking-tight">Are you ready to count the ballots?</h3>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-md font-medium">
+                Welcome to the celebration of democracy. Your campaign budget has been locked and all districts have completed sealing the ballot boxes. Now, results from each district will be broadcast on live television one by one.
+              </p>
+            </div>
+          )}
 
           {/* Settle Speed details */}
           <div className="flex items-center gap-3 bg-black/25 p-3 rounded-xl border border-slate-800 w-full max-w-sm justify-between">
@@ -402,7 +746,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
             onClick={() => setStep('counting')}
             className="px-8 py-3.5 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 hover:scale-[1.02] cursor-pointer transition-all"
           >
-            Start Counting and Tune into Live Broadcast!
+            {isOnePartyOrCommunist ? 'Begin Assembly Ballot Count' : 'Start Counting and Tune into Live Broadcast!'}
           </button>
         </div>
       )}
