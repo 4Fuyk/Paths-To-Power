@@ -38,43 +38,67 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   const safeScenario = (['2026', '1950', '1936', '1920', '1914'].includes(scenario) ? scenario : '2026') as ScenarioYear;
   const historicalCandidates = getCandidatesForEraAndCountry(countryCode, safeScenario);
   
-  const baseCandidatesPool: MinisterCandidate[] = historicalCandidates.length > 0 ? historicalCandidates : [
-    { name: party.leader || `${party.name} Leader`, party: party.name, loyalty: 98, competence: 90, popularity: 88 },
-    { name: `${party.name} General Secretary`, party: party.name, loyalty: 94, competence: 88, popularity: 82 },
-    { name: `${party.name} Chief Strategist`, party: party.name, loyalty: 92, competence: 92, popularity: 76 },
-    { name: `${party.name} Senior Deputy`, party: party.name, loyalty: 90, competence: 85, popularity: 78 },
-    ...country.rivals.map(r => ({
-      name: r.leader,
-      party: r.name,
-      loyalty: 65,
-      competence: 84,
-      popularity: Math.min(95, Math.max(60, Math.round(r.baseSupport * 2.2)))
-    })),
-    ...country.rivals.map(r => ({
-      name: `${r.name} Spokesperson`,
-      party: r.name,
-      loyalty: 60,
-      competence: 80,
-      popularity: Math.min(90, Math.max(50, Math.round(r.baseSupport * 1.8)))
-    }))
-  ];
-
-  // Filter out rival party leaders unless they are in a coalition with the player
+  // Coalition active partner names
   const playerCoalition = coalitions.find(c => c.parties.includes(party.name));
   const coalitionPartyNames = playerCoalition ? playerCoalition.parties : [];
-  
-  const candidatesPool = baseCandidatesPool.filter(candidate => {
-    const isLeaderOfRival = country.rivals.some(r => r.leader === candidate.name);
-    
-    if (isLeaderOfRival) {
-      const rivalInfo = country.rivals.find(r => r.leader === candidate.name);
-      if (rivalInfo && (coalitionPartyNames.includes(rivalInfo.name) || coalitionPartyNames.includes(rivalInfo.id))) {
-        return true;
-      }
-      return false;
-    }
-    return true;
+
+  const isTechnocratOrNonPartisan = (candParty: string) => {
+    const cp = candParty.toLowerCase();
+    return cp.includes('independent') || cp.includes('bağımsız') || cp.includes('technocrat') ||
+           cp.includes('military') || cp.includes('command') || cp.includes('central bank') ||
+           cp.includes('civil service') || cp.includes('judiciary') || cp.includes('nato') ||
+           cp.includes('defense') || cp.includes('general staff');
+  };
+
+  const isPlayerOrCoalitionParty = (candParty: string) => {
+    const cp = candParty.toLowerCase();
+    const pName = (party.name || '').toLowerCase();
+    const pId = (party.id || '').toLowerCase();
+
+    // Player party match
+    if (cp.includes(pName) || pName.includes(cp) || cp.includes(pId) || pId.includes(cp)) return true;
+
+    // Check acronym / first token
+    const pTokens = pName.split(/[\s(/)]+/).filter(t => t.length >= 2);
+    if (pTokens.some(tok => cp.includes(tok.toLowerCase()))) return true;
+
+    // Coalition partner match
+    return coalitionPartyNames.some(cpName => {
+      const low = cpName.toLowerCase();
+      return cp.includes(low) || low.includes(cp);
+    });
+  };
+
+  // Filter candidates: strictly player's party, coalition partners, and non-partisan experts
+  let eligibleCandidates = historicalCandidates.filter(c => {
+    if (isTechnocratOrNonPartisan(c.party)) return true;
+    return isPlayerOrCoalitionParty(c.party);
   });
+
+  // If eligible list is small, provide authentic, specialized cadres from player's party
+  const defaultPartyCadres: MinisterCandidate[] = [
+    { name: party.leader || `${party.name} Leader`, party: party.name, loyalty: 98, competence: 92, popularity: 90 },
+    { name: `${party.name} General Secretary`, party: party.name, loyalty: 95, competence: 89, popularity: 84 },
+    { name: `${party.name} Chief Economic Strategist`, party: party.name, loyalty: 92, competence: 94, popularity: 80 },
+    { name: `${party.name} Foreign Policy Directorate`, party: party.name, loyalty: 94, competence: 91, popularity: 78 },
+    { name: `${party.name} Parliamentary Group Chair`, party: party.name, loyalty: 96, competence: 88, popularity: 82 },
+    { name: `${party.name} Justice & Constitutional Affairs`, party: party.name, loyalty: 93, competence: 93, popularity: 77 },
+    { name: `${party.name} Defense & Security Expert`, party: party.name, loyalty: 95, competence: 90, popularity: 85 },
+    { name: `${party.name} Regional Policy Director`, party: party.name, loyalty: 91, competence: 86, popularity: 75 }
+  ];
+
+  if (eligibleCandidates.length === 0) {
+    eligibleCandidates = defaultPartyCadres;
+  } else if (eligibleCandidates.length < 6) {
+    const existingNames = new Set(eligibleCandidates.map(c => c.name));
+    defaultPartyCadres.forEach(cadre => {
+      if (!existingNames.has(cadre.name)) {
+        eligibleCandidates.push(cadre);
+      }
+    });
+  }
+
+  const candidatesPool = eligibleCandidates;
 
   const getCurrencySymbol = () => {
     if (country.id === 'US') return '$';
@@ -101,7 +125,7 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
     coalitionRivals.forEach(rival => {
       const isAlreadyAppointed = Object.values(nextCabinet).some((c: any) => c && c.name === rival.leader);
       if (!isAlreadyAppointed) {
-        const cand = baseCandidatesPool.find(c => c.name === rival.leader);
+        const cand = candidatesPool.find(c => c.name === rival.leader);
         if (cand) {
           const emptySlotId = positions.find(p => !nextCabinet[p.id])?.id;
           if (emptySlotId) {
@@ -117,7 +141,7 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
       setSuccessMessage('Coalition partners have been assigned to available ministries!');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerCoalition, baseCandidatesPool, country.rivals, positions]);
+  }, [playerCoalition, candidatesPool, country.rivals, positions]);
 
   // Appoint candidate to a specific post
   const handleAppoint = (postKey: string, candidate: MinisterCandidate) => {

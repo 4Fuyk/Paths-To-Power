@@ -349,21 +349,26 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
   }
 
   if (countryId === 'FR') {
-    if (normName.includes('iledefrance') || normName.includes('paris')) return 'FR_iledefrance';
-    if (normName.includes('hautsdefrance') || normName.includes('nord') || normName.includes('lille') || normName.includes('pasdecalais')) return 'FR_hautsdefrance';
-    if (normName.includes('auvergne') || normName.includes('rhone') || normName.includes('lyon') || normName.includes('grenoble')) return 'FR_auvergnerhonealpes';
-    if (normName.includes('grandest') || normName.includes('alsace') || normName.includes('lorraine') || normName.includes('strasbourg') || normName.includes('champagne')) return 'FR_grandest';
-    if (normName.includes('nouvelleaquitaine') || normName.includes('bordeaux') || normName.includes('aquitaine') || normName.includes('poitou') || normName.includes('limousin')) return 'FR_nouvelleaquitaine';
-    if (normName.includes('occitanie') || normName.includes('toulouse') || normName.includes('languedoc') || normName.includes('roussillon') || normName.includes('midi')) return 'FR_occitanie';
-    if (normName.includes('provence') || normName.includes('marseille') || normName.includes('paca') || normName.includes('cotedazur') || normName.includes('nice')) return 'FR_provencealpescotedazur';
-    if (normName.includes('paysdelaloire') || normName.includes('nantes') || normName.includes('loire')) return 'FR_paysdelaloire';
-    if (normName.includes('bretagne') || normName.includes('brittany') || normName.includes('rennes') || normName.includes('brest')) return 'FR_bretagne';
-    if (normName.includes('normandie') || normName.includes('normandy') || normName.includes('rouen') || normName.includes('caen')) return 'FR_normandie';
-    if (normName.includes('bourgogne') || normName.includes('franchecomte') || normName.includes('burgundy') || normName.includes('dijon') || normName.includes('besancon')) return 'FR_bourgognefranchecomte';
-    if (normName.includes('centrevaldeloire') || normName.includes('centre') || normName.includes('orleans') || normName.includes('tours')) return 'FR_centrevaldeloire';
-    if (normName.includes('corse') || normName.includes('corsica') || normName.includes('ajaccio') || normName.includes('bastia')) return 'FR_corse';
+    if (normName.includes('iledefrance') || normName.includes('paris') || normName === '11') return 'FR_iledefrance';
+    if (normName.includes('hautsdefrance') || normName.includes('nord') || normName.includes('lille') || normName.includes('pasdecalais') || normName === '32') return 'FR_hautsdefrance';
+    if (normName.includes('auvergne') || normName.includes('rhone') || normName.includes('lyon') || normName.includes('grenoble') || normName === '84') return 'FR_auvergnerhonealpes';
+    if (normName.includes('grandest') || normName.includes('alsace') || normName.includes('lorraine') || normName.includes('strasbourg') || normName.includes('champagne') || normName === '44') return 'FR_grandest';
+    if (normName.includes('nouvelleaquitaine') || normName.includes('bordeaux') || normName.includes('aquitaine') || normName.includes('poitou') || normName.includes('limousin') || normName === '75') return 'FR_nouvelleaquitaine';
+    if (normName.includes('occitanie') || normName.includes('toulouse') || normName.includes('languedoc') || normName.includes('roussillon') || normName.includes('midi') || normName === '76') return 'FR_occitanie';
+    if (normName.includes('provence') || normName.includes('marseille') || normName.includes('paca') || normName.includes('cotedazur') || normName.includes('nice') || normName === '93') return 'FR_provencealpescotedazur';
+    if (normName.includes('paysdelaloire') || normName.includes('nantes') || normName.includes('loire') || normName === '52') return 'FR_paysdelaloire';
+    if (normName.includes('bretagne') || normName.includes('brittany') || normName.includes('rennes') || normName.includes('brest') || normName === '53') return 'FR_bretagne';
+    if (normName.includes('normandie') || normName.includes('normandy') || normName.includes('rouen') || normName.includes('caen') || normName === '28') return 'FR_normandie';
+    if (normName.includes('bourgogne') || normName.includes('franchecomte') || normName.includes('burgundy') || normName.includes('dijon') || normName.includes('besancon') || normName === '27') return 'FR_bourgognefranchecomte';
+    if (normName.includes('centrevaldeloire') || normName.includes('centre') || normName.includes('orleans') || normName.includes('tours') || normName === '24') return 'FR_centrevaldeloire';
+    if (normName.includes('corse') || normName.includes('corsica') || normName.includes('ajaccio') || normName.includes('bastia') || normName === '94') return 'FR_corse';
+    if (normName.includes('guadeloupe') || normName === '01' || normName === 'glp') return 'FR_guadeloupe';
+    if (normName.includes('martinique') || normName === '02' || normName === 'mtq') return 'FR_martinique';
+    if (normName.includes('frenchguiana') || normName.includes('guyane') || normName.includes('guiana') || normName === '03' || normName === 'guf') return 'FR_frenchguianaguyane';
+    if (normName.includes('reunion') || normName.includes('lareunion') || normName === '04' || normName === 'reu') return 'FR_lareunion';
+    if (normName.includes('mayotte') || normName === '06' || normName === 'myt') return 'FR_mayotte';
+    if (normName.includes('etranger') || normName.includes('francaisdeletranger') || normName.includes('expat')) return 'FR_francaisdeletranger';
     if (normName.includes('algerie') || normName.includes('algeria') || normName.includes('oran') || normName.includes('constantine') || normName === 'dza') return 'FR_algeriefrancaisealgiersoranconstantine';
-    if (normName.includes('outremer') || normName.includes('overseas') || normName.includes('madagascar') || normName.includes('guiana') || normName === 'mdg' || normName === 'guf') return 'FR_outremeroverseas';
     return `FR_${normName}`;
   }
 
@@ -431,6 +436,94 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
     return `PL_${normName}`;
   }
 
+  if (countryId === 'RU') {
+    return `RU_${normName}`;
+  }
+
+  if (countryId === 'UA') {
+    if (normName.includes('kyiv') || normName.includes('kiev')) return 'UA_kyiv';
+    if (normName.includes('kharkiv') || normName.includes('sumy') || normName.includes('poltava')) return 'UA_kharkiv';
+    if (normName.includes('odesa') || normName.includes('odessa') || normName.includes('mykolaiv') || normName.includes('kherson')) return 'UA_odesa';
+    if (normName.includes('dnipro') || normName.includes('zaporizhzhia') || normName.includes('kryvyi')) return 'UA_dnipro';
+    if (normName.includes('lviv') || normName.includes('ivano') || normName.includes('ternopil') || normName.includes('volyn') || normName.includes('rivne')) return 'UA_lviv';
+    if (normName.includes('donetsk') || normName.includes('luhansk') || normName.includes('donbas')) return 'UA_donbas';
+    return `UA_${normName}`;
+  }
+
+  if (countryId === 'CL') {
+    return `CL_${normName}`;
+  }
+
+  if (countryId === 'SE') {
+    if (normName.includes('stockholm')) return 'SE_stockholmlan';
+    if (normName.includes('vastra') || normName.includes('goteborg') || normName.includes('gothenburg')) return 'SE_vastragotaland';
+    if (normName.includes('skane') || normName.includes('malmo')) return 'SE_skane';
+    if (normName.includes('ostergotland') || normName.includes('jonkoping') || normName.includes('kronoberg') || normName.includes('kalmar') || normName.includes('blekinge') || normName.includes('halland') || normName.includes('gotland') || normName.includes('sodermanland')) return 'SE_svealandgotaland';
+    if (normName.includes('norrbotten') || normName.includes('vasterbotten') || normName.includes('jamtland') || normName.includes('vasternorrland') || normName.includes('gavleborg') || normName.includes('dalarna') || normName.includes('varmland') || normName.includes('norre')) return 'SE_norrlandnorth';
+    return `SE_${normName}`;
+  }
+
+  if (countryId === 'PT') {
+    return `PT_${normName}`;
+  }
+
+  if (countryId === 'GR') {
+    if (normName.includes('attica') || normName.includes('attiki') || normName.includes('athens') || normName.includes('piraeus')) return 'GR_atticaathenspiraeus';
+    if (normName.includes('macedonia') || normName.includes('thessaloniki') || normName.includes('thrace') || normName.includes('kentriki')) return 'GR_centralmacedoniathessaloniki';
+    if (normName.includes('crete') || normName.includes('kriti')) return 'GR_crete';
+    if (normName.includes('thessaly') || normName.includes('thessalia') || normName.includes('epirus') || normName.includes('ipiros') || normName.includes('sterea')) return 'GR_thessalyepirus';
+    if (normName.includes('peloponnese') || normName.includes('peloponnisos') || normName.includes('west greece') || normName.includes('dytiki')) return 'GR_peloponnesewestgreece';
+    if (normName.includes('aegean') || normName.includes('ionian') || normName.includes('voreio') || normName.includes('notio') || normName.includes('ionia')) return 'GR_aegeanionianislands';
+    return `GR_${normName}`;
+  }
+
+  if (countryId === 'IS') {
+    return `IS_${normName}`;
+  }
+
+  if (countryId === 'TW') {
+    if (normName.includes('taipei') || normName.includes('keelung')) return 'TW_greaternorthtaipei';
+    if (normName.includes('taichung') || normName.includes('changhua') || normName.includes('miaoli') || normName.includes('nantou')) return 'TW_centraltaichung';
+    if (normName.includes('kaohsiung') || normName.includes('tainan') || normName.includes('pingtung') || normName.includes('chiayi')) return 'TW_southkaohsiungtainan';
+    if (normName.includes('yilan') || normName.includes('hualien') || normName.includes('taitung') || normName.includes('penghu') || normName.includes('kinmen') || normName.includes('matsu')) return 'TW_easthualientaitung';
+    return `TW_${normName}`;
+  }
+
+  if (countryId === 'SA') {
+    if (normName.includes('riyadh')) return 'SA_riyadhcapitalprovince';
+    if (normName.includes('makkah') || normName.includes('mecca') || normName.includes('jeddah')) return 'SA_makkahjeddahwestern';
+    if (normName.includes('eastern') || normName.includes('dammam') || normName.includes('khobar') || normName.includes('sharqiyah')) return 'SA_easternprovinceoilbasin';
+    if (normName.includes('madinah') || normName.includes('medina') || normName.includes('tabuk') || normName.includes('jawf') || normName.includes('hudud')) return 'SA_medinatabuknorth';
+    if (normName.includes('asir') || normName.includes('jizan') || normName.includes('najran') || normName.includes('bahah')) return 'SA_asirjizansouth';
+    return `SA_${normName}`;
+  }
+
+  if (countryId === 'IR') {
+    if (normName.includes('tehran') || normName.includes('alborz') || normName.includes('karaj') || normName.includes('qom')) return 'IR_tehrancapitalregion';
+    if (normName.includes('khorasan') || normName.includes('mashhad') || normName.includes('semnan')) return 'IR_razavikhorasanmashhad';
+    if (normName.includes('isfahan') || normName.includes('fars') || normName.includes('shiraz') || normName.includes('yazd') || normName.includes('kerman')) return 'IR_isfahanfarsheritage';
+    if (normName.includes('azerbaijan') || normName.includes('tabriz') || normName.includes('ardabil') || normName.includes('zanjan') || normName.includes('gilan') || normName.includes('mazandaran')) return 'IR_northtabrizcaspian';
+    if (normName.includes('khuzestan') || normName.includes('hormozgan') || normName.includes('bushehr') || normName.includes('sistan') || normName.includes('baluchestan') || normName.includes('kermanshah') || normName.includes('kurdistan') || normName.includes('lorestan') || normName.includes('ilam')) return 'IR_southkhuzestanoilgulf';
+    return `IR_${normName}`;
+  }
+
+  if (countryId === 'IL') {
+    if (normName.includes('tel aviv') || normName.includes('dan')) return 'IL_telavivmetropolitan';
+    if (normName.includes('jerusalem') || normName.includes('yerushalayim')) return 'IL_jerusalemcapital';
+    if (normName.includes('central') || normName.includes('merkaz') || normName.includes('petah') || normName.includes('rishon')) return 'IL_centralmerkazsharon';
+    if (normName.includes('haifa') || normName.includes('north') || normName.includes('tzafon') || normName.includes('galilee') || normName.includes('golan')) return 'IL_haifanorthgalilee';
+    if (normName.includes('south') || normName.includes('darom') || normName.includes('beer') || normName.includes('negev') || normName.includes('eilat')) return 'IL_southdaromnegev';
+    return `IL_${normName}`;
+  }
+
+  if (countryId === 'PS') {
+    if (normName.includes('gaza') || normName.includes('khan') || normName.includes('rafah')) return 'PS_gazastrip';
+    if (normName.includes('jerusalem') || normName.includes('quds') || normName.includes('ramallah') || normName.includes('al-bireh') || normName.includes('bethlehem')) return 'PS_centralwestbankramallahquds';
+    if (normName.includes('hebron') || normName.includes('khalil')) return 'PS_southernwestbankhebron';
+    if (normName.includes('nablus') || normName.includes('jenin') || normName.includes('tulkarm') || normName.includes('qalqilya') || normName.includes('salfit') || normName.includes('tubas') || normName.includes('jericho')) return 'PS_northernwestbanknablusjenin';
+    return `PS_${normName}`;
+  }
+
   if (countryId === 'CN') {
     if (normName.includes('beijing') || normName.includes('tianjin') || normName.includes('hebei')) return 'CN_northchinabeijingtianjin';
     if (normName.includes('shanghai') || normName.includes('jiangsu') || normName.includes('zhejiang')) return 'CN_eastchinashanghai';
@@ -469,7 +562,12 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
 export const getFeatureName = (feature: any): string => {
   if (!feature) return '';
   if (feature.properties) {
-    return feature.properties.shapeName || feature.properties.NAME_1 || 
+    return feature.properties.name_latin || 
+           feature.properties.NAME_LATIN || 
+           feature.properties.name_en || 
+           feature.properties.NAME_EN || 
+           feature.properties.shapeName || 
+           feature.properties.NAME_1 || 
            feature.properties.nombre || 
            feature.properties.NOMBRE || 
            feature.properties.name || 
@@ -481,6 +579,9 @@ export const getFeatureName = (feature: any): string => {
            feature.properties.STATE || 
            feature.properties.nam || 
            feature.properties.NAME || 
+           feature.properties.VARNAME_1 ||
+           feature.properties.ADM1_EN ||
+           feature.properties.adm1_name ||
            feature.properties.EER13NM || 
            feature.properties['hc-key'] || 
            feature.properties.admin || '';

@@ -213,7 +213,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     const id2 = String(feature.properties?.ISO_A2 || feature.properties?.iso_a2 || '').toUpperCase();
     const name = String(feature.properties?.name || feature.properties?.NAME || '').toUpperCase();
 
-    // 1. Check if Soviet Union / All 15 Republics unified under Soviet Union
+    // 0. Exclude non-playable territories from accidental substring collisions
+    if (id3 === 'CAF' || id2 === 'CF' || name.includes('CENTRAL AFRICAN')) return null;
+    if (id3 === 'ESH' || id2 === 'EH' || name.includes('WESTERN SAHARA')) return null;
+
+    // 1. Check if Soviet Union / All 15 Republics unified under Soviet Union (ONLY in historical Soviet scenarios)
+    const isHistoricalSovietEra = activeScenarioId === '1950' || activeScenarioId === '1936' || activeScenarioId === '1920' || activeScenarioId === '1914';
     const isSovietRepublic = 
       id3 === 'RUS' || id3 === 'SUN' || id3 === 'BLR' || id3 === 'UKR' || id3 === 'KAZ' ||
       id3 === 'UZB' || id3 === 'TKM' || id3 === 'TJK' || id3 === 'KGZ' || id3 === 'GEO' ||
@@ -224,7 +229,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       name.includes('GEORGIA') || name.includes('ARMENIA') || name.includes('AZERBAIJAN') ||
       name.includes('MOLDOVA') || name.includes('ESTONIA') || name.includes('LATVIA') || name.includes('LITHUANIA');
 
-    if (isSovietRepublic && activeCountries.some(c => c.id === 'SU')) {
+    if (isHistoricalSovietEra && isSovietRepublic && activeCountries.some(c => c.id === 'SU')) {
       return 'SU';
     }
 
@@ -284,8 +289,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         (activeScenarioId === '1950' && (['KEN', 'UGA', 'NGA', 'GHA', 'MYS', 'CYP', 'TZA', 'ZMB', 'ZWE', 'SLE'].includes(id3) || name.includes('KENYA') || name.includes('NIGERIA') || name.includes('MALAYA')))) {
       if (activeCountries.some(c => c.id === 'GB')) return 'GB';
     }
-    if (id3 === 'FRA' || id2 === 'FR' || name.includes('FRANCE') ||
-        (activeScenarioId === '1950' && (id3 === 'DZA' || id3 === 'MDG' || id3 === 'GUF' || name.includes('ALGERIA') || name.includes('MADAGASCAR') || name.includes('FRENCH GUIANA')))) {
+    if (id3 === 'FRA' || id2 === 'FR' || id3 === 'GUF' || id2 === 'GF' || name.includes('FRANCE') || name.includes('FRENCH GUIANA') || name.includes('GUYANE') ||
+        (activeScenarioId === '1950' && (id3 === 'DZA' || id3 === 'MDG' || name.includes('ALGERIA') || name.includes('MADAGASCAR')))) {
       if (activeCountries.some(c => c.id === 'FR')) return 'FR';
     }
     if (id3 === 'ITA' || id2 === 'IT' || name.includes('ITALY')) {
@@ -347,6 +352,24 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     }
     if (id3 === 'GRC' || id2 === 'GR' || name.includes('GREECE')) {
       if (activeCountries.some(c => c.id === 'GR')) return 'GR';
+    }
+    if (id3 === 'UKR' || id2 === 'UA' || name.includes('UKRAINE')) {
+      if (activeCountries.some(c => c.id === 'UA')) return 'UA';
+    }
+    if (id3 === 'SWE' || id2 === 'SE' || name.includes('SWEDEN')) {
+      if (activeCountries.some(c => c.id === 'SE')) return 'SE';
+    }
+    if (id3 === 'SAU' || id2 === 'SA' || name.includes('SAUDI')) {
+      if (activeCountries.some(c => c.id === 'SA')) return 'SA';
+    }
+    if (id3 === 'IRN' || id2 === 'IR' || name.includes('IRAN')) {
+      if (activeCountries.some(c => c.id === 'IR')) return 'IR';
+    }
+    if (id3 === 'ISR' || id2 === 'IL' || name.includes('ISRAEL')) {
+      if (activeCountries.some(c => c.id === 'IL')) return 'IL';
+    }
+    if (id3 === 'PSE' || id2 === 'PS' || name.includes('PALESTINE')) {
+      if (activeCountries.some(c => c.id === 'PS')) return 'PS';
     }
 
     return null;
@@ -685,9 +708,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           if (!countryId) {
             return {
               fillColor: darkMode ? '#1e293b' : '#cbd5e1',
-              color: darkMode ? '#0f172a' : '#94a3b8',
-              weight: 0.5,
-              opacity: 0.85,
+              color: '#ffffff',
+              weight: 0.85,
+              opacity: 0.9,
               fillOpacity: darkMode ? 0.75 : 0.85,
               interactive: false
             };
@@ -701,9 +724,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           const fillColor = isSelected ? scheme.selected : (isCompleted ? scheme.completed : scheme.default);
           const fillOpacity = isSelected ? 0.95 : (isCompleted ? 0.90 : 0.84);
           
-          // Seamless borders for composite subdivisions like 1950 German states
-          const borderColor = isSubDivision ? fillColor : (isSelected ? '#ffffff' : fillColor);
-          const borderWidth = isSubDivision ? 0.1 : (isSelected ? 2.2 : 0.6);
+          // White borders for countries on pre-game world map
+          const borderColor = isSubDivision ? fillColor : '#ffffff';
+          const borderWidth = isSubDivision ? 0.1 : (isSelected ? 2.5 : 1.2);
 
           return {
             fillColor: fillColor,

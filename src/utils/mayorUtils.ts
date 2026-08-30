@@ -740,14 +740,36 @@ export const SPECIFIC_PARTY_MAYORS: Record<string, Record<string, Record<string,
       'Provence-Alpes-Côte d\'Azur': 'Renaud Muselier',
       'Pays de la Loire': 'Christelle Morançais',
       'Bretagne': 'Loïg Chesnais-Girard',
-      'Normandie': 'Hervé Morin'
+      'Normandie': 'Hervé Morin',
+      'Bourgogne-Franche-Comté': 'Marie-Guite Dufay',
+      'Centre-Val de Loire': 'François Bonneau',
+      'Corse': 'Gilles Simeoni',
+      'Guadeloupe': 'Ary Chalus',
+      'Martinique': 'Serge Letchimy',
+      'French Guiana (Guyane)': 'Gabriel Serville',
+      'La Réunion': 'Huguette Bello',
+      'Mayotte': 'Ben Issa Ousseni',
+      'Français de l\'étranger': 'Roland Lescure'
     },
     RN: {
       'Hauts-de-France': 'Sébastien Chenu',
       'Provence-Alpes-Côte d\'Azur': 'Thierry Mariani',
       'Occitanie': 'Jean-Paul Garraud',
       'Grand Est': 'Laurent Jacobelli',
-      'Île-de-France': 'Jordan Bardella'
+      'Île-de-France': 'Jordan Bardella',
+      'Auvergne-Rhône-Alpes': 'Andréa Kotarac',
+      'Nouvelle-Aquitaine': 'Edwige Diaz',
+      'Bourgogne-Franche-Comté': 'Julien Odoul',
+      'Normandie': 'Nicolas Bay',
+      'Pays de la Loire': 'Hervé Juvin',
+      'Bretagne': 'Gilles Pennelle',
+      'Centre-Val de Loire': 'Aleksandar Nikolic',
+      'Corse': 'François Filoni',
+      'Guadeloupe': 'Rody Tolassy',
+      'Martinique': 'Max Orville',
+      'French Guiana (Guyane)': 'Jérôme Harbourg',
+      'La Réunion': 'Johnny Payet',
+      'Mayotte': 'Saidali Boina Hamissi'
     },
     NFP: {
       'Île-de-France': 'Anne Hidalgo',
@@ -755,7 +777,33 @@ export const SPECIFIC_PARTY_MAYORS: Record<string, Record<string, Record<string,
       'Auvergne-Rhône-Alpes': 'Grégory Doucet',
       'Nouvelle-Aquitaine': 'Pierre Hurmic',
       'Occitanie': 'Carole Delga',
-      'Bretagne': 'Nathalie Appéré'
+      'Bretagne': 'Nathalie Appéré',
+      'Hauts-de-France': 'Ugo Bernalicis',
+      'Grand Est': 'Florian Philippot',
+      'Normandie': 'Sébastien Jumel',
+      'Bourgogne-Franche-Comté': 'Marie-Guite Dufay',
+      'Centre-Val de Loire': 'François Bonneau',
+      'Corse': 'Jean-Félix Acquaviva',
+      'Guadeloupe': 'Ary Chalus',
+      'Martinique': 'Serge Letchimy',
+      'French Guiana (Guyane)': 'Gabriel Serville',
+      'La Réunion': 'Huguette Bello',
+      'Mayotte': 'Ben Issa Ousseni'
+    },
+    RE: {
+      'Île-de-France': 'Valérie Pécresse',
+      'Auvergne-Rhône-Alpes': 'Laurent Wauquiez',
+      'Hauts-de-France': 'Xavier Bertrand',
+      'Grand Est': 'Franck Leroy',
+      'Provence-Alpes-Côte d\'Azur': 'Renaud Muselier',
+      'Pays de la Loire': 'Christelle Morançais',
+      'Normandie': 'Hervé Morin',
+      'Corse': 'Gilles Simeoni',
+      'Guadeloupe': 'Ary Chalus',
+      'Martinique': 'Serge Letchimy',
+      'French Guiana (Guyane)': 'Gabriel Serville',
+      'La Réunion': 'Huguette Bello',
+      'Mayotte': 'Ben Issa Ousseni'
     }
   },
   SE: {
@@ -911,8 +959,18 @@ export function syncRegionOwnersAndMayors(
       });
     }
 
+    const isPlayerWinning = playerParty && (leadingPartyId === playerParty.id || leadingPartyId === 'player_party');
     const ownerChanged = reg.ownerPartyId !== leadingPartyId;
     const missingMayor = !reg.mayorName || reg.mayorName.trim() === '';
+
+    // If player is winning this region and previously nominated a candidate, prioritize that nominated candidate
+    if (isPlayerWinning && reg.playerCandidate && reg.playerCandidate.trim() !== '') {
+      return {
+        ...reg,
+        ownerPartyId: leadingPartyId,
+        mayorName: reg.playerCandidate
+      };
+    }
 
     if (ownerChanged || missingMayor) {
       const newMayorName = getPartyGovernorForRegion(

@@ -18,6 +18,8 @@ interface ElectionSimulatorProps {
   onElectionFinished: (success: boolean, finalSeats?: Record<string, number>, newCoalition?: any) => void;
   darkMode: boolean;
   coalitions?: Coalition[];
+  isAtWar?: boolean;
+  militaryReadiness?: number;
 }
 
 export type RegimeChangeType = 'POPULAR_UPRISING' | 'MILITARY_COUP' | 'POLITBURO_OPERATION';
@@ -28,6 +30,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   onElectionFinished,
   darkMode,
   coalitions = [],
+  isAtWar = false,
+  militaryReadiness = 65,
 }) => {
   const [currentRegionIndex, setCurrentRegionIndex] = useState(0);
   const [countedRegions, setCountedRegions] = useState<string[]>([]);
@@ -207,6 +211,20 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
             const suppressionShift = Math.min(playerOld * 0.15, statePressure);
             rawSupports[party.id] = Math.max(0, playerOld - suppressionShift);
             rawSupports[incumbentRival.id] = (rawSupports[incumbentRival.id] || 0) + suppressionShift;
+          }
+        }
+
+        // Simultaneous War & Elections Modifier (Russia / Ukraine wartime model)
+        if (isAtWar) {
+          const playerShare = rawSupports[party.id] || 0;
+          if (militaryReadiness >= 65) {
+            // Rally 'Round the Flag Effect: Frontline victories boost incumbent support
+            const rallyBoost = Math.min(15, playerShare * 0.12);
+            rawSupports[party.id] = playerShare + rallyBoost;
+          } else if (militaryReadiness <= 40) {
+            // Anti-War Backlash: Casualties and exhaustion penalize incumbent support
+            const warPenalty = Math.min(20, playerShare * 0.15);
+            rawSupports[party.id] = Math.max(5, playerShare - warPenalty);
           }
         }
         const regionSupports = rawSupports;
@@ -462,6 +480,24 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
             ? 'In a non-democratic or one-party state, power changes require revolutionary mobilization, military defection, internal politburo moves, or constituent assembly pressure.'
             : 'It is time to reap the rewards of your rallies, organization efforts, and legislative works in parliament. The public is voting!'}
         </p>
+
+        {isAtWar && (
+          <div className="mt-3 p-3 rounded-2xl bg-rose-950/40 border border-rose-850 text-left flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0">
+              <Swords className="w-5 h-5" />
+            </div>
+            <div className="text-xs">
+              <span className="font-bold text-rose-300 block">⚔️ Simultaneous Wartime Election Underway</span>
+              <p className="text-slate-300 text-[11px] mt-0.5">
+                {militaryReadiness >= 65 
+                  ? 'High military readiness & frontline dominance inspire a patriotic "Rally \'Round the Flag" voter surge (+12% support).'
+                  : militaryReadiness <= 40
+                  ? 'Frontline strain and casualties have triggered anti-war voter discontent (-15% support penalty).'
+                  : 'Active conflict ongoing. Public opinion is divided between wartime unity and casualty concerns.'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SPECIAL REGIME OPERATION SCREEN (Communist / One-Party States) */}

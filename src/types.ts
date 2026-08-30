@@ -107,7 +107,7 @@ export interface Delegate {
   id: string;
   name: string;
   city: string;
-  faction: 'Gelenekçi' | 'Yenilikçi' | 'Merkezci';
+  faction: 'Traditionalist' | 'Reformist' | 'Centrist' | 'Gelenekçi' | 'Yenilikçi' | 'Merkezci';
   loyalty: number; // 0-100 (loyalty to player)
   demands: string;
 }
@@ -180,3 +180,109 @@ export interface SpeechCard {
   question: string;
   choices: SpeechChoice[];
 }
+
+export interface OngoingSituation {
+  id: string;
+  title: string;
+  icon: string;
+  category: 'GEOPOLITICAL' | 'MILITARY' | 'ECONOMIC' | 'DOMESTIC' | 'CRISIS';
+  description: string;
+  sourceEvent: string;
+  remainingMonths: number;
+  totalDuration: number;
+  monthlyEffects: {
+    treasuryDelta?: number;
+    inflationDelta?: number;
+    reputationDelta?: number;
+    confidenceDelta?: number;
+    freedomDelta?: number;
+    civilWarRiskDelta?: number;
+    approvalDelta?: number;
+  };
+  resolutionOutcome?: string;
+  counterAction?: {
+    label: string;
+    cost: number;
+    effectDescription: string;
+  };
+}
+
+export interface StateCrisisOption {
+  text: string;
+  flavorImpact: string;
+  immediateEffects: {
+    treasuryDelta?: number;
+    inflationDelta?: number;
+    reputationDelta?: number;
+    confidenceDelta?: number;
+    freedomDelta?: number;
+    civilWarRiskDelta?: number;
+    approvalDelta?: number;
+  };
+  spawnSituation?: Omit<OngoingSituation, 'id'>;
+}
+
+export interface StateCrisisEvent {
+  id: string;
+  title: string;
+  icon: string;
+  category: 'GEOPOLITICAL' | 'MILITARY' | 'ECONOMIC' | 'DOMESTIC' | 'CRISIS';
+  urgency: 'HIGH' | 'CRITICAL' | 'MODERATE';
+  description: string;
+  options: StateCrisisOption[];
+}
+
+export interface CivilWarFaction {
+  id: string;
+  name: string;
+  leader: string;
+  ideology: string;
+  color: string;
+  strength: number; // 0-100
+  controlledRegions: string[];
+  isGovernment?: boolean;
+  foreignBacker?: string;
+  description: string;
+}
+
+export interface CivilWarState {
+  countryId: string;
+  countryName: string;
+  flag: string;
+  conflictName: string;
+  yearStarted: number;
+  stability: number; // strictly < 30
+  factions: CivilWarFaction[];
+  status: 'ACTIVE' | 'GOV_VICTORY' | 'REBEL_VICTORY' | 'PARTITION' | 'FROZEN_CONFLICT';
+  playerStance?: 'NEUTRAL' | 'RECOGNIZED_GOV' | 'RECOGNIZED_REBEL' | 'PEACEKEEPER';
+  playerAidRecipient?: string;
+  militaryIntervention?: boolean;
+  refugeePressure: number;
+  monthlyCasualties: number;
+}
+
+export interface WartimeDecree {
+  id: string;
+  name: string;
+  category: 'MOBILIZATION' | 'FINANCE' | 'SECURITY' | 'MEDIA';
+  militaryBenefit: string;
+  electoralCost: string;
+  active: boolean;
+  benefits: {
+    militaryReadinessDelta?: number;
+    armyMoraleDelta?: number;
+    manpowerDelta?: number;
+    treasuryDelta?: number;
+    defenseDelta?: number;
+    resistanceSuppression?: number;
+  };
+  costs: {
+    voterGroupApprovalDelta?: Record<string, number>;
+    overallApprovalDelta?: number;
+    freedomIndexDelta?: number;
+    inflationDelta?: number;
+    reputationDelta?: number;
+    warWearinessDelta?: number;
+  };
+}
+

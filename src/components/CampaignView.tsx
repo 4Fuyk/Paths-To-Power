@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
-import { Country, Region, Party, VoterGroup, SpeechCard, SpeechChoice } from '../types';
+import { Country, Region, Party, VoterGroup, SpeechCard, SpeechChoice, ScenarioYear } from '../types';
 import { SPEECH_CARDS_POOL, getDeterministicMayorName } from '../constants/countries';
 import { getPartyGovernorForRegion, syncRegionOwnersAndMayors } from '../utils/mayorUtils';
 import { 
@@ -22,6 +22,7 @@ interface CampaignViewProps {
   onUpdateParty: (updatedParty: Party) => void;
   onSpendTurn: () => void;
   darkMode: boolean;
+  scenario?: ScenarioYear | string;
 }
 
 // Map GIS Coordinates representing actual geographical locations in Turkey
@@ -127,6 +128,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
   onUpdateParty,
   onSpendTurn,
   darkMode,
+  scenario = '2026',
 }) => {
   const [selectedRegion, setSelectedRegion] = useState<Region>(country.regions[0]);
   const [activeSpeechCard, setActiveSpeechCard] = useState<SpeechCard | null>(null);
@@ -1486,10 +1488,22 @@ const getPolygonCenter = (feat: any) => {
 
   // Fetch online GeoJSON for various countries on component load
   useEffect(() => {
-        const geojsonMapUrls: Record<string, string> = {
+    const geojsonMapUrls: Record<string, string> = {
+      RU: '/russia.geojson',
+      UA: '/ukraine.geojson',
+      SE: '/sweden.geojson',
+      PT: '/portugal.geojson',
+      GR: '/greece.geojson',
+      IS: '/iceland.geojson',
+      CL: '/chile.geojson',
+      TW: '/taiwan.geojson',
+      SA: '/saudi-arabia.geojson',
+      IR: '/iran.geojson',
+      IL: '/israel.geojson',
+      PS: '/palestine.geojson',
+      EG: '/egypt-provinces.geojson',
       BR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson',
       JP: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson',
-      EG: '/egypt-provinces.geojson',
       GB: 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json',
       CA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson',
       ZA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson',
@@ -1643,6 +1657,39 @@ const getPolygonCenter = (feat: any) => {
           }
         })
         .catch(err => console.warn('Failed to load DDR states:', err));
+    }
+
+    if (country.id === 'FR') {
+      // Find French Guiana from world geojson and append to France regions
+      const gufFeature = worldGeoJsonData.features.find((f: any) => {
+        const fId = String(f?.id || f?.properties?.ISO_A3 || '').toUpperCase();
+        const fName = String(f?.properties?.name || f?.properties?.NAME || '').toLowerCase();
+        return fId === 'GUF' || fName.includes('french guiana') || fName.includes('guyane');
+      });
+
+      if (gufFeature) {
+        setGeoJsonData((prev: any) => {
+          if (!prev || !prev.features) return prev;
+          const hasGuf = prev.features.some((f: any) => {
+            const name = String(f?.properties?.name || f?.properties?.nom || f?.id || '').toLowerCase();
+            return name.includes('guiana') || name.includes('guyane');
+          });
+          if (hasGuf) return prev;
+          const formattedGuf = {
+            ...gufFeature,
+            id: 'FR_frenchguianaguyane',
+            properties: {
+              ...gufFeature.properties,
+              name: 'French Guiana (Guyane)',
+              nom: 'French Guiana (Guyane)'
+            }
+          };
+          return {
+            ...prev,
+            features: [...prev.features, formattedGuf]
+          };
+        });
+      }
     }
   }, [country.id, worldGeoJsonData]);
 
@@ -1828,7 +1875,27 @@ const getPolygonCenter = (feat: any) => {
       KR: [35.9078, 127.7669, 6.5],
       AR: [-38.4161, -63.6167, 4.0],
       ZA: [-30.5595, 22.9375, 5.0],
+      RU: [61.5240, 95.3188, 3.2],
+      IS: [64.9631, -18.6000, 6.2],
+      PT: [39.3999, -8.2245, 6.5],
+      CL: [-35.6751, -71.5430, 4.5],
+      UA: [48.3794, 31.1656, 5.8],
+      SE: [60.1282, 16.6435, 5.0],
+      GR: [39.0742, 22.5000, 6.2],
+      TW: [23.6978, 120.9605, 7.2],
+      SA: [23.8859, 45.0792, 5.2],
+      IR: [32.4279, 53.6880, 5.2],
+      IL: [31.0461, 34.8516, 7.0],
+      PS: [31.9522, 35.2332, 8.0]
     };
+
+    if (!turkeyMapRef.current) return;
+
+    if ((turkeyMapRef.current as any)._leaflet_id && !turkeyMapInstanceRef.current) {
+      try {
+        delete (turkeyMapRef.current as any)._leaflet_id;
+      } catch (e) {}
+    }
 
     if (!turkeyMapInstanceRef.current) {
       const coordEntry = defaultCoordsMap[country.id] || [38.9637, 35.2433, 5];
@@ -1901,59 +1968,8 @@ const getPolygonCenter = (feat: any) => {
     // Pan and zoom to correct country coordinates on switch
     if (lastCountryIdRef.current !== country.id) {
       lastCountryIdRef.current = country.id;
-      if (country.id === 'DE') {
-        map.setView([51.1657, 10.4515], 6);
-      } else if (country.id === 'DDR') {
-        map.setView([52.3, 12.6], 6.8);
-      } else if (country.id === 'SU') {
-        map.setView([56.0, 52.0], 3.5);
-      } else if (country.id === 'YU') {
-        map.setView([44.0, 18.5], 6.2);
-      } else if (country.id === 'CS') {
-        map.setView([49.8, 15.5], 6.8);
-      } else if (country.id === 'PL') {
-        map.setView([52.0, 19.5], 6.0);
-      } else if (country.id === 'CN') {
-        map.setView([35.8, 104.2], 4.0);
-      } else if (country.id === 'US') {
-        map.setView([37.0902, -95.7129], 4);
-      } else if (country.id === 'BR') {
-        map.setView([-14.235, -51.9253], 4);
-      } else if (country.id === 'JP') {
-        map.setView([36.2048, 138.2529], 5);
-      } else if (country.id === 'EG') {
-        map.setView([26.8206, 30.8025], 5);
-      } else if (country.id === 'GB') {
-        map.setView([54.3781, -3.4360], 5);
-      } else if (country.id === 'CA') {
-        map.setView([56.1304, -106.3468], 3);
-      } else if (country.id === 'ZA') {
-        map.setView([-30.5595, 22.9375], 5);
-      } else if (country.id === 'IN') {
-        map.setView([20.5937, 78.9629], 4);
-      } else if (country.id === 'MX') {
-        map.setView([23.6345, -102.5528], 5);
-      } else if (country.id === 'ES') {
-        map.setView([40.4637, -3.7492], 5);
-      } else if (country.id === 'AU') {
-        map.setView([-25.2744, 133.7751], 4);
-      } else if (country.id === 'AR') {
-        map.setView([-38.4161, -63.6167], 4);
-      } else if (country.id === 'IT') {
-        map.setView([41.8719, 12.5674], 5);
-      } else if (country.id === 'ID') {
-        map.setView([-0.7893, 113.9213], 5);
-      } else if (country.id === 'KR') {
-        map.setView([35.9078, 127.7669], 6);
-      } else if (country.id === 'FR') {
-        map.setView([46.2276, 2.2137], 5.5);
-      } else if (country.id === 'RO') {
-        map.setView([45.9432, 24.9668], 6.2);
-      } else if (country.id === 'HU') {
-        map.setView([47.1625, 19.5033], 6.8);
-      } else {
-        map.setView([38.9637, 35.2433], 6);
-      }
+      const targetCoords = defaultCoordsMap[country.id] || [38.9637, 35.2433, 6];
+      map.setView([targetCoords[0], targetCoords[1]], targetCoords[2]);
     }
     
     // Clear old layers/markers robustly
@@ -2102,9 +2118,38 @@ const getPolygonCenter = (feat: any) => {
           if (country.id === 'CS' && (['CZE', 'SVK', 'CSK'].includes(fId) || fName.includes('czech') || fName.includes('slovak'))) return false;
           if (country.id === 'PL' && (fId === 'POL' || fName.includes('poland'))) return false;
           if (country.id === 'CN' && (fId === 'CHN' || fName.includes('china'))) return false;
-          if (country.id === 'FR' && (fName.includes('france') || fId === 'FRA' || fId === 'DZA' || fId === 'MDG' || fId === 'GUF' || fName.includes('algeria') || fName.includes('madagascar'))) return false;
+          if (country.id === 'FR') {
+            if (fName.includes('france') || fId === 'FRA' || fId === 'GUF' || fName.includes('french guiana') || fName.includes('guyane')) return false;
+            if (scenario === '1950' && (fId === 'DZA' || fId === 'MDG' || fName.includes('algeria') || fName.includes('madagascar'))) return false;
+          }
           if (country.id === 'GB' && (fName.includes('united kingdom') || fId === 'GBR' || fId === 'GB' || (['KEN', 'UGA', 'NGA', 'GHA', 'MYS', 'CYP', 'TZA', 'ZMB', 'ZWE', 'SLE'].includes(fId)))) return false;
           if (country.id === 'IT' && (fId === 'ITA' || fName.includes('italy') || fName.includes('italia'))) return false;
+          if (country.id === 'RU' && (fId === 'RUS' || fName.includes('russia'))) return false;
+          if (country.id === 'UA' && (fId === 'UKR' || fName.includes('ukraine'))) return false;
+          if (country.id === 'SE' && (fId === 'SWE' || fName.includes('sweden'))) return false;
+          if (country.id === 'PT' && (fId === 'PRT' || fName.includes('portugal'))) return false;
+          if (country.id === 'GR' && (fId === 'GRC' || fName.includes('greece'))) return false;
+          if (country.id === 'IS' && (fId === 'ISL' || fName.includes('iceland'))) return false;
+          if (country.id === 'CL' && (fId === 'CHL' || fName.includes('chile'))) return false;
+          if (country.id === 'TW' && (fId === 'TWN' || fName.includes('taiwan'))) return false;
+          if (country.id === 'SA' && (fId === 'SAU' || fName.includes('saudi'))) return false;
+          if (country.id === 'IR' && (fId === 'IRN' || fName.includes('iran'))) return false;
+          if (country.id === 'IL' && (fId === 'ISR' || fName.includes('israel'))) return false;
+          if (country.id === 'PS' && (fId === 'PSE' || fName.includes('palestine'))) return false;
+          if (country.id === 'EG' && (fId === 'EGY' || fName.includes('egypt'))) return false;
+          if (country.id === 'BR' && (fId === 'BRA' || fName.includes('brazil'))) return false;
+          if (country.id === 'JP' && (fId === 'JPN' || fName.includes('japan'))) return false;
+          if (country.id === 'CA' && (fId === 'CAN' || fName.includes('canada'))) return false;
+          if (country.id === 'ZA' && (fId === 'ZAF' || fName.includes('south africa'))) return false;
+          if (country.id === 'IN' && (fId === 'IND' || fName.includes('india'))) return false;
+          if (country.id === 'MX' && (fId === 'MEX' || fName.includes('mexico'))) return false;
+          if (country.id === 'ES' && (fId === 'ESP' || fName.includes('spain'))) return false;
+          if (country.id === 'AU' && (fId === 'AUS' || fName.includes('australia'))) return false;
+          if (country.id === 'ID' && (fId === 'IDN' || fName.includes('indonesia'))) return false;
+          if (country.id === 'KR' && (fId === 'KOR' || fName.includes('korea'))) return false;
+          if (country.id === 'AR' && (fId === 'ARG' || fName.includes('argentina'))) return false;
+          if (country.id === 'RO' && (fId === 'ROU' || fName.includes('romania'))) return false;
+          if (country.id === 'HU' && (fId === 'HUN' || fName.includes('hungary'))) return false;
           return true;
         });
 
@@ -2112,10 +2157,11 @@ const getPolygonCenter = (feat: any) => {
           style: (feature: any) => {
             const fId = String(feature?.id || feature?.properties?.ISO_A3 || '').toUpperCase();
             const fName = String(feature?.properties?.name || feature?.properties?.NAME || '').toLowerCase();
+            const isHistoricalScenario = scenario === '1950' || scenario === '1936' || scenario === '1920' || scenario === '1914';
             const isSovietUnion = ['RUS', 'UKR', 'BLR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU', 'SUN'].includes(fId) || fName.includes('russia') || fName.includes('soviet');
             const isYugo = ['SRB', 'HRV', 'SVN', 'BIH', 'MKD', 'MNE', 'KOS', 'KVX', 'YUG'].includes(fId) || fName.includes('serbia') || fName.includes('croatia') || fName.includes('bosnia') || fName.includes('slovenia') || fName.includes('macedonia') || fName.includes('montenegro');
             const isCzecho = ['CZE', 'SVK', 'CSK'].includes(fId) || fName.includes('czech') || fName.includes('slovakia');
-            const isHistoricalUnified = isSovietUnion || isYugo || isCzecho;
+            const isHistoricalUnified = isHistoricalScenario && (isSovietUnion || isYugo || isCzecho);
 
             return {
               fillColor: darkMode ? "#334155" : "#94a3b8",
@@ -2320,7 +2366,7 @@ const getPolygonCenter = (feat: any) => {
                 <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${districtName}</strong>
                 <div class="text-[10px] text-slate-400">${regionLabel}: <strong class="text-slate-300">${feature.properties.provinceName}</strong></div>
                 <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-300">${feature.properties.mayorName || 'N/A'}</strong></div>
-                <div class="text-[10px] text-slate-400 font-mono">Population: <strong class="text-slate-300">${feature.properties.population.toLocaleString()}</strong></div>
+                <div class="text-[10px] text-slate-400 font-mono">Population: <strong class="text-slate-300">${(feature.properties?.population ?? feature.properties?.POP_EST ?? 50000).toLocaleString()}</strong></div>
                 <div class="mt-1 pt-1 border-t border-slate-800/40">${supportHtmlList}</div>
               </div>
             `, {
@@ -2561,6 +2607,21 @@ const getPolygonCenter = (feat: any) => {
 
     setTimeout(() => { try { if (turkeyMapInstanceRef.current) turkeyMapInstanceRef.current.invalidateSize(); } catch(e) {} }, 250);
 
+    return () => {
+      try {
+        if (turkeyMapInstanceRef.current) {
+          turkeyMapInstanceRef.current.off();
+          turkeyMapInstanceRef.current.remove();
+        }
+      } catch (e) {}
+      turkeyMapInstanceRef.current = null;
+      turkeyTileLayerRef.current = null;
+      turkeyTerrainLayerRef.current = null;
+      turkeyGeoJsonLayerRef.current = null;
+      provinceOverlayLayerRef.current = null;
+      worldBgLayerRef.current = null;
+      turkeyMarkersRef.current = [];
+    };
   }, [country, selectedRegion, darkMode, worldGeoJsonData, geoJsonData, districtGeoJsonData, activeViewLevel, selectedDistrict]);
 
   const currency = country.id === 'TR' ? '₺' 
@@ -2591,8 +2652,8 @@ const getPolygonCenter = (feat: any) => {
     const fallback = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === selectedRegion.id);
     const resolvedCenter = fallback ? { lat: fallback.lat, lng: fallback.lng } : center;
     const allDistricts = getDeterministicDistricts(selectedRegion, resolvedCenter);
-    const totalPopulation = allDistricts.reduce((sum, d) => sum + d.population, 0);
-    const proportion = selectedDistrict.population / (totalPopulation || 1);
+    const totalPopulation = allDistricts.reduce((sum, d) => sum + (d.population || 50000), 0);
+    const proportion = (selectedDistrict.population || 50000) / (totalPopulation || 1);
 
     // Dynamic shift proportional to the district's weight in the province
     const provinceBoost = districtBoost * proportion;
@@ -3255,7 +3316,7 @@ const getPolygonCenter = (feat: any) => {
                           </div>
                           <div className="flex justify-between text-[10px] leading-none text-slate-400">
                             <span>Voters Count:</span>
-                            <strong className="text-slate-100">{selectedDistrict.population.toLocaleString()}</strong>
+                            <strong className="text-slate-100">{(selectedDistrict.population ?? 50000).toLocaleString()}</strong>
                           </div>
                           <div className="flex justify-between text-[10px] leading-none text-slate-400">
                             <span>{country.id === 'US' ? 'Governor:' : country.id === 'DE' ? 'Minister-President:' : 'Mayor:'}</span>
@@ -3408,12 +3469,13 @@ const getPolygonCenter = (feat: any) => {
                   <h3 className="text-xl font-bold tracking-tight mt-1">{selectedRegion.name}</h3>
                   <p className="text-xs text-slate-400 mt-0.5 font-medium">Headquarters Status: {selectedRegion.infrastructure}/5 | Seat Allocation: {selectedRegion.seats}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  {/* Current Incumbent / Mayor */}
+                  <div className="text-left sm:text-right">
                     <span className="text-[10px] text-slate-400 font-mono uppercase block">
-                      {country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Local Mayor'}
+                      {country.id === 'US' ? 'Incumbent Governor' : country.id === 'DE' ? 'Minister-President' : 'Incumbent Mayor / Leader'}
                     </span>
-                    <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                    <div className="flex items-center gap-1.5 justify-start sm:justify-end mt-0.5">
                       <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold border" style={{
                         backgroundColor: (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') ? party.color + '22' : getRivalColor(selectedRegion.ownerPartyId) + '22',
                         color: (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') ? party.color : getRivalColor(selectedRegion.ownerPartyId),
@@ -3422,26 +3484,47 @@ const getPolygonCenter = (feat: any) => {
                         {selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party' ? party.name : (country.rivals.find(r => r.id === selectedRegion.ownerPartyId)?.name || selectedRegion.ownerPartyId)}
                       </span>
                       <strong className="text-xs text-slate-200">
-                        {selectedRegion.mayorName || getPartyGovernorForRegion(selectedRegion.name, selectedRegion.ownerPartyId, country.id, party, country.rivals)}
+                        {selectedRegion.mayorName || getPartyGovernorForRegion(selectedRegion.name, selectedRegion.ownerPartyId, country.id, party, country.rivals, selectedRegion)}
                       </strong>
-                      {(selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') && (
-                        <button
-                          onClick={() => {
-                            const newName = prompt("Partinizin bu bölgedeki Belediye Başkanı / Vali adayının adını girin:", selectedRegion.mayorName || "");
-                            if (newName && newName.trim()) {
-                              const updatedRegions = country.regions.map(r => 
-                                r.id === selectedRegion.id ? { ...r, mayorName: newName.trim() } : r
-                              );
-                              onUpdateCountry({ ...country, regions: updatedRegions });
-                              setSelectedRegion({ ...selectedRegion, mayorName: newName.trim() });
-                            }
-                          }}
-                          className="px-1.5 py-0.5 hover:bg-indigo-500/20 rounded text-indigo-400 text-[10px] font-mono border border-indigo-500/30 transition-colors"
-                          title="Belediye Başkanını Değiştir / Atama Yap"
-                        >
-                          ✏️ Atama
-                        </button>
-                      )}
+                    </div>
+                  </div>
+
+                  {/* Player's Nominated Candidate for this region */}
+                  <div className="pl-3 sm:border-l border-slate-700/50 flex flex-col items-start sm:items-end">
+                    <span className="text-[10px] text-indigo-400 font-mono uppercase block">
+                      Party Candidate / Adayınız
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <strong className="text-xs text-indigo-200 font-medium">
+                        {selectedRegion.playerCandidate || (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party' ? selectedRegion.mayorName : party.leader)}
+                      </strong>
+                      <button
+                        onClick={() => {
+                          const currentVal = selectedRegion.playerCandidate || (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party' ? selectedRegion.mayorName : party.leader) || "";
+                          const newName = prompt("Partinizin bu bölgedeki Adayının (Belediye Başkanı / Vali / Temsilci) Adını Girin:", currentVal);
+                          if (newName && newName.trim()) {
+                            const trimmed = newName.trim();
+                            const isOwner = selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party';
+                            const updatedRegions = country.regions.map(r => 
+                              r.id === selectedRegion.id ? { 
+                                ...r, 
+                                playerCandidate: trimmed, 
+                                mayorName: isOwner ? trimmed : r.mayorName 
+                              } : r
+                            );
+                            onUpdateCountry({ ...country, regions: updatedRegions });
+                            setSelectedRegion({ 
+                              ...selectedRegion, 
+                              playerCandidate: trimmed, 
+                              mayorName: isOwner ? trimmed : selectedRegion.mayorName 
+                            });
+                          }
+                        }}
+                        className="px-2 py-0.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded text-[10px] font-mono border border-indigo-500/40 transition-colors shadow-sm cursor-pointer"
+                        title="Partinizin Bu Bölgedeki Adayını Belirleyin / Atama Yapın"
+                      >
+                        ✏️ Aday Belirle
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -3479,16 +3562,28 @@ const getPolygonCenter = (feat: any) => {
                       // Look up candidate stats
                       let leaderName = '';
                       let leaderPhoto = '';
+                      let candidateTag = '';
                       if (isPlayer) {
-                        leaderName = party.leader;
+                        if (selectedRegion.playerCandidate) {
+                          leaderName = selectedRegion.playerCandidate;
+                          candidateTag = 'Parti Bölge Adayı';
+                        } else if (selectedRegion.ownerPartyId === party.id || selectedRegion.ownerPartyId === 'player_party') {
+                          leaderName = selectedRegion.mayorName || party.leader;
+                          candidateTag = 'Yerel Temsilci';
+                        } else {
+                          leaderName = party.leader;
+                          candidateTag = 'Genel Başkan';
+                        }
                         leaderPhoto = country.id === 'DE' ? '' : (party.photo || '');
                       } else {
                         const rival = country.rivals.find(r => r.id === pid);
                         if (rival) {
                           leaderName = rival.leader;
+                          candidateTag = 'Genel Başkan';
                           leaderPhoto = rival.photo || '';
                         } else {
                           leaderName = 'Alliance Representative';
+                          candidateTag = 'İttifak Adayı';
                           leaderPhoto = '';
                         }
                       }

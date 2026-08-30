@@ -219,7 +219,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
         <div className="flex items-center gap-3">
           <span className={`h-px w-10 ${darkMode ? 'bg-[#c9a26a]/50' : 'bg-slate-400'}`} />
           <span className={`text-[11px] tracking-[0.35em] font-mono font-bold ${darkMode ? 'text-[#c9a26a]' : 'text-slate-500'}`}>
-            GLOBAL CAMPAIGN SIMULATOR
+            RIDGELINE INTERACTIVE PRESENTS
           </span>
           <span className={`h-px w-10 ${darkMode ? 'bg-[#c9a26a]/50' : 'bg-slate-400'}`} />
         </div>

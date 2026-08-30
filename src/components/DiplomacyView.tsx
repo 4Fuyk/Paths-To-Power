@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Country, Party } from '../types';
+import { Country, Party, ScenarioYear } from '../types';
 import { countryColors, PLAYABLE_COUNTRIES } from '../constants/countries';
+import { getPlayableCountriesForScenario } from '../constants/eraCountries';
 import { playSound } from '../lib/sounds';
-import { Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, AlertTriangle, Swords, Flame, Check } from 'lucide-react';
+import { Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, AlertTriangle, Swords, Flame, Check, Zap } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -37,7 +38,14 @@ const countryCoords: Record<string, [number, number]> = {
   IR: [32.427, 53.688],
   PL: [51.919, 19.145],
   GR: [39.074, 21.824],
-  SE: [60.128, 18.643]
+  SE: [60.128, 18.643],
+  SU: [60.000, 90.000],
+  DDR: [52.520, 13.405],
+  CS: [49.817, 15.473],
+  YU: [44.016, 20.911],
+  CL: [-35.675, -71.543],
+  IS: [64.963, -19.020],
+  PT: [39.399, -8.224]
 };
 
 interface DiplomacyViewProps {
@@ -53,6 +61,10 @@ interface DiplomacyViewProps {
   onUpdateReputation: (updatedReputation: number) => void;
   publicApprovalImpact: (approvalChange: number) => void;
   darkMode: boolean;
+  scenario?: ScenarioYear | string;
+  freedomIndex?: number;
+  countryIdeologies?: Record<string, string>;
+  countryFreedomScores?: Record<string, number>;
 }
 
 export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
@@ -68,8 +80,12 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   onUpdateReputation,
   publicApprovalImpact,
   darkMode,
+  scenario = '2026',
+  freedomIndex = 75,
+  countryIdeologies = {},
+  countryFreedomScores = {},
 }) => {
-  const [mapMode, setMapMode] = useState<'RELATIONS' | 'WARS' | 'IDEOLOGY' | 'FREEDOM'>('RELATIONS');
+  const [mapMode, setMapMode] = useState<'RELATIONS' | 'WARS' | 'IDEOLOGY' | 'FREEDOM' | 'INFLUENCE'>('RELATIONS');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [casusBelli, setCasusBelli] = useState<Record<string, boolean>>({});
@@ -120,6 +136,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const id2 = String(feature.properties?.iso_a2 || feature.properties?.ISO_A2 || feature.properties?.wb_a2 || '').toUpperCase();
     const name = String(feature.properties?.name || feature.properties?.NAME || '').toLowerCase();
 
+    // Reject incorrect territories from colliding with playable countries
+    if (id3 === 'CAF' || id2 === 'CF' || name.includes('central african')) return null;
+    if (id3 === 'ESH' || id2 === 'EH' || name.includes('western sahara')) return null;
+
+    // French Guiana is an integral overseas department of France
+    if (id3 === 'GUF' || id2 === 'GF' || name.includes('french guiana') || name.includes('guyane')) return 'FR';
+
     const a3ToA2: Record<string, string> = {
       USA: 'US', TUR: 'TR', DEU: 'DE', GBR: 'GB', EGY: 'EG', BRA: 'BR', JPN: 'JP',
       CAN: 'CA', ARG: 'AR', ZAF: 'ZA', IND: 'IN', ITA: 'IT', IDN: 'ID', MEX: 'MX',
@@ -131,8 +154,25 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       QAT: 'QA', ARE: 'AE', NZL: 'NZ'
     };
 
-    if (id2 && id2.length === 2 && id2 !== '-9') return id2;
     if (id3 && a3ToA2[id3]) return a3ToA2[id3];
+    if (id2 && id2.length === 2 && id2 !== '-9' && Object.values(a3ToA2).includes(id2)) return id2;
+
+    const isHistoricalSovietEra = scenario === '1950' || scenario === '1936' || scenario === '1920' || scenario === '1914';
+    if (isHistoricalSovietEra) {
+      if (['RUS', 'SUN', 'BLR', 'UKR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU'].includes(id3) ||
+          name.includes('soviet') || name.includes('byelorussia')) {
+        return 'SU';
+      }
+      if (id3 === 'CZE' || id3 === 'SVK' || id3 === 'CSK' || name.includes('czech') || name.includes('slovakia')) {
+        return 'CS';
+      }
+      if (id3 === 'SRB' || id3 === 'HRV' || id3 === 'SVN' || id3 === 'BIH' || id3 === 'MKD' || id3 === 'MNE' || id3 === 'KOS' || id3 === 'KVX' || id3 === 'YUG' || name.includes('yugoslavia')) {
+        return 'YU';
+      }
+      if (id3 === 'DDR' || name.includes('german democratic')) {
+        return 'DDR';
+      }
+    }
 
     if (name.includes('united states') || name.includes('america')) return 'US';
     if (name.includes('turkey') || name.includes('türkiye')) return 'TR';
@@ -163,9 +203,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     if (name.includes('poland')) return 'PL';
     if (name.includes('greece')) return 'GR';
     if (name.includes('sweden')) return 'SE';
-
-    if (id3 && id3.length === 3) return id3.substring(0, 2);
-    if (id2 && id2.length >= 2) return id2.substring(0, 2);
+    if (name.includes('portugal')) return 'PT';
+    if (name.includes('chile')) return 'CL';
+    if (name.includes('iceland')) return 'IS';
 
     return null;
   };
@@ -192,38 +232,119 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     }
     
     if (mapMode === 'IDEOLOGY') {
+       if (cid === country.id && party) {
+         const ideo = (party.ideology || party.name).toLowerCase();
+         if (ideo.includes('communist') || ideo.includes('marxist') || ideo.includes('socialist') || ideo.includes('left')) return '#991b1b';
+         if (ideo.includes('nationalist') || ideo.includes('sovereign right') || ideo.includes('populism')) return '#1e3a8a';
+         if (ideo.includes('conservative') || ideo.includes('capitalist') || ideo.includes('republican') || ideo.includes('right')) return '#2563eb';
+         if (ideo.includes('social dem') || ideo.includes('progressive')) return '#0891b2';
+         if (ideo.includes('centrist') || ideo.includes('liberal') || ideo.includes('moderate')) return '#ca8a04';
+         if (ideo.includes('green') || ideo.includes('ecolog')) return '#22c55e';
+       }
+       if (countryIdeologies[cid]) {
+         const ideo = countryIdeologies[cid].toLowerCase();
+         if (ideo.includes('communist') || ideo.includes('marxist') || ideo.includes('socialist') || ideo.includes('left')) return '#991b1b';
+         if (ideo.includes('nationalist') || ideo.includes('sovereign right') || ideo.includes('populism')) return '#1e3a8a';
+         if (ideo.includes('conservative') || ideo.includes('capitalist') || ideo.includes('republican') || ideo.includes('right')) return '#2563eb';
+         if (ideo.includes('social dem') || ideo.includes('progressive')) return '#0891b2';
+         if (ideo.includes('centrist') || ideo.includes('liberal') || ideo.includes('moderate')) return '#ca8a04';
+         if (ideo.includes('green') || ideo.includes('ecolog')) return '#22c55e';
+       }
+       if (['SU', 'DDR', 'CN', 'CS', 'YU'].includes(cid)) return '#991b1b'; // Communist / Marxist-Leninist
        const playCountry = PLAYABLE_COUNTRIES.find(c => c.id === cid);
        if (!playCountry) return '#94a3b8';
        const rulingIdeology = playCountry.rivals[0]?.ideology || '';
        if (rulingIdeology.includes('Social') || rulingIdeology.includes('Left') || rulingIdeology.includes('Marxist')) return '#ef4444';
-       if (rulingIdeology.includes('Conservative') || rulingIdeology.includes('Right') || rulingIdeology.includes('Nationalist')) return '#1e3a8a';
+       if (rulingIdeology.includes('Nationalist') || rulingIdeology.includes('Sovereign')) return '#1e3a8a';
+       if (rulingIdeology.includes('Conservative') || rulingIdeology.includes('Right')) return '#2563eb';
        if (rulingIdeology.includes('Liberal') || rulingIdeology.includes('Centrist') || rulingIdeology.includes('Democrat')) return '#facc15';
        if (rulingIdeology.includes('Green') || rulingIdeology.includes('Ecologist')) return '#22c55e';
        return '#6366f1';
     }
 
     if (mapMode === 'FREEDOM') {
-      let hash = 0;
-      for (let i = 0; i < cid.length; i++) hash = cid.charCodeAt(i) + ((hash << 5) - hash);
-      const freedom = 30 + (Math.abs(hash) % 65);
-      // Optional: Use actual freedom index if it's the player's country
-      // if (cid === country.id) freedom = freedomIndex;
-      if (freedom > 80) return '#22c55e';
-      if (freedom > 50) return '#eab308';
-      return '#ef4444';
+      if (cid === country.id) {
+        if (freedomIndex >= 70) return '#22c55e';
+        if (freedomIndex >= 40) return '#eab308';
+        return '#ef4444';
+      }
+      if (countryFreedomScores[cid] !== undefined) {
+        const score = countryFreedomScores[cid];
+        if (score >= 70) return '#22c55e';
+        if (score >= 40) return '#eab308';
+        return '#ef4444';
+      }
+      if (['SU', 'DDR', 'CN', 'CS'].includes(cid)) return '#ef4444';
+      if (['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS', 'PT'].includes(cid)) return '#22c55e';
+      if (['TR', 'PL', 'RO', 'HU', 'IT', 'ES', 'CL', 'GR'].includes(cid)) return '#eab308';
+      return '#64748b';
+    }
+
+    if (mapMode === 'INFLUENCE') {
+      if (cid === country.id) return '#6366f1';
+      if (['US', 'GB', 'FR', 'DE'].includes(cid)) return '#0284c7';
+      if (['RU', 'CN', 'SU'].includes(cid)) return '#b91c1c';
+      return '#475569';
     }
 
     return getCountryColor(cid);
+  };
+
+  const getIsAtWar = (id3: string, cid: string | null, name: string) => {
+    if (cid && (diplomaticRelations[cid] as any)?.status === 'At War') return true;
+    if (id3 && (diplomaticRelations[id3] as any)?.status === 'At War') return true;
+    if (cid === country.id) {
+      return Object.values(diplomaticRelations || {}).some(r => (r as any)?.status === 'At War');
+    }
+    if (scenario === '2026') {
+      return ['UKR', 'RUS', 'ISR', 'PSE'].includes(id3) || cid === 'RU' || cid === 'UA' || cid === 'IL' || cid === 'PS' || name.includes('PALESTINE') || name.includes('ISRAEL') || name.includes('UKRAINE') || name.includes('RUSSIA');
+    }
+    if (scenario === '1950') {
+      return ['KOR', 'PRK', 'CHN', 'USA'].includes(id3) || cid === 'KR' || cid === 'CN' || cid === 'US';
+    }
+    if (scenario === '1936') {
+      return ['ESP', 'CHN', 'JPN', 'ETH', 'ITA'].includes(id3) || cid === 'ES' || cid === 'CN' || cid === 'JP' || cid === 'IT';
+    }
+    if (scenario === '1920') {
+      return ['TUR', 'GRC', 'POL', 'RUS', 'SUN'].includes(id3) || cid === 'TR' || cid === 'GR' || cid === 'PL' || cid === 'SU';
+    }
+    if (scenario === '1914') {
+      return ['DEU', 'FRA', 'GBR', 'RUS', 'SUN', 'TUR', 'SRB'].includes(id3) || cid === 'DE' || cid === 'FR' || cid === 'GB' || cid === 'SU' || cid === 'TR';
+    }
+    return false;
   };
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [worldGeoJsonData, setWorldGeoJsonData] = useState<any>(null);
   const worldBgLayerRef = useRef<any>(null);
   useEffect(() => {
-    fetch("https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json")
-      .then(res => res.json())
-      .then(data => setWorldGeoJsonData(data))
-      .catch(err => console.error("Failed to load world geojson", err));
+    let isMounted = true;
+    const urls = [
+      '/world_admin0_50m.geojson',
+      'https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json',
+      'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson'
+    ];
+    const loadGeo = async () => {
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('text/html')) continue;
+          const text = await res.text();
+          if (text.trim().startsWith('<')) continue;
+          const data = JSON.parse(text);
+          if (isMounted && data && data.features) {
+            setWorldGeoJsonData(data);
+            return;
+          }
+        } catch {
+          // Continue to next URL
+        }
+      }
+    };
+    loadGeo();
+    return () => { isMounted = false; };
   }, []);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -250,7 +371,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         const cid = getPlayableCountryIdFromFeature(feature);
         const id3 = String(feature?.id || feature?.properties?.ISO_A3 || feature?.properties?.iso_a3 || '').toUpperCase();
         const name = String(feature?.properties?.name || feature?.properties?.NAME || '').toUpperCase();
-        const isAtWar = ['UKR', 'RUS', 'ISR', 'PSE'].includes(id3) || name === 'PALESTINE' || name === 'ISRAEL' || name === 'UKRAINE' || name === 'RUSSIA';
+        const isAtWar = getIsAtWar(id3, cid, name);
 
         if (cid) {
           const isSelected = selectedMapCountryId === cid;
@@ -335,7 +456,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
             const cid = getPlayableCountryIdFromFeature(feature);
             const id3 = String(feature?.id || feature?.properties?.ISO_A3 || feature?.properties?.iso_a3 || '').toUpperCase();
             const name = String(feature?.properties?.name || feature?.properties?.NAME || '').toUpperCase();
-            const isAtWar = ['UKR', 'RUS', 'ISR', 'PSE'].includes(id3) || name === 'PALESTINE' || name === 'ISRAEL' || name === 'UKRAINE' || name === 'RUSSIA';
+            const isAtWar = getIsAtWar(id3, cid, name);
 
             if (cid) {
               const isSelected = selectedMapCountryId === cid;
@@ -681,8 +802,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       setErrorMessage(`Insufficient Treasury! Sending a diplomatic aid gift requires ₺/$/€ ${giftCost.toLocaleString()}.`);
       return;
     }
-    const rel = diplomaticRelations[targetId];
-    if (!rel) return;
+    const rel = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
 
     onUpdateTreasury(treasury - giftCost);
     const updatedOpinion = Math.min(100, rel.opinion + 18);
@@ -693,6 +813,28 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     onUpdateRelations(updated);
     playSound('success');
     setSuccessMessage(`Diplomatic aid package delivered to ${getCountryName(targetId)}! Bilateral opinion increased by +18.`);
+    setErrorMessage(null);
+  };
+
+  const handleNormalizeRelations = (targetId: string) => {
+    const cost = 10000;
+    if (treasury < cost) {
+      playSound('error');
+      setErrorMessage(`Normalizing relations and lifting embargoes requires ₺/$/€ ${cost.toLocaleString()} in diplomatic processing.`);
+      return;
+    }
+    const rel = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 30 };
+    onUpdateTreasury(treasury - cost);
+    onUpdateReputation(Math.min(100, internationalReputation + 6));
+    publicApprovalImpact(2);
+
+    const updated = {
+      ...diplomaticRelations,
+      [targetId]: { ...rel, status: 'Neutral' as const, opinion: Math.max(45, rel.opinion + 20) }
+    };
+    onUpdateRelations(updated);
+    playSound('success');
+    setSuccessMessage(`Relations normalized with ${getCountryName(targetId)}! Sanctions lifted and diplomatic channels reopened.`);
     setErrorMessage(null);
   };
 
@@ -707,6 +849,8 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     }
 
     onUpdateTreasury(treasury - cost);
+    onUpdateReputation(Math.min(100, internationalReputation + 15));
+    publicApprovalImpact(5);
     const updated = {
       ...diplomaticRelations,
       [targetId]: { ...rel, status: 'Neutral' as const, opinion: 35 }
@@ -717,23 +861,34 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     setErrorMessage(null);
   };
 
+  const handleFabricateCB = (targetId: string) => {
+    const cost = 15000;
+    if (treasury < cost) {
+      playSound('error');
+      setErrorMessage(`Fabricating border justification requires ₺/$/€ ${cost.toLocaleString()} intelligence operations.`);
+      return;
+    }
+    onUpdateTreasury(treasury - cost);
+    setCasusBelli(prev => ({ ...prev, [targetId]: true }));
+    playSound('success');
+    setSuccessMessage(`Casus Belli fabricated against ${getCountryName(targetId)}! Justification for military action is now secured.`);
+    setErrorMessage(null);
+  };
+
   // Hostile action handlers
   const handleHostileAction = (targetId: string, action: 'Sanction' | 'Embargo' | 'Sever Relations' | 'Declare War') => {
-    const currentRelation = diplomaticRelations[targetId];
-    if (!currentRelation) return;
+    const currentRelation = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
 
     if (action === 'Declare War') {
-      // Must have casus belli
       const hasCB = casusBelli[targetId];
       if (!hasCB) {
-        playSound('error');
-        setErrorMessage(`Declaration of War rejected! You do not have a valid Casus Belli (Justification of War) against ${getCountryName(targetId)}. Sanction or Embargo them first to fabricate justification.`);
-        setSuccessMessage(null);
-        return;
+        // Allow declare war but with severe penalty
+        onUpdateReputation(Math.max(5, internationalReputation - 35));
+        publicApprovalImpact(-12);
+      } else {
+        onUpdateReputation(Math.max(5, internationalReputation - 20));
+        publicApprovalImpact(-6);
       }
-
-      onUpdateReputation(Math.max(5, internationalReputation - 40));
-      publicApprovalImpact(-10); // War triggers public anti-war protests, drops approval by 10%
 
       const updated = {
         ...diplomaticRelations,
@@ -741,7 +896,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       };
       onUpdateRelations(updated);
       playSound('error');
-      setSuccessMessage(`WAR HAS BEEN DECLARED! You have mobilized the military command structure against ${getCountryName(targetId)}. Prepare defenses immediately!`);
+      setSuccessMessage(`WAR DECLARED! Mobilization orders dispatched against ${getCountryName(targetId)}. Frontlines are active.`);
       setErrorMessage(null);
       return;
     }
@@ -753,18 +908,17 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
     if (action === 'Sanction') {
       opDrop = 30;
-      repChange = -8;
+      repChange = -6;
       updatedStatus = 'Sanctioned';
-      // Fabricate Casus Belli on 50% chance
       setCasusBelli(prev => ({ ...prev, [targetId]: true }));
     } else if (action === 'Embargo') {
       opDrop = 45;
-      repChange = -15;
-      updatedStatus = 'Sanctioned'; // also embargoed
+      repChange = -12;
+      updatedStatus = 'Sanctioned';
       setCasusBelli(prev => ({ ...prev, [targetId]: true }));
     } else if (action === 'Sever Relations') {
       opDrop = 60;
-      repChange = -10;
+      repChange = -8;
       updatedStatus = 'Neutral';
     }
 
@@ -775,7 +929,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     };
     onUpdateRelations(updated);
     playSound('success');
-    setSuccessMessage(`Hostile Action [${action}] executed against ${getCountryName(targetId)}. Relations severed, trade halted, and Casus Belli has been secured!`);
+    setSuccessMessage(`Hostile Action [${action}] executed against ${getCountryName(targetId)}. Bilateral ties restricted.`);
     setErrorMessage(null);
   };
 
@@ -831,6 +985,32 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     });
     playSound('success');
     setSuccessMessage(`Stance locked! Your strategic stance of [${stance} Support] in the ${getCountryName(conflict.countryA)} vs. ${getCountryName(conflict.countryB)} dispute has been broadcasted globally.`);
+  };
+
+  const handleMediatePeace = (conflictId: string) => {
+    const conflictIndex = globalConflicts.findIndex(c => c.id === conflictId);
+    if (conflictIndex === -1 || globalConflicts[conflictIndex].resolved) return;
+    const conflict = globalConflicts[conflictIndex];
+
+    const medCost = 25000;
+    if (treasury < medCost) {
+      playSound('error');
+      setErrorMessage(`Hosting an International Peace Summit requires ₺/$/€ ${medCost.toLocaleString()} in diplomatic budget.`);
+      return;
+    }
+
+    onUpdateTreasury(treasury - medCost);
+    onUpdateReputation(Math.min(100, internationalReputation + 20));
+    publicApprovalImpact(5);
+
+    setGlobalConflicts(prev => {
+      const next = [...prev];
+      next[conflictIndex] = { ...next[conflictIndex], stance: 'Mediated Peace Accord' as any, resolved: true };
+      return next;
+    });
+    playSound('success');
+    setSuccessMessage(`HISTORIC PEACE SUMMIT BROKERED! Your diplomats mediated an immediate ceasefire between ${getCountryName(conflict.countryA)} and ${getCountryName(conflict.countryB)}.`);
+    setErrorMessage(null);
   };
 
   return (
@@ -912,6 +1092,12 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                   <Scale className="w-3 h-3" /> FREEDOM
                 </button>
                 <button 
+                  onClick={() => { playSound('click'); setMapMode('INFLUENCE'); }}
+                  className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'INFLUENCE' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'border-slate-700/50 text-slate-500'}`}
+                >
+                  <Zap className="w-3 h-3" /> INFLUENCE
+                </button>
+                <button 
                   onClick={() => { playSound('click'); setMapMode('WARS'); }}
                   className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded-full border transition-all flex items-center gap-1 hover:opacity-80 ${mapMode === 'WARS' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'border-slate-700/50 text-slate-500'}`}
                 >
@@ -945,12 +1131,12 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                 </div>
               )}
 
-              {/* Bottom-Left Map Legend (Renk Kodları Karşılığı) */}
+              {/* Bottom-Left Map Legend */}
               <div className="absolute bottom-3 left-3 z-20 pointer-events-auto max-w-[250px]">
                 <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/70 p-2.5 rounded-xl shadow-2xl flex flex-col gap-1.5 text-white">
                   <div className="flex items-center justify-between gap-2 border-b border-slate-700/50 pb-1">
                     <span className="text-[10px] text-indigo-300 font-extrabold uppercase tracking-wider flex items-center gap-1">
-                      <Globe className="w-3 h-3 text-indigo-400" /> RENK KODLARI
+                      <Globe className="w-3 h-3 text-indigo-400" /> MAP LEGEND
                     </span>
                     <span className="text-[9px] font-mono text-slate-400 font-bold">{mapMode}</span>
                   </div>
@@ -959,27 +1145,27 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-medium">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 border border-emerald-300/40" />
-                        <span className="text-slate-200 truncate">HQ / İttifak</span>
+                        <span className="text-slate-200 truncate">HQ / Alliance</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 border border-cyan-300/40" />
-                        <span className="text-slate-200 truncate">Savunma Paktı</span>
+                        <span className="text-slate-200 truncate">Defense Pact</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 border border-amber-200/40" />
-                        <span className="text-slate-200 truncate">Saldırmazlık</span>
+                        <span className="text-slate-200 truncate">Non-Aggression</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 border border-rose-300/40" />
-                        <span className="text-slate-200 truncate">Savaş Halinde</span>
+                        <span className="text-slate-200 truncate">At War</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0 border border-amber-300/40" />
-                        <span className="text-slate-200 truncate">Yaptırımlı</span>
+                        <span className="text-slate-200 truncate">Sanctioned</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0 border border-slate-300/40" />
-                        <span className="text-slate-200 truncate">Nötr İlişki</span>
+                        <span className="text-slate-200 truncate">Neutral</span>
                       </div>
                     </div>
                   )}
@@ -988,19 +1174,19 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] font-medium">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-                        <span className="text-slate-200">Sol / Sosyalist</span>
+                        <span className="text-slate-200">Left / Socialist</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-900 shrink-0" />
-                        <span className="text-slate-200">Sağ / Muhafazakar</span>
+                        <span className="text-slate-200">Right / Conservative</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                        <span className="text-slate-200">Liberal / Merkez</span>
+                        <span className="text-slate-200">Liberal / Centrist</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="text-slate-200">Yeşil / Ekolojist</span>
+                        <span className="text-slate-200">Green / Ecology</span>
                       </div>
                     </div>
                   )}
@@ -1009,15 +1195,15 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                     <div className="grid grid-cols-1 gap-1 text-[9px] font-medium">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                        <span className="text-slate-200">Yüksek Özgürlük (&gt;80)</span>
+                        <span className="text-slate-200">High Freedom (&gt;80)</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                        <span className="text-slate-200">Orta Özgürlük (50-80)</span>
+                        <span className="text-slate-200">Moderate Freedom (50-80)</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
-                        <span className="text-slate-200">Düşük Özgürlük (&lt;50)</span>
+                        <span className="text-slate-200">Low Freedom (&lt;50)</span>
                       </div>
                     </div>
                   )}
@@ -1026,17 +1212,17 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                     <div className="grid grid-cols-1 gap-1 text-[9px] font-medium">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                        <span className="text-slate-200">Aktif Savaş Bölgesi</span>
+                        <span className="text-slate-200">Active Conflict Zone</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-slate-600 shrink-0" />
-                        <span className="text-slate-200">Barışçıl / Taraf Olmayan</span>
+                        <span className="text-slate-200">Peaceful / Non-Belligerent</span>
                       </div>
                     </div>
                   )}
 
                   <div className="pt-1 border-t border-slate-800 text-[8.5px] text-slate-400 italic">
-                    Ayrıntılı diplomatik eylemler için haritada ülkeye tıklayın.
+                    Click any nation on the map to conduct bilateral diplomacy.
                   </div>
                 </div>
               </div>
@@ -1115,7 +1301,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                   {/* Pacifist Treaties & Alliances */}
                   <div className="p-4 rounded-2xl bg-black/15 border border-slate-500/5 flex flex-col gap-3">
                     <h5 className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> BARIŞÇIL ANLAŞMALAR • PEACEMAKING
+                      <Check className="w-3.5 h-3.5 text-emerald-400" /> PEACEMAKING & TREATIES
                     </h5>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
                       Establish friendly coalitions, guarantee non-aggression, or form defensive networks. Friendly actions require high bilateral opinions and diplomatic soft power.
@@ -1124,10 +1310,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                     <div className="flex flex-col gap-2 mt-1">
                       <button
                         onClick={() => handleSignTreaty(id, 'Non-Aggression')}
-                        disabled={rel.status !== 'Neutral'}
+                        disabled={rel.status === 'Non-Aggression' || rel.status === 'Defensive Pact' || rel.status === 'Alliance' || rel.status === 'At War'}
                         className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
                           rel.status === 'Neutral'
-                            ? 'bg-slate-800 hover:bg-slate-755 text-slate-200 border-slate-700 hover:scale-[1.01]'
+                            ? 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700 hover:scale-[1.01]'
                             : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
                         }`}
                       >
@@ -1137,9 +1323,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
                       <button
                         onClick={() => handleSignTreaty(id, 'Defensive Pact')}
-                        disabled={rel.status !== 'Non-Aggression'}
+                        disabled={rel.status === 'Defensive Pact' || rel.status === 'Alliance' || rel.status === 'At War'}
                         className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
-                          rel.status === 'Non-Aggression'
+                          rel.status === 'Non-Aggression' || rel.opinion >= 65
                             ? 'bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-400 border-cyan-500/20 hover:scale-[1.01]'
                             : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
                         }`}
@@ -1150,9 +1336,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
                       <button
                         onClick={() => handleSignTreaty(id, 'Alliance')}
-                        disabled={rel.status !== 'Defensive Pact'}
+                        disabled={rel.status === 'Alliance' || rel.status === 'At War'}
                         className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
-                          rel.status === 'Defensive Pact'
+                          rel.status === 'Defensive Pact' || rel.opinion >= 85
                             ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/20 hover:scale-[1.01]'
                             : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
                         }`}
@@ -1161,19 +1347,30 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                         <span className="text-[10px] font-mono text-indigo-200 font-bold">Opinion ≥85</span>
                       </button>
 
-                      <button
-                        onClick={() => handleSendGift(id)}
-                        disabled={rel.status === 'At War'}
-                        className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center justify-between px-3"
-                      >
-                        <span>Send Aid Gift</span>
-                        <span className="text-[10px] font-mono text-emerald-300 font-bold">+18 Op (20k ₺)</span>
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleSendGift(id)}
+                          disabled={rel.status === 'At War'}
+                          className="py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5"
+                        >
+                          <span>Send Aid Gift</span>
+                          <span className="text-[9px] font-mono text-emerald-300">+18 Op (20k ₺)</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleNormalizeRelations(id)}
+                          disabled={rel.status === 'At War' || (rel.status === 'Neutral' && rel.opinion >= 50)}
+                          className="py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5"
+                        >
+                          <span>Normalize / Lift Sanction</span>
+                          <span className="text-[9px] font-mono text-sky-300">10k ₺</span>
+                        </button>
+                      </div>
 
                       {rel.status === 'At War' && (
                         <button
                           onClick={() => handleCeasefire(id)}
-                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl cursor-pointer transition-all flex items-center justify-between px-3 shadow-md shadow-amber-500/20 uppercase tracking-wide"
+                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl cursor-pointer transition-all flex items-center justify-between px-3 shadow-md shadow-amber-500/20 uppercase tracking-wide animate-pulse"
                         >
                           <span>Ceasefire & Peace Treaty</span>
                           <span className="text-[10px] font-mono font-bold">30k ₺</span>
@@ -1188,7 +1385,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                       <Swords className="w-3.5 h-3.5 text-rose-400 animate-pulse" /> HOSTILITIES
                     </h5>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Isolate hostile nations, block commercial fleets, fund local rebel groups covertly, or declare active armed mobilization against rival economies.
+                      Isolate hostile nations, fabricate justification, block commercial trade fleets, or declare total armed mobilization against rival states.
                     </p>
 
                     <div className="flex flex-col gap-2 mt-1">
@@ -1205,19 +1402,43 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                           disabled={rel.status === 'At War'}
                           className="py-2.5 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
                         >
-                          Ambargo / Embargo
+                          Embargo
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleFabricateCB(id)}
+                          disabled={rel.status === 'At War' || casusBelli[id]}
+                          className={`py-2 border rounded-xl font-bold text-xs cursor-pointer transition-all ${
+                            casusBelli[id]
+                              ? 'bg-rose-950/20 text-rose-300 border-rose-500/20'
+                              : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                          }`}
+                        >
+                          {casusBelli[id] ? '✓ CB Secured' : 'Fabricate CB (15k)'}
+                        </button>
+
+                        <button
+                          onClick={() => handleFundRebels(id)}
+                          disabled={rel.status === 'At War'}
+                          className="py-2 bg-orange-500/5 hover:bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
+                        >
+                          Fund Rebels (80k)
                         </button>
                       </div>
 
                       <button
-                        onClick={() => handleFundRebels(id)}
+                        onClick={() => handleHostileAction(id, 'Declare War')}
                         disabled={rel.status === 'At War'}
-                        className="w-full py-2.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1"
+                        className={`w-full py-2.5 font-black text-xs rounded-xl cursor-pointer transition-all flex items-center justify-between px-3 uppercase tracking-wide ${
+                          rel.status === 'At War'
+                            ? 'opacity-40 pointer-events-none bg-slate-800 text-slate-500 border border-transparent'
+                            : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20'
+                        }`}
                       >
-                        <span>Fund Local Rebels</span>
-                        <span className="text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded-full uppercase">
-                          Costs 80k
-                        </span>
+                        <span>Declare War & Mobilize</span>
+                        <span className="text-[10px] font-mono">{casusBelli[id] ? 'With Justification' : 'Surprise Strike'}</span>
                       </button>
                     </div>
                   </div>
@@ -1300,7 +1521,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                   </p>
 
                   {!conflict.resolved ? (
-                    <div className="grid grid-cols-3 gap-1.5 mt-3.5 pt-3.5 border-t border-slate-500/10">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-3.5 pt-3.5 border-t border-slate-500/10">
                       <button
                         onClick={() => handleStance(conflict.id, 'Neutral')}
                         className="py-2 bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-300 font-extrabold text-[10px] rounded-xl cursor-pointer"
@@ -1317,7 +1538,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                         onClick={() => handleStance(conflict.id, 'Military')}
                         className="py-2 bg-rose-650 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-xl cursor-pointer"
                       >
-                        Intervene militarily
+                        Intervene Military
+                      </button>
+                      <button
+                        onClick={() => handleMediatePeace(conflict.id)}
+                        className="py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] rounded-xl cursor-pointer shadow-sm shadow-emerald-600/20"
+                      >
+                        Mediate Peace (25k)
                       </button>
                     </div>
                   ) : (

@@ -24,11 +24,15 @@ import { DiplomacyView } from './components/DiplomacyView';
 import { GovernanceView } from './components/GovernanceView';
 import { CivicWatchdogView } from './components/CivicWatchdogView';
 import { MilitaryView } from './components/MilitaryView';
+import { StateEventsView } from './components/StateEventsView';
 import { SettingsModal } from './components/SettingsModal';
+import { STATE_CRISIS_BANK } from './constants/crisisEvents';
+import { OngoingSituation, StateCrisisEvent } from './types';
 import { 
   Landmark, Megaphone, Users, Award, Calendar, 
   Coins, HelpCircle, RefreshCw, LogOut, CheckCircle, Info, X, Play, Pause, FastForward, Swords,
-  Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield, Home
+  Volume2, VolumeX, Briefcase, Globe, TrendingUp, ShieldAlert, Scale, UserX, AlertTriangle, ShieldCheck, Shield, Home,
+  Flame, Zap, Clock, Activity, MapPin, Compass, Sparkles, Crosshair
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
 import { syncRegionOwnersAndMayors } from './utils/mayorUtils';
@@ -217,6 +221,16 @@ export default function App() {
     }[];
   } | null>(null);
 
+  // Active Ongoing Situations & Crisis Decisions Engine
+  const [situations, setSituations] = useState<OngoingSituation[]>([]);
+  const [pendingCrisis, setPendingCrisis] = useState<StateCrisisEvent | null>(null);
+  const [decisionHistory, setDecisionHistory] = useState<Array<{
+    date: string;
+    title: string;
+    choice: string;
+    outcomeSummary: string;
+  }>>([]);
+
   const [cabinet, setCabinet] = useState<Record<string, MinisterCandidate | null>>({});
 
   const [taxRates, setTaxRates] = useState({
@@ -324,6 +338,10 @@ export default function App() {
     const startCampaignFlow = (targetCountry: Country) => {
       setIsRuling(false);
       setElectionSeats(null);
+      setCoalitions([]); // Reset coalitions on new game start
+      setCampaignTurn(1);
+      setRulingMonthsCount(0);
+      setCurrentEvent(null);
 
       // Reset starting region support configurations for the simulation run
       const preppedRegions = targetCountry.regions.map((region, index) => {
@@ -756,7 +774,60 @@ export default function App() {
     const nextConfidence = Math.max(10, Math.min(100, investorConfidence + confidenceDelta));
     setInvestorConfidence(nextConfidence);
 
-    // 3. National election countdown check
+    // 3. Ongoing Situations monthly impact & decay
+    if (situations.length > 0) {
+      let sitTreasury = 0;
+      let sitInflation = 0;
+      let sitReputation = 0;
+      let sitConfidence = 0;
+      let sitFreedom = 0;
+      let sitApproval = 0;
+      let sitCivilWar = 0;
+
+      const updatedSituations: OngoingSituation[] = [];
+      situations.forEach(sit => {
+        sitTreasury += sit.monthlyEffects.treasuryDelta || 0;
+        sitInflation += sit.monthlyEffects.inflationDelta || 0;
+        sitReputation += sit.monthlyEffects.reputationDelta || 0;
+        sitConfidence += sit.monthlyEffects.confidenceDelta || 0;
+        sitFreedom += sit.monthlyEffects.freedomDelta || 0;
+        sitApproval += sit.monthlyEffects.approvalDelta || 0;
+        sitCivilWar += sit.monthlyEffects.civilWarRiskDelta || 0;
+
+        const remaining = sit.remainingMonths - 1;
+        if (remaining > 0) {
+          updatedSituations.push({ ...sit, remainingMonths: remaining });
+        } else {
+          setDecisionHistory(prev => [{
+            date: `Month ${nextMonths}`,
+            title: sit.title,
+            choice: 'Situation Concluded',
+            outcomeSummary: sit.resolutionOutcome || 'Ongoing situation concluded naturally.'
+          }, ...prev]);
+        }
+      });
+
+      setSituations(updatedSituations);
+      if (sitTreasury !== 0) setTreasury(prev => Math.max(0, prev + sitTreasury));
+      if (sitInflation !== 0) setInflation(prev => Math.max(1.0, parseFloat((prev + sitInflation).toFixed(2))));
+      if (sitReputation !== 0) setInternationalReputation(prev => Math.min(100, Math.max(0, prev + sitReputation)));
+      if (sitConfidence !== 0) setInvestorConfidence(prev => Math.min(100, Math.max(10, prev + sitConfidence)));
+      if (sitFreedom !== 0) setFreedomIndex(prev => Math.min(100, Math.max(10, prev + sitFreedom)));
+      if (sitCivilWar !== 0) setCivilWarRisk(prev => Math.min(100, Math.max(0, prev + sitCivilWar)));
+      if (sitApproval !== 0) adjustPublicApproval(sitApproval);
+    }
+
+    // 4. Trigger High Stakes Crisis Event (every 5-6 months with 50% chance or if none pending)
+    if (!pendingCrisis && ((nextMonths % 5 === 0 && Math.random() < 0.55) || (nextMonths % 10 === 0))) {
+      const unhandledCrises = STATE_CRISIS_BANK.filter(c => !decisionHistory.some(h => h.title === c.title));
+      const candidateCrisis = unhandledCrises.length > 0 
+        ? unhandledCrises[Math.floor(Math.random() * unhandledCrises.length)] 
+        : STATE_CRISIS_BANK[Math.floor(Math.random() * STATE_CRISIS_BANK.length)];
+      
+      setPendingCrisis(candidateCrisis);
+    }
+
+    // 5. National election countdown check
     const totalCycleMonths = selectedCountry.electionCycleYears * 12;
     if (nextMonths >= totalCycleMonths) {
       setWarningAlert(`Your ruling term is complete! It is time for the next General Elections in ${selectedCountry.name}!`);
@@ -767,8 +838,8 @@ export default function App() {
       return;
     }
 
-    // 4. Random Crisis / Governance Events (every 3 months, or 25% chance)
-    const shouldTriggerEvent = nextMonths % 3 === 0 || Math.random() < 0.25;
+    // 6. Balanced Crisis / Governance Events (every 6 months with 40% chance or annual landmark, only if no pending event)
+    const shouldTriggerEvent = !currentEvent && ((nextMonths % 6 === 0 && Math.random() < 0.4) || (nextMonths % 12 === 0));
     if (shouldTriggerEvent) {
       const events = [
         {
@@ -984,6 +1055,89 @@ export default function App() {
       const chosenEvent = events[Math.floor(Math.random() * events.length)];
       setCurrentEvent(chosenEvent);
     }
+  };
+
+  const handleResolveSituationEarly = (situationId: string, cost: number) => {
+    if (treasury < cost) {
+      playSound('error');
+      setWarningAlert(`Insufficient Treasury funds! You need ${cost.toLocaleString()} ${getCurrency(selectedCountry?.id || 'US')} to enact this mitigation order.`);
+      return;
+    }
+    playSound('success');
+    setTreasury(prev => Math.max(0, prev - cost));
+    const target = situations.find(s => s.id === situationId);
+    setSituations(prev => prev.filter(s => s.id !== situationId));
+    if (target) {
+      setDecisionHistory(prev => [{
+        date: `Month ${rulingMonthsCount + 1}`,
+        title: target.title,
+        choice: target.counterAction?.label || 'Emergency Executive Mitigation',
+        outcomeSummary: target.counterAction?.effectDescription || 'Resolved early via executive decree.'
+      }, ...prev]);
+    }
+    setWarningAlert('Executive Directive Enacted: Situation mitigated and removed from active roster.');
+  };
+
+  const handleResolveCrisis = (crisisId: string, optionIndex: number) => {
+    const crisis = pendingCrisis?.id === crisisId ? pendingCrisis : STATE_CRISIS_BANK.find(c => c.id === crisisId);
+    if (!crisis || !crisis.options[optionIndex]) return;
+
+    const opt = crisis.options[optionIndex];
+    playSound('click');
+
+    // Apply immediate effects
+    if (opt.immediateEffects.treasuryDelta) {
+      setTreasury(prev => Math.max(0, prev + opt.immediateEffects.treasuryDelta!));
+    }
+    if (opt.immediateEffects.inflationDelta) {
+      setInflation(prev => Math.max(1.0, parseFloat((prev + opt.immediateEffects.inflationDelta!).toFixed(2))));
+    }
+    if (opt.immediateEffects.reputationDelta) {
+      setInternationalReputation(prev => Math.min(100, Math.max(0, prev + opt.immediateEffects.reputationDelta!)));
+    }
+    if (opt.immediateEffects.confidenceDelta) {
+      setInvestorConfidence(prev => Math.min(100, Math.max(10, prev + opt.immediateEffects.confidenceDelta!)));
+    }
+    if (opt.immediateEffects.freedomDelta) {
+      setFreedomIndex(prev => Math.min(100, Math.max(10, prev + opt.immediateEffects.freedomDelta!)));
+    }
+    if (opt.immediateEffects.civilWarRiskDelta) {
+      setCivilWarRisk(prev => Math.min(100, Math.max(0, prev + opt.immediateEffects.civilWarRiskDelta!)));
+    }
+    if (opt.immediateEffects.approvalDelta) {
+      adjustPublicApproval(opt.immediateEffects.approvalDelta);
+    }
+
+    // Spawn ongoing situation
+    if (opt.spawnSituation) {
+      const newSit: OngoingSituation = {
+        ...opt.spawnSituation,
+        id: `sit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      };
+      setSituations(prev => [newSit, ...prev]);
+    }
+
+    // Add to decision history
+    setDecisionHistory(prev => [{
+      date: `Month ${rulingMonthsCount + 1}`,
+      title: crisis.title,
+      choice: opt.text,
+      outcomeSummary: opt.flavorImpact
+    }, ...prev]);
+
+    setPendingCrisis(null);
+    setWarningAlert(`Executive Directive Enacted: ${opt.text}`);
+  };
+
+  const handleTriggerNewCrisis = () => {
+    const unhandled = STATE_CRISIS_BANK.filter(c => !decisionHistory.some(h => h.title === c.title));
+    const chosen = unhandled.length > 0 
+      ? unhandled[Math.floor(Math.random() * unhandled.length)]
+      : STATE_CRISIS_BANK[Math.floor(Math.random() * STATE_CRISIS_BANK.length)];
+    
+    setPendingCrisis(chosen);
+    setDashboardTab('EVENTS_SITUATIONS');
+    playSound('click');
   };
 
   const handleUpdateCountry = (updatedCountry: Country) => {
@@ -1228,9 +1382,47 @@ export default function App() {
             });
           }
 
-          const finalCoals = [...(coalitions || []), ...generated]; if(newCoalition && !finalCoals.find(c => c.name === newCoalition.name)) finalCoals.push(newCoalition); setCoalitions(finalCoals);
+          // Enforce strictly 1 coalition per party across generated coalitions
+          const assignedParties = new Set<string>();
+          const validGenerated: Coalition[] = [];
+
+          [...generated].forEach(c => {
+            const availableParties = c.parties.filter(p => !assignedParties.has(p));
+            if (availableParties.length >= 2) {
+              availableParties.forEach(p => assignedParties.add(p));
+              validGenerated.push({
+                ...c,
+                parties: availableParties
+              });
+            }
+          });
+
+          let mergedCoals = [...(coalitions || [])];
+          if (newCoalition) {
+            const newPartySet = new Set(newCoalition.parties);
+            mergedCoals = mergedCoals
+              .map(c => ({ ...c, parties: c.parties.filter(p => !newPartySet.has(p)) }))
+              .filter(c => c.parties.length >= 2);
+            mergedCoals.push(newCoalition);
+          } else {
+            validGenerated.forEach(gen => {
+              const genPartySet = new Set(gen.parties);
+              mergedCoals = mergedCoals
+                .map(c => ({ ...c, parties: c.parties.filter(p => !genPartySet.has(p)) }))
+                .filter(c => c.parties.length >= 2);
+              mergedCoals.push(gen);
+            });
+          }
+
+          setCoalitions(mergedCoals);
         } else {
-          if (newCoalition) setCoalitions([...(coalitions || []), newCoalition]); else setCoalitions([...(coalitions || [])]);
+          if (newCoalition) {
+            const newPartySet = new Set(newCoalition.parties);
+            const cleaned = (coalitions || [])
+              .map(c => ({ ...c, parties: c.parties.filter(p => !newPartySet.has(p)) }))
+              .filter(c => c.parties.length >= 2);
+            setCoalitions([...cleaned, newCoalition]);
+          }
         }
       }
 
@@ -1251,6 +1443,8 @@ export default function App() {
     setSelectedCountry(null);
     setPlayerParty(null);
     setElectionSeats(null);
+    setCoalitions([]);
+    setCurrentEvent(null);
   };
 
   const handleFormCabinet = () => {
@@ -1259,7 +1453,7 @@ export default function App() {
     setFreedomIndex(Math.min(100, Math.max(10, 85 + pressFreedomBonus)));
     setBannedParties([]);
     setCivilWarRisk(0);
-    setDashboardTab('CABINET');
+    setDashboardTab('DIPLOMACY');
     setActiveScreen('MAIN_DASHBOARD');
     setHasReshuffledPrompt(true);
     setShowElectionSuccessModal(false);
@@ -1267,6 +1461,33 @@ export default function App() {
     if (pressReputationBonus !== 0) {
       setInternationalReputation(prev => Math.min(100, Math.max(0, prev + pressReputationBonus)));
     }
+    // Seed initial post-election situation
+    setSituations([
+      {
+        id: 'sit-electoral-mandate',
+        title: 'Electoral Victory Mandate & Popular Goodwill',
+        icon: '🎉',
+        category: 'DOMESTIC',
+        description: 'The national electorate has granted your administration a decisive governing mandate. Popular optimism boosts public approval and state investments.',
+        sourceEvent: 'General Election Victory - Sovereign Inauguration',
+        remainingMonths: 5,
+        totalDuration: 5,
+        monthlyEffects: {
+          approvalDelta: 1.2,
+          confidenceDelta: 1.0,
+          treasuryDelta: 12000
+        },
+        resolutionOutcome: 'The initial electoral honeymoon concluded as standard parliamentary politics resumed.'
+      }
+    ]);
+    setDecisionHistory([
+      {
+        date: 'Month 1',
+        title: 'State Governance Inauguration',
+        choice: 'Formed Executive Administration & Cabinet',
+        outcomeSummary: 'Inauguration completed; executive ministries staffed and foreign diplomatic missions notified.'
+      }
+    ]);
   };
 
   const handleReturnToMap = () => {
@@ -1275,6 +1496,8 @@ export default function App() {
     setSelectedCountry(null);
     setPlayerParty(null);
     setElectionSeats(null);
+    setCoalitions([]);
+    setCurrentEvent(null);
     setShowElectionSuccessModal(false);
   };
 
@@ -1644,7 +1867,7 @@ export default function App() {
                         {isRuling ? 'STATE TREASURY' : 'PARTY BUDGET'}
                       </span>
                       <div className="text-sm font-black font-mono text-emerald-400">
-                        {currency}{isRuling ? treasury.toLocaleString() : playerParty.budget.toLocaleString()}
+                        {currency}{isRuling ? (treasury ?? 0).toLocaleString() : (playerParty?.budget ?? 0).toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -1863,233 +2086,452 @@ export default function App() {
 
             {/* TAB CONTROLLERS SECTION */}
             <div className="flex flex-col gap-3">
-              {/* CAMPAIGN OPERATIONS ROW */}
-              <div>
-                <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Campaign Operations</span>
-                <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
-                  darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <button
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 You must win the extraordinary party congress first to become the party leader before you can launch a national election campaign!");
-                        return;
-                      }
-                      playSound('click'); 
-                      setDashboardTab('CAMPAIGN'); 
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'CAMPAIGN'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <Megaphone className="w-3.5 h-3.5" /> Campaign & Rallies {isJuniorMember && '🔒'}
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 Parliament access is restricted to official party leaders during active national campaigns.");
-                        return;
-                      }
-                      playSound('click'); 
-                      setDashboardTab('PARLIAMENT'); 
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'PARLIAMENT'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <Landmark className="w-3.5 h-3.5" /> Parliament {isJuniorMember && '🔒'}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      playSound('click'); 
-                      setDashboardTab('CONGRESS'); 
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'CONGRESS'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" /> Party Congress
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 Junior members do not have access to the official party treasury.");
-                        return;
-                      }
-                      playSound('click'); 
-                      setDashboardTab('FINANCE'); 
-                    }}
-                    className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                      dashboardTab === 'FINANCE'
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <Coins className="w-3.5 h-3.5" /> Finance & Treasury {isJuniorMember && '🔒'}
-                  </button>
-                </div>
-              </div>
-
-              {/* SOVEREIGN GOVERNANCE ROW */}
-              {(completedCountries.length > 0 || isRuling) && (
-                <div>
-                  <span className="text-[9px] font-mono font-bold text-rose-450 uppercase tracking-wider block mb-1.5 ml-1">
-                    Sovereign Governance & Tactical Ops {isRuling ? '• Unlocked (Ruling)' : '• 🔒 Locked (Opposition Phase)'}
-                  </span>
-                  <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
-                    darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
+              {isRuling ? (
+                /* SOVEREIGN RULING COMMAND CENTER NAVIGATION */
+                <div className="flex flex-col gap-3">
+                  {/* 1. STRATEGIC MAPS COMMAND (50% HERO FOCUS) */}
+                  <div className={`p-3.5 rounded-3xl border transition-all ${
+                    darkMode ? 'bg-slate-900/90 border-cyan-900/40 shadow-lg' : 'bg-white border-cyan-200 shadow-md'
                   }`}>
-                    {/* CABINET & RESHUFFLES */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('This sovereign Cabinet panel is locked during the opposition phase. Complete and win the election first!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('CABINET'); 
-                      }}
-                      className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'CABINET'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <Briefcase className="w-3.5 h-3.5" /> Cabinet {isRuling ? '' : '🔒'}
-                    </button>
+                    <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
+                          <Globe className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-mono font-black text-cyan-400 uppercase tracking-wider">
+                          1. Strategic Maps Command (50% Primary Focus)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        World Geopolitics, Battle Theaters & Provinces
+                      </span>
+                    </div>
 
-                    {/* DIPLOMACY & FOREIGN POLICY */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('This sovereign Diplomacy panel is locked during the opposition phase. Complete and win the election first!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('DIPLOMACY'); 
-                      }}
-                      className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'DIPLOMACY'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <Globe className="w-3.5 h-3.5" /> Diplomacy {isRuling ? '' : '🔒'}
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* WORLD DIPLOMACY & GEOPOLITICS MAP */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('DIPLOMACY');
+                        }}
+                        className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP'
+                            ? 'bg-cyan-600 border-cyan-400 text-white shadow-md'
+                            : darkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-cyan-500/40 hover:bg-cyan-950/20' : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-cyan-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Globe className={`w-5 h-5 ${dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP' ? 'text-white' : 'text-cyan-400'}`} />
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wide">World Diplomacy Map</div>
+                            <div className={`text-[10px] ${dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP' ? 'text-cyan-100' : 'text-slate-400'}`}>
+                              Pacts, Treaties & Sphere
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                          dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP' ? 'bg-cyan-700 text-white' : 'bg-slate-800 text-cyan-400'
+                        }`}>
+                          {internationalReputation} Rep
+                        </span>
+                      </button>
 
-                    {/* TAXATION & ECONOMY */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('This sovereign Taxation panel is locked during the opposition phase. Complete and win the election first!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('TAXATION'); 
-                      }}
-                      className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'TAXATION'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <TrendingUp className="w-3.5 h-3.5" /> Taxation & Economy {isRuling ? '' : '🔒'}
-                    </button>
+                      {/* WAR FRONT & TACTICAL BATTLE MAP */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('TACTICAL_BATTLE');
+                        }}
+                        className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          dashboardTab === 'TACTICAL_BATTLE'
+                            ? 'bg-rose-600 border-rose-400 text-white shadow-md'
+                            : darkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-rose-500/40 hover:bg-rose-950/20' : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Swords className={`w-5 h-5 ${dashboardTab === 'TACTICAL_BATTLE' ? 'text-white' : 'text-rose-400'}`} />
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wide">War Front & Battle Map</div>
+                            <div className={`text-[10px] ${dashboardTab === 'TACTICAL_BATTLE' ? 'text-rose-100' : 'text-slate-400'}`}>
+                              Armies, Fleets & Theaters
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                          dashboardTab === 'TACTICAL_BATTLE' ? 'bg-rose-700 text-white' : 'bg-slate-800 text-rose-400'
+                        }`}>
+                          {civilWarRisk > 0 ? `${civilWarRisk}% Risk` : 'Ready'}
+                        </span>
+                      </button>
 
-                    {/* MILITARY OPERATIONS */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('This sovereign Military panel is locked during the opposition phase. Complete and win the election first!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('MILITARY'); 
-                      }}
-                      className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'MILITARY'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5" /> Military {isRuling ? '' : '🔒'}
-                    </button>
+                      {/* DOMESTIC PROVINCES MAP */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('CAMPAIGN');
+                        }}
+                        className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          dashboardTab === 'CAMPAIGN'
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                            : darkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-indigo-500/40 hover:bg-indigo-950/20' : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-indigo-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Megaphone className={`w-5 h-5 ${dashboardTab === 'CAMPAIGN' ? 'text-white' : 'text-indigo-400'}`} />
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wide">Provinces & Mayors</div>
+                            <div className={`text-[10px] ${dashboardTab === 'CAMPAIGN' ? 'text-indigo-100' : 'text-slate-400'}`}>
+                              Regional Governors & Stability
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                          dashboardTab === 'CAMPAIGN' ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-indigo-400'
+                        }`}>
+                          %{selectedCountry ? Math.round(selectedCountry.regions.reduce((a, r) => a + (r.supports[playerParty?.id || ''] || 0), 0) / (selectedCountry.regions.length || 1)) : 0}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
 
-                    {/* WATCHDOGS */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('This sovereign Watchdogs panel is locked during the opposition phase. Complete and win the election first!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('WATCHDOG'); 
-                      }}
-                      className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'WATCHDOG'
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
-                      }`}
-                    >
-                      <Scale className="w-3.5 h-3.5" /> Watchdogs {isRuling ? '' : '🔒'}
-                    </button>
+                  {/* 2. STATE AFFAIRS, CRISIS DECISIONS & ONGOING SITUATIONS (MAJOR HIGH-IMPACT SHARE) */}
+                  <div className={`p-3.5 rounded-3xl border transition-all ${
+                    darkMode ? 'bg-slate-900/90 border-amber-900/40 shadow-lg' : 'bg-white border-amber-200 shadow-md'
+                  }`}>
+                    <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                          <Flame className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-mono font-black text-amber-400 uppercase tracking-wider">
+                          2. State Events & Consequence Situations (High Impact Share)
+                        </span>
+                      </div>
+                      {pendingCrisis && (
+                        <span className="text-[10px] font-mono bg-rose-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> URGENT CRISIS PENDING
+                        </span>
+                      )}
+                    </div>
 
-                    {/* TACTICAL OPERATIONS MAP */}
                     <button
                       onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('Tactical Operations Map is unlocked after winning the election as head of state!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('TACTICAL_MAP'); 
+                        playSound('click');
+                        setDashboardTab('EVENTS_SITUATIONS');
                       }}
-                      className={`flex-1 min-w-[140px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'TACTICAL_MAP'
-                          ? 'bg-cyan-600 text-white shadow-md'
-                          : darkMode ? 'text-cyan-400 hover:text-cyan-200 hover:bg-cyan-950/40' : 'text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50'
+                      className={`w-full p-3 rounded-2xl border text-left transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 cursor-pointer ${
+                        dashboardTab === 'EVENTS_SITUATIONS'
+                          ? 'bg-amber-500 border-amber-300 text-slate-950 shadow-lg'
+                          : darkMode ? 'bg-slate-950/60 border-slate-800 text-slate-200 hover:border-amber-500/40 hover:bg-amber-950/20' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-amber-300'
                       }`}
                     >
-                      <Globe className="w-3.5 h-3.5" /> Tactical Map {isRuling ? '' : '🔒'}
-                    </button>
+                      <div className="flex items-center gap-3">
+                        <Zap className={`w-6 h-6 shrink-0 ${dashboardTab === 'EVENTS_SITUATIONS' ? 'text-slate-950' : 'text-amber-400'}`} />
+                        <div>
+                          <div className="text-sm font-black uppercase tracking-wide flex items-center gap-2">
+                            <span>Crisis Decisions & Active Situations Room</span>
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                              dashboardTab === 'EVENTS_SITUATIONS' ? 'bg-slate-900 text-amber-300' : 'bg-amber-500/20 text-amber-300'
+                            }`}>
+                              {situations.length} Active Situation{situations.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className={`text-xs mt-0.5 ${dashboardTab === 'EVENTS_SITUATIONS' ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
+                            Executive decisions spawn long-term situations affecting Treasury, Inflation, Reputation, and Approval every month.
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* WAR FRONT & ORDNANCE */}
-                    <button
-                      onClick={() => {
-                        if (!isRuling) {
-                          playSound('error');
-                          setWarningAlert('War Front & Ordnance operations are unlocked after winning the election!');
-                          return;
-                        }
-                        playSound('click'); 
-                        setDashboardTab('TACTICAL_BATTLE'); 
-                      }}
-                      className={`flex-1 min-w-[140px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        dashboardTab === 'TACTICAL_BATTLE'
-                          ? 'bg-rose-600 text-white shadow-md'
-                          : darkMode ? 'text-rose-400 hover:text-rose-200 hover:bg-rose-950/40' : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50'
-                      }`}
-                    >
-                      <Swords className="w-3.5 h-3.5" /> War Front {isRuling ? '' : '🔒'}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs font-mono font-black px-3 py-1.5 rounded-xl border ${
+                          dashboardTab === 'EVENTS_SITUATIONS' 
+                            ? 'bg-slate-950 text-amber-400 border-slate-900' 
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          Open Situation Room →
+                        </span>
+                      </div>
                     </button>
+                  </div>
+
+                  {/* 3. EXECUTIVE STATE GOVERNANCE (COMPACT SECONDARY SHARE) */}
+                  <div>
+                    <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">
+                      3. Executive State Governance (Compact Secondary Share - Ministries, Parties, Tax & Fiscal)
+                    </span>
+                    <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
+                      darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      {/* CABINET / BAKANLIKLAR */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('CABINET');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'CABINET'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5" /> Ministries (Bakanlıklar)
+                      </button>
+
+                      {/* PARLIAMENT / PARTİLER */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('PARLIAMENT');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'PARLIAMENT'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Landmark className="w-3.5 h-3.5" /> Parties & Bills
+                      </button>
+
+                      {/* TAXATION & ECONOMY / VERGİ */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('TAXATION');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'TAXATION'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <TrendingUp className="w-3.5 h-3.5" /> Taxes & Economy (Vergi)
+                      </button>
+
+                      {/* FINANCE / HAZİNE */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('FINANCE');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'FINANCE'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5" /> Treasury (Finans)
+                      </button>
+
+                      {/* MILITARY & READINESS */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('MILITARY');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'MILITARY'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5" /> Military Readiness
+                      </button>
+
+                      {/* WATCHDOGS */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('WATCHDOG');
+                        }}
+                        className={`flex-1 min-w-[120px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'WATCHDOG'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Scale className="w-3.5 h-3.5" /> Watchdogs
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* OPPOSITION PHASE NAVIGATION (With visible locked sovereign systems) */
+                <div className="flex flex-col gap-2">
+                  {/* Campaign Operations */}
+                  <div>
+                    <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">
+                      Campaign Operations
+                    </span>
+                    <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
+                      darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
+                    }`}>
+                      <button
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 You must win the extraordinary party congress first to become the party leader before you can launch a national election campaign!");
+                            return;
+                          }
+                          playSound('click'); 
+                          setDashboardTab('CAMPAIGN'); 
+                        }}
+                        className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                          dashboardTab === 'CAMPAIGN'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Megaphone className="w-3.5 h-3.5" /> Campaign & Rallies {isJuniorMember && '🔒'}
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 Parliament access is restricted to official party leaders during active national campaigns.");
+                            return;
+                          }
+                          playSound('click'); 
+                          setDashboardTab('PARLIAMENT'); 
+                        }}
+                        className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                          dashboardTab === 'PARLIAMENT'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Landmark className="w-3.5 h-3.5" /> Parliament {isJuniorMember && '🔒'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          playSound('click'); 
+                          setDashboardTab('CONGRESS'); 
+                        }}
+                        className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                          dashboardTab === 'CONGRESS'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" /> Party Congress
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 Junior members do not have access to the official party treasury.");
+                            return;
+                          }
+                          playSound('click'); 
+                          setDashboardTab('FINANCE'); 
+                        }}
+                        className={`flex-1 min-w-[120px] py-2.5 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
+                          dashboardTab === 'FINANCE'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5" /> Finance & Treasury {isJuniorMember && '🔒'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sovereign Systems - Locked Not Removed */}
+                  <div>
+                    <span className="text-[9px] font-mono font-bold text-amber-500/80 uppercase tracking-wider block mb-1.5 ml-1 flex items-center gap-1.5">
+                      <span>🔒</span> Sovereign Authority Systems (Locked during Election Phase)
+                    </span>
+                    <div className={`p-1 rounded-2xl border flex gap-1 flex-wrap ${
+                      darkMode ? 'bg-slate-950/40 border-slate-850' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      {/* TACTICAL MAP / WAR FRONT (Viewable in Observation/Intel Mode) */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('TACTICAL_MAP');
+                        }}
+                        title="Tactical Map & Global Intelligence Dossiers"
+                        className={`flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'TACTICAL_MAP' || dashboardTab === 'DIPLOMACY'
+                            ? 'bg-rose-700 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                        }`}
+                      >
+                        <Crosshair className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Tactical Map & Intel</span>
+                      </button>
+
+                      {/* TACTICAL BATTLE FRONT */}
+                      <button
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('TACTICAL_BATTLE');
+                        }}
+                        title="Frontline Military Engagements"
+                        className={`flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                          dashboardTab === 'TACTICAL_BATTLE'
+                            ? 'bg-rose-700 text-white shadow-md'
+                            : darkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                        }`}
+                      >
+                        <Swords className="w-3.5 h-3.5 text-rose-400" />
+                        <span>War Frontline</span>
+                      </button>
+
+                      {/* CABINET (Locked) */}
+                      <button
+                        onClick={() => {
+                          playSound('error');
+                          setWarningAlert("🔒 Cabinet Governance is locked: Unlocks after you win the election and form the government.");
+                        }}
+                        title="Unlocks after you win the election"
+                        className="flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50 text-slate-500 hover:opacity-75"
+                      >
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>Cabinet 🔒</span>
+                      </button>
+
+                      {/* TAXATION & ECONOMY (Locked) */}
+                      <button
+                        onClick={() => {
+                          playSound('error');
+                          setWarningAlert("🔒 Tax & Economic Decrees are locked: Unlocks after you win the election and form the government.");
+                        }}
+                        title="Unlocks after you win the election"
+                        className="flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50 text-slate-500 hover:opacity-75"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Taxes & Economy 🔒</span>
+                      </button>
+
+                      {/* MILITARY (Locked) */}
+                      <button
+                        onClick={() => {
+                          playSound('error');
+                          setWarningAlert("🔒 Sovereign Armed Forces Command is locked: Unlocks after you win the election.");
+                        }}
+                        title="Unlocks after you win the election"
+                        className="flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50 text-slate-500 hover:opacity-75"
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                        <span>Armed Forces 🔒</span>
+                      </button>
+
+                      {/* WATCHDOGS (Locked) */}
+                      <button
+                        onClick={() => {
+                          playSound('error');
+                          setWarningAlert("🔒 Civic Watchdogs & Constitutional Audits are locked: Unlocks after you win the election.");
+                        }}
+                        title="Unlocks after you win the election"
+                        className="flex-1 min-w-[110px] py-2 text-center rounded-xl font-bold text-xs tracking-wide transition-all uppercase flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50 text-slate-500 hover:opacity-75"
+                      >
+                        <Scale className="w-3.5 h-3.5" />
+                        <span>Watchdogs 🔒</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2104,6 +2546,7 @@ export default function App() {
                 onUpdateParty={setPlayerParty}
                 onSpendTurn={handleSpendTurn}
                 darkMode={darkMode}
+                scenario={selectedScenario}
               />
             )}
 
@@ -2117,6 +2560,31 @@ export default function App() {
                 coalitions={coalitions}
                 onUpdateCoalitions={setCoalitions}
                 electionSeats={electionSeats}
+                scenario={selectedScenario}
+              />
+            )}
+
+            {dashboardTab === 'EVENTS_SITUATIONS' && selectedCountry && playerParty && (
+              <StateEventsView
+                country={selectedCountry}
+                party={playerParty}
+                situations={situations}
+                onUpdateSituations={setSituations}
+                onResolveSituationEarly={handleResolveSituationEarly}
+                pendingCrisis={pendingCrisis}
+                onResolveCrisis={handleResolveCrisis}
+                onTriggerNewCrisis={handleTriggerNewCrisis}
+                decisionHistory={decisionHistory}
+                treasury={treasury}
+                onUpdateTreasury={setTreasury}
+                currency={getCurrency(selectedCountry.id)}
+                darkMode={darkMode}
+                onNavigateToMap={(mapType) => {
+                  if (mapType === 'DIPLOMACY') setDashboardTab('DIPLOMACY');
+                  else if (mapType === 'WAR_FRONT') setDashboardTab('TACTICAL_BATTLE');
+                  else setDashboardTab('CAMPAIGN');
+                  playSound('click');
+                }}
               />
             )}
 
@@ -2173,6 +2641,10 @@ export default function App() {
                 onUpdateReputation={setInternationalReputation}
                 publicApprovalImpact={adjustPublicApproval}
                 darkMode={darkMode}
+                scenario={selectedScenario}
+                freedomIndex={freedomIndex}
+                countryIdeologies={customCountryIdeologies}
+                countryFreedomScores={customCountryFreedomScores}
               />
             )}
 
@@ -2238,6 +2710,7 @@ export default function App() {
                 internationalReputation={internationalReputation}
                 countryIdeologies={customCountryIdeologies}
                 countryFreedomScores={customCountryFreedomScores}
+                diplomaticRelations={diplomaticRelations}
                 scenario={selectedScenario}
                 darkMode={darkMode}
               />
@@ -2248,14 +2721,19 @@ export default function App() {
                 country={selectedCountry}
                 party={playerParty}
                 civilWarRisk={civilWarRisk}
+                treasury={treasury}
+                onUpdateTreasury={setTreasury}
+                diplomaticRelations={diplomaticRelations}
+                onUpdateRelations={setDiplomaticRelations}
+                scenario={selectedScenario}
                 darkMode={darkMode}
                 onBattleFinished={(success: boolean) => {
                   if (success) {
                     setCivilWarRisk(5);
-                    setWarningAlert("💥 FRONT-LINE VICTORY: Our military operations and ordnance strikes have successfully neutralized all hostile rebel nodes!");
+                    setWarningAlert("💥 STRATEGIC THEATER SECURED: National defense forces and deterrence operations successfully reinforced!");
                   } else {
-                    setCivilWarRisk(prev => Math.min(100, prev + 25));
-                    setWarningAlert("⚠️ TACTICAL RETREAT: Insurgent counter-offensive caused severe friendly casualties. Fortify remaining sectors!");
+                    setCivilWarRisk(prev => Math.min(100, prev + 15));
+                    setWarningAlert("⚠️ DEFENSE ALERT: Hostile pressure detected. Fortify remaining national sectors!");
                   }
                   setDashboardTab('CAMPAIGN');
                 }}
@@ -2273,6 +2751,8 @@ export default function App() {
             onElectionFinished={handleElectionFinished}
             darkMode={darkMode}
             coalitions={coalitions}
+            isAtWar={Object.values(diplomaticRelations).some((r: any) => r?.status === 'At War') || civilWarRisk > 40}
+            militaryReadiness={Math.max(10, 100 - civilWarRisk)}
           />
         )}
 
@@ -2565,7 +3045,7 @@ export default function App() {
                   <div className="p-3.5 bg-slate-900/60 border border-slate-850 rounded-2xl flex flex-wrap gap-4 items-center justify-center text-xs font-mono max-w-sm mx-auto">
                     <div className="text-left">
                       <div className="text-slate-450 text-[10px]">TREASURY BONUS</div>
-                      <div className="text-emerald-400 font-bold">+{pressTreasuryBonus.toLocaleString()} ₺</div>
+                      <div className="text-emerald-400 font-bold">+{(pressTreasuryBonus ?? 0).toLocaleString()} ₺</div>
                     </div>
                     <div className="border-l border-slate-800 h-6"></div>
                     <div className="text-left">

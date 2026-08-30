@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation, Bomb, Factory, Radio } from 'lucide-react';
+import { 
+  Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, 
+  Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation, 
+  Bomb, Factory, Radio, Anchor, Plane, DollarSign, ChevronRight, CheckCircle2,
+  Building2, X, RefreshCw, Ship, Waves, Skull, Check
+} from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
 import { Country, ScenarioYear } from '../types';
 import L from 'leaflet';
@@ -11,6 +16,8 @@ interface RegionUnit {
   type: 'loyal' | 'rebel' | 'contested';
   hp: number;
   maxHp: number;
+  fortificationLevel: number;
+  facilities: string[];
 }
 
 export interface PlayerArmy {
@@ -21,8 +28,9 @@ export interface PlayerArmy {
   hp: number;
   maxHp: number;
   attackPower: number;
-  status: 'idle' | 'marching' | 'sieging';
+  status: 'idle' | 'marching' | 'sieging' | 'embarked';
   targetRegionId?: string;
+  assignedTransportId?: string;
 }
 
 export interface HistoricalBomb {
@@ -60,253 +68,645 @@ export const HISTORICAL_BOMBS: HistoricalBomb[] = [
   { id: 'b_zeppelin_1914', name: 'Carbonit 50kg Torpedo Aerobomb', era: '1914', type: 'heavy', damage: 60, cost: 16000, description: 'Dirigible Zeppelin heavy fragmentation bomb for strategic bombardment.', icon: '💥' }
 ];
 
+export interface StrategicFacilityType {
+  id: string;
+  name: string;
+  type: 'nuclear' | 'airbase' | 'tank_factory' | 'naval_base' | 'barracks' | 'sam_shield';
+  cost: number;
+  icon: string;
+  description: string;
+  soldierBonus?: number;
+  tankBonus?: number;
+  aircraftBonus?: number;
+  warshipBonus?: number;
+  reserveBonus?: number;
+  nuclearBonus?: number;
+}
+
+export const STRATEGIC_FACILITIES: StrategicFacilityType[] = [
+  {
+    id: 'fac_nuclear',
+    name: 'Nuclear Reactor & ICBM Silo',
+    type: 'nuclear',
+    cost: 120000,
+    icon: '☢️',
+    description: 'Strategic nuclear enrichment facility and hardened ICBM launch silo. Provides maximum deterrence.',
+    nuclearBonus: 1,
+    reserveBonus: 10000
+  },
+  {
+    id: 'fac_airbase',
+    name: 'Strategic Air Base & Radar Network',
+    type: 'airbase',
+    cost: 45000,
+    icon: '✈️',
+    description: 'Heavy bomber airfield, stealth fighter hangars, and early warning long-range radar station.',
+    aircraftBonus: 50
+  },
+  {
+    id: 'fac_tank_factory',
+    name: 'Heavy Armor & Tank Assembly Plant',
+    type: 'tank_factory',
+    cost: 35000,
+    icon: '🛡️',
+    description: 'Modern main battle tank (MBT) and infantry fighting vehicle (IFV) fabrication complex.',
+    tankBonus: 100
+  },
+  {
+    id: 'fac_naval_base',
+    name: 'Naval Shipyard & Fleet Base',
+    type: 'naval_base',
+    cost: 50000,
+    icon: '⚓',
+    description: 'Deep-water harbor for frigates, destroyers, submarines, and amphibious assault transports.',
+    warshipBonus: 10
+  },
+  {
+    id: 'fac_barracks',
+    name: 'Military Barracks & Mobilization HQ',
+    type: 'barracks',
+    cost: 25000,
+    icon: '🪖',
+    description: 'Brigade-level professional barracks, drill training grounds, and rapid mobilization depot.',
+    soldierBonus: 40000,
+    reserveBonus: 120000
+  },
+  {
+    id: 'fac_sam_shield',
+    name: 'SAM Missile Defense & Air Shield',
+    type: 'sam_shield',
+    cost: 30000,
+    icon: '🎯',
+    description: 'Multi-layered surface-to-air missile battery guarding regional airspace against cruise/ballistic threats.'
+  }
+];
+
+// Land Border Adjacency Database for realistic overseas vs land war detection
+const LAND_BORDERS: Record<string, string[]> = {
+  TR: ['GR', 'BG', 'SY', 'IQ', 'IR', 'AZ', 'AM', 'GE'],
+  GR: ['TR', 'AL', 'MK', 'BG'],
+  BG: ['TR', 'GR', 'RO', 'RS', 'MK'],
+  FR: ['BE', 'LU', 'DE', 'CH', 'IT', 'ES', 'AD', 'MC'],
+  BE: ['FR', 'LU', 'DE', 'NL'],
+  DE: ['DK', 'PL', 'CZ', 'AT', 'CH', 'FR', 'LU', 'BE', 'NL'],
+  NL: ['DE', 'BE'],
+  IT: ['FR', 'CH', 'AT', 'SI', 'SM', 'VA'],
+  ES: ['PT', 'FR', 'AD', 'GI'],
+  PT: ['ES'],
+  PL: ['DE', 'CZ', 'SK', 'UA', 'BY', 'LT', 'RU'],
+  UA: ['RU', 'BY', 'PL', 'SK', 'HU', 'RO', 'MD'],
+  RU: ['NO', 'FI', 'EE', 'LV', 'LT', 'PL', 'BY', 'UA', 'GE', 'AZ', 'KZ', 'CN', 'MN', 'KP'],
+  US: ['CA', 'MX'],
+  CA: ['US'],
+  MX: ['US', 'GT', 'BZ'],
+  CN: ['RU', 'MN', 'KZ', 'KG', 'TJ', 'AF', 'PK', 'IN', 'NP', 'BT', 'MM', 'LA', 'VN', 'KP'],
+  IN: ['PK', 'CN', 'NP', 'BT', 'BD', 'MM'],
+  GB: ['IE'],
+  IE: ['GB'],
+  JP: [], // Island nation - 100% overseas
+  AU: [], // Island nation
+  NZ: [],
+  BR: ['UY', 'AR', 'PY', 'BO', 'PE', 'CO', 'VE', 'GY', 'SR', 'GF'],
+  AR: ['CL', 'BO', 'PY', 'BR', 'UY'],
+  IL: ['LB', 'SY', 'JO', 'EG', 'PS'],
+  SY: ['TR', 'IQ', 'JO', 'IL', 'LB'],
+  IR: ['TR', 'AM', 'AZ', 'TM', 'AF', 'PK', 'IQ'],
+  IQ: ['TR', 'SY', 'JO', 'SA', 'KW', 'IR'],
+  SA: ['JO', 'IQ', 'KW', 'QA', 'AE', 'OM', 'YE'],
+  EG: ['IL', 'PS', 'SD', 'LY']
+};
+
+export const checkIsLandAdjacent = (countryA: string, countryB: string): boolean => {
+  if (countryA === countryB) return true;
+  const neighbors = LAND_BORDERS[countryA];
+  if (!neighbors) return false;
+  return neighbors.includes(countryB);
+};
+
+// Universal Country Military Baseline Generator
+export const getCountryMilitaryBaselines = (countryId: string, scenario: ScenarioYear = '2026') => {
+  const baselines: Record<string, { soldiers: number; tanks: number; aircraft: number; warships: number; reserves: number; nukes: number }> = {
+    TR: { soldiers: 485000, tanks: 2229, aircraft: 1065, warships: 154, reserves: 880000, nukes: 0 },
+    US: { soldiers: 1350000, tanks: 5500, aircraft: 13200, warships: 480, reserves: 800000, nukes: 5044 },
+    FR: { soldiers: 205000, tanks: 222, aircraft: 1050, warships: 180, reserves: 41000, nukes: 290 },
+    DE: { soldiers: 181000, tanks: 295, aircraft: 610, warships: 65, reserves: 30000, nukes: 0 },
+    RU: { soldiers: 1150000, tanks: 12560, aircraft: 4180, warships: 598, reserves: 2000000, nukes: 5580 },
+    GB: { soldiers: 148000, tanks: 213, aircraft: 660, warships: 117, reserves: 37000, nukes: 225 },
+    CN: { soldiers: 2035000, tanks: 4950, aircraft: 3280, warships: 730, reserves: 510000, nukes: 500 },
+    JP: { soldiers: 247000, tanks: 1000, aircraft: 1450, warships: 155, reserves: 56000, nukes: 0 },
+    IT: { soldiers: 165000, tanks: 200, aircraft: 800, warships: 184, reserves: 20000, nukes: 0 },
+    ES: { soldiers: 120000, tanks: 327, aircraft: 500, warships: 130, reserves: 15000, nukes: 0 },
+    CA: { soldiers: 68000, tanks: 82, aircraft: 390, warships: 68, reserves: 27000, nukes: 0 },
+    AU: { soldiers: 59000, tanks: 59, aircraft: 460, warships: 52, reserves: 29000, nukes: 0 },
+    IN: { soldiers: 1450000, tanks: 4614, aircraft: 2210, warships: 295, reserves: 1155000, nukes: 164 },
+    BR: { soldiers: 360000, tanks: 469, aircraft: 665, warships: 112, reserves: 1340000, nukes: 0 },
+    BE: { soldiers: 25000, tanks: 40, aircraft: 110, warships: 18, reserves: 6000, nukes: 0 },
+    NL: { soldiers: 41000, tanks: 18, aircraft: 160, warships: 32, reserves: 7000, nukes: 0 },
+    PL: { soldiers: 216000, tanks: 850, aircraft: 460, warships: 86, reserves: 150000, nukes: 0 },
+    UA: { soldiers: 800000, tanks: 2100, aircraft: 320, warships: 25, reserves: 1200000, nukes: 0 },
+    GR: { soldiers: 142000, tanks: 1240, aircraft: 570, warships: 120, reserves: 220000, nukes: 0 },
+    IL: { soldiers: 170000, tanks: 2200, aircraft: 600, warships: 65, reserves: 465000, nukes: 90 },
+    IR: { soldiers: 610000, tanks: 1996, aircraft: 551, warships: 101, reserves: 350000, nukes: 0 },
+    SA: { soldiers: 257000, tanks: 1062, aircraft: 897, warships: 55, reserves: 0, nukes: 0 },
+    SU: { soldiers: 2800000, tanks: 18000, aircraft: 8500, warships: 450, reserves: 4000000, nukes: 50 },
+    DDR: { soldiers: 170000, tanks: 2800, aircraft: 380, warships: 60, reserves: 350000, nukes: 0 },
+    FRG: { soldiers: 495000, tanks: 4500, aircraft: 950, warships: 120, reserves: 850000, nukes: 0 }
+  };
+
+  if (baselines[countryId]) return baselines[countryId];
+
+  // Dynamic procedural baseline for any other sovereign nation
+  let seed = 0;
+  for (let i = 0; i < countryId.length; i++) seed += countryId.charCodeAt(i);
+  const soldiers = 30000 + (seed * 1500) % 180000;
+  const tanks = 50 + (seed * 12) % 650;
+  const aircraft = 40 + (seed * 8) % 320;
+  const warships = 10 + (seed * 3) % 45;
+  const reserves = soldiers * 2;
+  return { soldiers, tanks, aircraft, warships, reserves, nukes: 0 };
+};
+
+export interface WarSector {
+  id: string;
+  name: string;
+  enemyStrength: number;
+  maxEnemyStrength: number;
+  entrenchment: number;
+  controlledBy: 'player' | 'enemy' | 'contested';
+  assignedArmyIds: string[];
+  strategicValue: string;
+  icon: string;
+  isBeachhead?: boolean;
+}
+
 interface TacticalBattleViewProps {
   country: Country;
-  party: { name: string };
-  civilWarRisk?: number;
-  darkMode: boolean;
-  scenario?: ScenarioYear;
-  onBattleFinished: (success: boolean) => void;
+  party: any;
+  scenario: string;
+  onBattleFinished: (won: boolean) => void;
+  onUpdateRelations?: (relations: Record<string, any>) => void;
+  diplomaticRelations: Record<string, any>;
+  currentTreasury: number;
+  spendTreasury: (amount: number) => boolean;
+  addTreasury: (amount: number) => void;
+  darkMode?: boolean;
 }
 
 export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   country,
   party,
-  civilWarRisk = 50,
-  darkMode,
-  scenario = '2026',
-  onBattleFinished
+  scenario,
+  onBattleFinished,
+  onUpdateRelations,
+  diplomaticRelations = {},
+  currentTreasury,
+  spendTreasury,
+  addTreasury,
+  darkMode = true
 }) => {
-  const [regionStatus, setRegionStatus] = useState<Record<string, RegionUnit>>({});
-  const [armies, setArmies] = useState<PlayerArmy[]>([]);
-  const [militaryBudget, setMilitaryBudget] = useState<number>(180000);
-  const [selectedArmyId, setSelectedArmyId] = useState<string | null>(null);
-  const [recruitingProvinceId, setRecruitingProvinceId] = useState<string | null>(null);
+  const getCurrency = (countryId: string) => {
+    if (countryId === 'US') return '$';
+    if (countryId === 'TR') return '₺';
+    if (countryId === 'DE' || countryId === 'FR' || countryId === 'IT' || countryId === 'ES') return '€';
+    if (countryId === 'GB') return '£';
+    if (countryId === 'JP') return '¥';
+    return '$';
+  };
 
-  // Casualties and Army tracking state
-  const [loyalCasualties, setLoyalCasualties] = useState<number>(57039);
-  const [rebelCasualties, setRebelCasualties] = useState<number>(82392);
-  const [loyalArmyCount, setLoyalArmyCount] = useState<number>(420000);
-  const [rebelArmyCount, setRebelArmyCount] = useState<number>(280000);
+  const currency = getCurrency(country.id);
+
+  // Baseline Military
+  const initialBase = getCountryMilitaryBaselines(country.id, scenario as ScenarioYear);
+  const [extraSoldiers, setExtraSoldiers] = useState<number>(0);
+  const [extraTanks, setExtraTanks] = useState<number>(0);
+  const [extraAircraft, setExtraAircraft] = useState<number>(0);
+  const [extraWarships, setExtraWarships] = useState<number>(0);
+  const [extraReserves, setExtraReserves] = useState<number>(0);
+  const [extraNukes, setExtraNukes] = useState<number>(0);
+
+  // Naval Transports for Overseas Wars
+  const [navalTransports, setNavalTransports] = useState<number>(10);
+
+  const totalActiveSoldiers = initialBase.soldiers + extraSoldiers;
+  const totalTanks = initialBase.tanks + extraTanks;
+  const totalAircraft = initialBase.aircraft + extraAircraft;
+  const totalWarships = initialBase.warships + extraWarships;
+  const totalReserves = initialBase.reserves + extraReserves;
+  const totalNukes = initialBase.nukes + extraNukes;
+
+  // Active Wars discovery from diplomaticRelations
+  const activeWars = Object.entries(diplomaticRelations)
+    .filter(([_, rel]) => rel && (rel as any).status === 'At War')
+    .map(([cId, _]) => cId);
+
+  // Active Theater state: 'HOME' or an enemy country code (e.g. 'BE', 'RU', 'UA', etc.)
+  const [activeTheater, setActiveTheater] = useState<string>('HOME');
+
+  const enemyCountryId = activeTheater !== 'HOME' ? activeTheater : (activeWars[0] || null);
+  const isEnemyOverseas = enemyCountryId ? !checkIsLandAdjacent(country.id, enemyCountryId) : false;
+
+  // Country name lookup
+  const getCountryName = (cId: string) => {
+    const names: Record<string, string> = {
+      BE: 'Belgium',
+      FR: 'France',
+      TR: 'Turkey',
+      US: 'United States',
+      DE: 'Germany',
+      GB: 'United Kingdom',
+      RU: 'Russia',
+      UA: 'Ukraine',
+      IT: 'Italy',
+      ES: 'Spain',
+      GR: 'Greece',
+      PL: 'Poland',
+      CN: 'China',
+      JP: 'Japan',
+      IR: 'Iran',
+      IL: 'Israel',
+      SY: 'Syria',
+      CA: 'Canada',
+      AU: 'Australia',
+      IN: 'India',
+      BR: 'Brazil'
+    };
+    return names[cId] || cId;
+  };
+
+  const enemyBase = enemyCountryId ? getCountryMilitaryBaselines(enemyCountryId, scenario as ScenarioYear) : null;
+
+  // Frontline War Sectors for the active enemy theater
+  const [warSectors, setWarSectors] = useState<Record<string, WarSector[]>>({});
+  const [draggedArmyId, setDraggedArmyId] = useState<string | null>(null);
+  const [selectedFrontArmyId, setSelectedFrontArmyId] = useState<string | null>(null);
+
+  // Initialize or get sectors for enemy country
+  useEffect(() => {
+    if (!enemyCountryId) return;
+    if (warSectors[enemyCountryId]) return;
+
+    const eName = getCountryName(enemyCountryId);
+    const overseas = !checkIsLandAdjacent(country.id, enemyCountryId);
+
+    let defaultSectors: WarSector[] = [];
+    if (overseas) {
+      defaultSectors = [
+        { id: `sec_${enemyCountryId}_beach`, name: `${eName} Coastal Landing & Beachhead`, enemyStrength: 280, maxEnemyStrength: 280, entrenchment: 25, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Amphibious Bridgehead', icon: '🏖️', isBeachhead: true },
+        { id: `sec_${enemyCountryId}_naval`, name: `${eName} Naval Port & Fleet Base`, enemyStrength: 340, maxEnemyStrength: 340, entrenchment: 35, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Supply & Logistics Hub', icon: '⚓' },
+        { id: `sec_${enemyCountryId}_air`, name: `${eName} Forward Air Base & Radar`, enemyStrength: 310, maxEnemyStrength: 310, entrenchment: 30, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Air Superiority', icon: '✈️' },
+        { id: `sec_${enemyCountryId}_cap`, name: `${eName} Capital & High Command HQ`, enemyStrength: 460, maxEnemyStrength: 460, entrenchment: 50, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'National Command Center', icon: '🏛️' }
+      ];
+    } else {
+      defaultSectors = [
+        { id: `sec_${enemyCountryId}_1`, name: `${eName} Frontier Fortifications & Checkpoints`, enemyStrength: 260, maxEnemyStrength: 260, entrenchment: 40, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Border Defense', icon: '🚩' },
+        { id: `sec_${enemyCountryId}_2`, name: `${eName} Strategic Logistics & Supply Corridor`, enemyStrength: 320, maxEnemyStrength: 320, entrenchment: 30, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Logistics Hub', icon: '🛡️' },
+        { id: `sec_${enemyCountryId}_3`, name: `${eName} Central Air Base & Defense Grid`, enemyStrength: 300, maxEnemyStrength: 300, entrenchment: 35, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'Air Superiority', icon: '✈️' },
+        { id: `sec_${enemyCountryId}_4`, name: `${eName} Capital & High Command Citadel`, enemyStrength: 450, maxEnemyStrength: 450, entrenchment: 45, controlledBy: 'enemy', assignedArmyIds: [], strategicValue: 'National Command Center', icon: '🏛️' }
+      ];
+    }
+
+    setWarSectors(prev => ({ ...prev, [enemyCountryId]: defaultSectors }));
+  }, [enemyCountryId, warSectors, country.id]);
+
+  // Province built facilities mapping (provinceId -> facility ids[])
+  const [provinceFacilities, setProvinceFacilities] = useState<Record<string, string[]>>({});
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
+
+  // Player Armies state
+  const [armies, setArmies] = useState<PlayerArmy[]>([
+    { id: 'army_1', name: '1st Armored Corps', type: 'armored', regionId: country.regions[0]?.id || 'r1', hp: 280, maxHp: 280, attackPower: 80, status: 'idle' },
+    { id: 'army_2', name: '2nd Infantry Division', type: 'infantry', regionId: country.regions[1]?.id || 'r2', hp: 180, maxHp: 180, attackPower: 50, status: 'idle' },
+    { id: 'army_3', name: '3rd Special Operations Brigade', type: 'specops', regionId: country.regions[2]?.id || 'r3', hp: 200, maxHp: 200, attackPower: 65, status: 'idle' }
+  ]);
 
   // Ordnance & Bomb Arsenal
   const [inventoryBombs, setInventoryBombs] = useState<Record<string, number>>({
-    [scenario === '1950' ? 'b_napalm_1950' : scenario === '1936' ? 'b_sc250_1936' : scenario === '1920' ? 'b_cooper_1920' : scenario === '1914' ? 'b_putilov_1914' : 'b_jdam_2026']: 2
+    [scenario === '1950' ? 'b_napalm_1950' : scenario === '1936' ? 'b_sc250_1936' : scenario === '1920' ? 'b_cooper_1920' : scenario === '1914' ? 'b_putilov_1914' : 'b_jdam_2026']: 3,
+    b_sdb_2026: 2
   });
   const [showOrdnanceFactory, setShowOrdnanceFactory] = useState<boolean>(false);
-  const [selectedBombToDrop, setSelectedBombToDrop] = useState<string | null>(null);
 
   const [battleLogs, setBattleLogs] = useState<string[]>([
-    'Tactical command center active! You can recruit new armies from provinces, manufacture era-specific bombs, and issue attack or siege orders.'
+    `🛡️ Strategic Command and National Defense Operations Center online. Build tactical facilities, construct silos, commission transport flotillas, and manage military theaters.`
   ]);
-  const [mapMode, setMapMode] = useState<'GIS' | 'CARDS'>('GIS');
+
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const armyMarkersLayerRef = useRef<L.LayerGroup | null>(null);
+  const facilityMarkersLayerRef = useRef<L.LayerGroup | null>(null);
   const regionCentersRef = useRef<Record<string, { lat: number; lng: number }>>({});
-  const regionStatusRef = useRef<Record<string, RegionUnit>>({});
-  const armiesRef = useRef<PlayerArmy[]>([]);
   const [centersReady, setCentersReady] = useState(false);
-  
-  useEffect(() => {
-    regionStatusRef.current = regionStatus;
-  }, [regionStatus]);
 
+  const addLog = (msg: string) => {
+    setBattleLogs(prev => [msg, ...prev.slice(0, 24)]);
+  };
+
+  // Load geojson for home country
   useEffect(() => {
-    armiesRef.current = armies;
-  }, [armies]);
-  
+    let isMounted = true;
+
+    const fetchJsonSafely = async (url: string) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) return null;
+        const text = await res.text();
+        if (text.trim().startsWith('<')) return null;
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    };
+
+    const countryGeoJsonUrls: Record<string, string[]> = {
+      TR: [
+        'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json',
+        '/world_admin0_50m.geojson'
+      ],
+      DE: [
+        'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json',
+        '/world_admin0_50m.geojson'
+      ],
+      US: [
+        'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
+        '/world_admin0_50m.geojson'
+      ],
+      RU: ['/russia.geojson', '/world_admin0_50m.geojson'],
+      UA: ['/ukraine.geojson', '/world_admin0_50m.geojson'],
+      SE: ['/sweden.geojson', '/world_admin0_50m.geojson'],
+      PT: ['/portugal.geojson', '/world_admin0_50m.geojson'],
+      GR: ['/greece.geojson', '/world_admin0_50m.geojson'],
+      IS: ['/iceland.geojson', '/world_admin0_50m.geojson'],
+      CL: ['/chile.geojson', '/world_admin0_50m.geojson'],
+      TW: ['/taiwan.geojson', '/world_admin0_50m.geojson'],
+      SA: ['/saudi-arabia.geojson', '/world_admin0_50m.geojson'],
+      IR: ['/iran.geojson', '/world_admin0_50m.geojson'],
+      IL: ['/israel.geojson', '/world_admin0_50m.geojson'],
+      PS: ['/palestine.geojson', '/world_admin0_50m.geojson'],
+      EG: ['/egypt-provinces.geojson', '/world_admin0_50m.geojson'],
+      BR: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson', '/world_admin0_50m.geojson'],
+      JP: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson', '/world_admin0_50m.geojson'],
+      GB: ['https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json', '/world_admin0_50m.geojson'],
+      CA: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson', '/world_admin0_50m.geojson'],
+      ZA: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson', '/world_admin0_50m.geojson'],
+      IN: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/india.geojson', '/world_admin0_50m.geojson'],
+      MX: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/mexico.geojson', '/world_admin0_50m.geojson'],
+      ES: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson', '/world_admin0_50m.geojson'],
+      AU: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/australia.geojson', '/world_admin0_50m.geojson'],
+      IT: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson', '/world_admin0_50m.geojson'],
+      ID: ['https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson', '/world_admin0_50m.geojson'],
+      KR: ['https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json', '/world_admin0_50m.geojson'],
+      AR: ['https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson', '/world_admin0_50m.geojson'],
+      FR: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson', '/world_admin0_50m.geojson'],
+      RO: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson', '/world_admin0_50m.geojson'],
+      HU: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson', '/world_admin0_50m.geojson'],
+      PL: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/poland.geojson', '/world_admin0_50m.geojson'],
+      CN: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/china.geojson', '/world_admin0_50m.geojson']
+    };
+
+    const loadCountryGeoJson = async () => {
+      const candidates = countryGeoJsonUrls[country.id] || [
+        `/${country.name.toLowerCase().replace(/\s+/g, '-')}.geojson`,
+        '/world_admin0_50m.geojson',
+        'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson'
+      ];
+
+      for (const url of candidates) {
+        const data = await fetchJsonSafely(url);
+        if (isMounted && data && (data.features || data.type === 'FeatureCollection')) {
+          setGeoJsonData(data);
+          return;
+        }
+      }
+    };
+
+    loadCountryGeoJson();
+    return () => { isMounted = false; };
+  }, [country.id, country.name]);
+
   const cleanupMap = () => {
     if (mapInstanceRef.current) {
       const map = mapInstanceRef.current;
-      
-      try { if(map.stop) map.stop(); map.off(); map.remove(); } catch(e) {}
-
+      try { if (map.stop) map.stop(); map.off(); map.remove(); } catch(e) {}
       mapInstanceRef.current = null;
       geoJsonLayerRef.current = null;
       tileLayerRef.current = null;
-      armyMarkersLayerRef.current = null;
+      facilityMarkersLayerRef.current = null;
     }
   };
 
+  // Initialize Home Leaflet Map
   useEffect(() => {
+    if (activeTheater !== 'HOME') return;
+    if (!mapContainerRef.current) return;
+    cleanupMap();
+
+    const map = L.map(mapContainerRef.current, {
+      center: country.coordinates || [39.0, 35.0],
+      zoom: country.zoom || 5,
+      minZoom: 2,
+      maxZoom: 14,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+
+    const tiles = L.tileLayer(tileUrl, {
+      subdomains: 'abcd',
+      maxZoom: 18,
+      maxNativeZoom: 13,
+      noWrap: true
+    }).addTo(map);
+    tileLayerRef.current = tiles;
+
+    facilityMarkersLayerRef.current = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+
+    setTimeout(() => {
+      try { if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize(); } catch(e) {}
+    }, 200);
+
     return () => cleanupMap();
-  }, []);
+  }, [darkMode, country, activeTheater]);
 
-  // Initialize board
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [gameSpeed, setGameSpeed] = useState<number>(1);
-  const [gameDate, setGameDate] = useState<Date>(new Date(Number(scenario) || 2026, 0, 1));
-
+  // Render GeoJSON on Home Map
   useEffect(() => {
-    if (isInitialized) return;
-    const regions = country.regions || [];
-    
-    if (mapMode === 'GIS') {
-       if (!centersReady) return;
+    if (activeTheater !== 'HOME') return;
+    if (!mapInstanceRef.current || !geoJsonData) return;
+
+    if (geoJsonLayerRef.current) {
+      try { mapInstanceRef.current.removeLayer(geoJsonLayerRef.current); } catch(e) {}
     }
 
-    const initialStatus: Record<string, RegionUnit> = {};
-    const isUnderCivilWar = civilWarRisk >= 40;
-    
-    if (isUnderCivilWar) {
-      if (mapMode === 'GIS') {
-        const epicenterIdx = Math.floor(Math.random() * (regions.length - 1)) + 1;
-        const epicenterId = regions[epicenterIdx].id;
-        const epiCenterCoords = regionCentersRef.current[epicenterId] || {lat: 0, lng: 0};
-        
-        const getDist = (id: string) => {
-           const c = regionCentersRef.current[id];
-           if (!c) return 999;
-           return Math.sqrt(Math.pow(c.lat - epiCenterCoords.lat, 2) + Math.pow(c.lng - epiCenterCoords.lng, 2));
-        };
+    const centers: Record<string, { lat: number; lng: number }> = {};
 
-        const sorted = [...regions].sort((a,b) => getDist(a.id) - getDist(b.id));
-        const rebelProportion = Math.max(0.15, Math.min(0.7, (civilWarRisk - 30) / 100)); 
-        const rebelCount = Math.max(1, Math.floor(regions.length * rebelProportion)); 
-        
-        sorted.forEach((reg, idx) => {
-          const isRebel = idx < rebelCount;
-          initialStatus[reg.id] = {
-            regionId: reg.id,
-            type: isRebel ? 'rebel' : 'loyal',
-            hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
-            maxHp: isRebel ? 250 : 200,
-          };
+    const geoLayer = L.geoJSON(geoJsonData, {
+      style: (feature: any) => {
+        const featureName = getFeatureName(feature);
+        const norm = normalizeName(featureName);
+        const regionId = getRegionIdFromNormalizedName(norm, country.id);
+        const isSelected = selectedProvinceId === regionId;
+        const hasNuke = provinceFacilities[regionId]?.includes('fac_nuclear');
+
+        return {
+          fillColor: isSelected ? '#3b82f6' : hasNuke ? '#eab308' : (darkMode ? '#1e293b' : '#334155'),
+          fillOpacity: isSelected ? 0.85 : 0.65,
+          color: isSelected ? '#60a5fa' : '#ffffff',
+          weight: isSelected ? 2.5 : 1.2,
+          opacity: 1
+        };
+      },
+      onEachFeature: (feature: any, layer: L.Layer) => {
+        const featureName = getFeatureName(feature);
+        const norm = normalizeName(featureName);
+        const regionId = getRegionIdFromNormalizedName(norm, country.id);
+
+        try {
+          const bounds = (layer as any).getBounds();
+          if (bounds && bounds.isValid()) {
+            const center = bounds.getCenter();
+            centers[regionId] = { lat: center.lat, lng: center.lng };
+          }
+        } catch(e) {}
+
+        layer.on('click', () => {
+          setSelectedProvinceId(regionId);
+          playSound('click');
         });
-      } else {
-        const rebelProportion = Math.max(0.15, Math.min(0.7, (civilWarRisk - 30) / 100)); 
-        regions.forEach((reg, idx) => {
-          const isRebel = idx > 0 && Math.random() < rebelProportion;
-          initialStatus[reg.id] = {
-            regionId: reg.id,
-            type: isRebel ? 'rebel' : 'loyal',
-            hp: isRebel ? 160 + Math.floor(Math.random() * 80) : 200,
-            maxHp: isRebel ? 250 : 200,
-          };
-        });
+
+        const facilities = provinceFacilities[regionId] || [];
+        const facilityIcons = facilities.map(fId => {
+          const fac = STRATEGIC_FACILITIES.find(f => f.id === fId);
+          return fac ? fac.icon : '';
+        }).join(' ');
+
+        layer.bindTooltip(`
+          <div style="font-family: sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; padding: 3px 6px;">
+            <div>🏢 ${featureName}</div>
+            ${facilityIcons ? `<div style="margin-top: 2px; font-size: 13px;">${facilityIcons}</div>` : '<div style="font-size: 9px; color: #94a3b8;">Click: Build Facility / Recruit</div>'}
+          </div>
+        `, { sticky: true, className: 'leaflet-tactical-tooltip' });
       }
-    } else {
-      // Sovereign Peace: all regions loyal, ready for national defense
-      regions.forEach((reg) => {
-        initialStatus[reg.id] = {
-          regionId: reg.id,
-          type: 'loyal',
-          hp: 200,
-          maxHp: 200,
-        };
-      });
-    }
+    }).addTo(mapInstanceRef.current);
 
-    setRegionStatus(initialStatus);
+    geoJsonLayerRef.current = geoLayer;
+    regionCentersRef.current = centers;
+    setCentersReady(true);
 
-    // Initial standing national defense armies in loyal provinces
-    const loyalProvinces = regions.filter(r => initialStatus[r.id]?.type === 'loyal');
-    const initialArmies: PlayerArmy[] = [];
-    if (loyalProvinces.length > 0) {
-      initialArmies.push({
-        id: 'army-1',
-        name: '1st Infantry Division',
-        type: 'infantry',
-        regionId: loyalProvinces[0].id,
-        hp: 180,
-        maxHp: 180,
-        attackPower: 45,
-        status: 'idle'
-      });
-    }
-    if (loyalProvinces.length > 1) {
-      initialArmies.push({
-        id: 'army-2',
-        name: '1st Armored Brigade',
-        type: 'armored',
-        regionId: loyalProvinces[1].id,
-        hp: 280,
-        maxHp: 280,
-        attackPower: 75,
-        status: 'idle'
-      });
-    } else if (loyalProvinces.length === 1) {
-      initialArmies.push({
-        id: 'army-2',
-        name: 'Special Operations Forces',
-        type: 'specops',
-        regionId: loyalProvinces[0].id,
-        hp: 200,
-        maxHp: 200,
-        attackPower: 60,
-        status: 'idle'
-      });
-    }
+    try {
+      mapInstanceRef.current.fitBounds(geoLayer.getBounds(), { padding: [20, 20] });
+    } catch(e) {}
+  }, [geoJsonData, country, selectedProvinceId, provinceFacilities, darkMode, activeTheater]);
 
-    setArmies(initialArmies);
-    setIsInitialized(true);
-  }, [country, isInitialized, mapMode, centersReady, civilWarRisk, scenario]);
-
-
+  // Update Facility Pins
   useEffect(() => {
-    if (!isPlaying || !isInitialized) return;
-    const intervalId = setInterval(() => {
-      // Advance date
-      setGameDate(prev => {
-        const nextDate = new Date(prev);
-        nextDate.setDate(nextDate.getDate() + 1);
-        return nextDate;
-      });
-      
-      // Auto battle
-      setRegionStatus(prev => {
-        const next = { ...prev };
-        const rebels = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'rebel');
-        const loyals = (Object.values(next) as RegionUnit[]).filter(r => r.type === 'loyal');
-        if (rebels.length === 0 || loyals.length === 0) {
-           setIsPlaying(false);
-           return next;
-        }
-        
-        // Random loyal attacks
-        if (Math.random() < 0.3) {
-            const randomRebel = rebels[Math.floor(Math.random() * rebels.length)];
-            const damageDealt = 20 + Math.floor(Math.random() * 30);
-            const newHp = Math.max(0, randomRebel.hp - damageDealt);
-            if (newHp === 0) {
-               addLog(`🟢 ${country.regions.find(r => r.id === randomRebel.regionId)?.name} has been liberated from rebel control!`);
-               next[randomRebel.regionId] = { ...randomRebel, hp: randomRebel.maxHp, type: 'loyal' };
-            } else {
-               next[randomRebel.regionId] = { ...randomRebel, hp: newHp };
-            }
-        }
-        
-        // Random rebel attacks
-        if (Math.random() < 0.3) {
-            const targetLoyal = loyals[Math.floor(Math.random() * loyals.length)];
-            const rebelDamage = 20 + Math.floor(Math.random() * 30);
-            const newHp = Math.max(0, targetLoyal.hp - rebelDamage);
-            if (newHp === 0) {
-               addLog(`💀 We lost control of ${country.regions.find(r => r.id === targetLoyal.regionId)?.name}! Rebels took over.`);
-               next[targetLoyal.regionId] = { ...targetLoyal, hp: 150, type: 'rebel' };
-            } else {
-               next[targetLoyal.regionId] = { ...targetLoyal, hp: newHp };
-            }
-        }
-        
-        return next;
-      });
-      
-    }, 1000 / gameSpeed);
-    
-    return () => clearInterval(intervalId);
-  }, [isPlaying, gameSpeed, isInitialized]);
+    if (activeTheater !== 'HOME') return;
+    if (!mapInstanceRef.current || !facilityMarkersLayerRef.current) return;
+    facilityMarkersLayerRef.current.clearLayers();
 
-  const addLog = (msg: string) => {
-    setBattleLogs(prev => [msg, ...prev].slice(0, 8));
+    Object.entries(provinceFacilities).forEach(([regId, rawFacIds]) => {
+      const facIds = (rawFacIds as string[]) || [];
+      if (!facIds || facIds.length === 0) return;
+      const center = regionCentersRef.current[regId];
+      if (!center) return;
+
+      const iconsHtml = facIds.map(fId => {
+        const fac = STRATEGIC_FACILITIES.find(f => f.id === fId);
+        return fac ? `<span style="font-size: 15px; margin: 0 1px;">${fac.icon}</span>` : '';
+      }).join('');
+
+      const customIcon = L.divIcon({
+        className: 'custom-facility-pin',
+        html: `
+          <div style="
+            background: rgba(15, 23, 42, 0.88); 
+            border: 1px solid #38bdf8; 
+            border-radius: 9999px; 
+            padding: 2px 6px; 
+            display: flex; 
+            align-items: center; 
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+            cursor: pointer;
+            pointer-events: auto;
+          ">
+            ${iconsHtml}
+          </div>
+        `,
+        iconSize: [40, 24],
+        iconAnchor: [20, 12]
+      });
+
+      const marker = L.marker([center.lat, center.lng], { icon: customIcon });
+      marker.on('click', () => {
+        setSelectedProvinceId(regId);
+        playSound('click');
+      });
+      marker.addTo(facilityMarkersLayerRef.current!);
+    });
+  }, [provinceFacilities, centersReady, activeTheater]);
+
+  // Handle Construction of Strategic Facility
+  const handleConstructFacility = (facilityId: string) => {
+    if (!selectedProvinceId) return;
+    const fac = STRATEGIC_FACILITIES.find(f => f.id === facilityId);
+    if (!fac) return;
+
+    if (currentTreasury < fac.cost) {
+      playSound('error');
+      addLog(`⚠️ Insufficient Treasury Funds: ${fac.name} requires ${currency}${fac.cost.toLocaleString()}.`);
+      return;
+    }
+
+    const regName = country.regions.find(r => r.id === selectedProvinceId)?.name || selectedProvinceId;
+    const existing = provinceFacilities[selectedProvinceId] || [];
+
+    if (existing.includes(facilityId) && facilityId !== 'fac_nuclear') {
+      playSound('error');
+      addLog(`⚠️ This region (${regName}) already operates a ${fac.name}.`);
+      return;
+    }
+
+    const ok = spendTreasury(fac.cost);
+    if (!ok) return;
+
+    // Apply bonuses
+    if (fac.soldierBonus) setExtraSoldiers(prev => prev + fac.soldierBonus!);
+    if (fac.tankBonus) setExtraTanks(prev => prev + fac.tankBonus!);
+    if (fac.aircraftBonus) setExtraAircraft(prev => prev + fac.aircraftBonus!);
+    if (fac.warshipBonus) setExtraWarships(prev => prev + fac.warshipBonus!);
+    if (fac.reserveBonus) setExtraReserves(prev => prev + fac.reserveBonus!);
+    if (fac.nuclearBonus) setExtraNukes(prev => prev + fac.nuclearBonus!);
+
+    setProvinceFacilities(prev => ({
+      ...prev,
+      [selectedProvinceId]: [...(prev[selectedProvinceId] || []), facilityId]
+    }));
+
+    playSound('success');
+    addLog(`🏗️ CONSTRUCTION COMPLETE: ${regName} commissioned a ${fac.icon} ${fac.name}! (${currency}${fac.cost.toLocaleString()})`);
   };
 
+  // Commission Naval Transports
+  const handleCommissionTransports = () => {
+    const cost = 20000;
+    if (currentTreasury < cost) {
+      playSound('error');
+      addLog(`⚠️ Insufficient Funds: Commissioning 5x Amphibious Transport Ships requires ${currency}20,000.`);
+      return;
+    }
+    const ok = spendTreasury(cost);
+    if (!ok) return;
+    setNavalTransports(prev => prev + 5);
+    playSound('success');
+    addLog(`⚓ NAVAL LOGISTICS: 5x Amphibious Transport Ships added to sovereign sealift fleet!`);
+  };
+
+  // Recruit Army Division
   const handleRecruitArmy = (regionId: string, unitType: 'infantry' | 'armored' | 'specops' | 'artillery') => {
     const region = country.regions.find(r => r.id === regionId);
     if (!region) return;
@@ -319,21 +719,23 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     if (unitType === 'armored') {
       cost = 35000; hp = 280; atk = 75; typeName = 'Armored Brigade';
     } else if (unitType === 'specops') {
-      cost = 25000; hp = 200; atk = 60; typeName = 'Special Operations Forces';
+      cost = 25000; hp = 200; atk = 60; typeName = 'Special Operations Group';
     } else if (unitType === 'artillery') {
-      cost = 30000; hp = 150; atk = 85; typeName = 'Artillery Regiment';
+      cost = 30000; hp = 150; atk = 85; typeName = 'Heavy Artillery Regiment';
     }
 
-    if (militaryBudget < cost) {
+    if (currentTreasury < cost) {
       playSound('error');
-      addLog(`⚠️ Insufficient Military Budget! More funds required to recruit unit.`);
+      addLog(`⚠️ Insufficient Treasury: Deploying ${typeName} requires ${currency}${cost.toLocaleString()}.`);
       return;
     }
 
-    setMilitaryBudget(prev => prev - cost);
+    const ok = spendTreasury(cost);
+    if (!ok) return;
+
     const newArmy: PlayerArmy = {
       id: `army-${Date.now()}`,
-      name: `${armies.length + 1}. ${typeName}`,
+      name: `${armies.length + 1}th ${typeName}`,
       type: unitType,
       regionId: regionId,
       hp: hp,
@@ -344,1023 +746,854 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
     setArmies(prev => [...prev, newArmy]);
     playSound('success');
-    addLog(`🪖 ${region.name} New unit recruited and deployed!`);
-    setRecruitingProvinceId(null);
+    addLog(`🪖 ${region.name}: New ${typeName} mobilized and ready for strategic deployment!`);
   };
 
+  // Manufacture Historical Ordnance / Bomb
   const handleManufactureBomb = (bombId: string) => {
     const bomb = HISTORICAL_BOMBS.find(b => b.id === bombId);
     if (!bomb) return;
-    if (militaryBudget < bomb.cost) {
+    if (currentTreasury < bomb.cost) {
       playSound('error');
-      addLog(`⚠️ Insufficient Military Budget! ₺${bomb.cost.toLocaleString()} required to produce ${bomb.name}.`);
+      addLog(`⚠️ Insufficient Budget: ${bomb.name} production requires ${currency}${bomb.cost.toLocaleString()}.`);
       return;
     }
-    setMilitaryBudget(prev => prev - bomb.cost);
+
+    const ok = spendTreasury(bomb.cost);
+    if (!ok) return;
+
     setInventoryBombs(prev => ({
       ...prev,
       [bombId]: (prev[bombId] || 0) + 1
     }));
     playSound('success');
-    addLog(`🏭 MANUFACTURED: 1x ${bomb.name} ready for aerial deployment!`);
+    addLog(`🏭 ORDNANCE ARSENAL: 1x ${bomb.icon} ${bomb.name} manufactured and stockpiled!`);
   };
 
-  const handleLaunchBomb = (bombId: string, targetRegionId: string) => {
+  // Toggle Embarkation onto Naval Transports
+  const handleToggleEmbark = (armyId: string) => {
+    const army = armies.find(a => a.id === armyId);
+    if (!army) return;
+
+    if (army.status === 'embarked') {
+      // Disembark
+      setArmies(prev => prev.map(a => a.id === armyId ? { ...a, status: 'idle' } : a));
+      addLog(`⚓ ${army.name} disembarked and stationed on mainland territory.`);
+      playSound('click');
+    } else {
+      // Embark
+      const currentlyEmbarked = armies.filter(a => a.status === 'embarked').length;
+      if (currentlyEmbarked >= navalTransports) {
+        playSound('error');
+        addLog(`⚠️ Sealift Capacity Exceeded: You have ${navalTransports} transport ships. Commission more transports in Naval Shipyards.`);
+        return;
+      }
+      setArmies(prev => prev.map(a => a.id === armyId ? { ...a, status: 'embarked' } : a));
+      addLog(`🚢 ${army.name} embarked onto Amphibious Transport Flotilla for overseas operations.`);
+      playSound('success');
+    }
+  };
+
+  // Combat Assault / Action on Enemy Sector in active theater
+  const handleAssaultSector = (sectorId: string, armyId?: string) => {
+    if (!enemyCountryId) return;
+    const currentSectors = warSectors[enemyCountryId] || [];
+    const sectorIndex = currentSectors.findIndex(s => s.id === sectorId);
+    if (sectorIndex === -1) return;
+
+    const sector = currentSectors[sectorIndex];
+    if (sector.controlledBy === 'player') {
+      addLog(`ℹ️ ${sector.name} sector is already secured by allied forces.`);
+      return;
+    }
+
+    // Select attacking army
+    const attacker = armies.find(a => a.id === (armyId || selectedFrontArmyId)) || armies[0];
+    if (!attacker) {
+      playSound('error');
+      addLog(`⚠️ No active combat division available to execute the assault.`);
+      return;
+    }
+
+    // Check overseas transport requirement
+    if (isEnemyOverseas && attacker.status !== 'embarked') {
+      playSound('error');
+      addLog(`⚠️ OVERSEAS THEATER RESTRICTION: ${getCountryName(enemyCountryId)} is overseas. You must EMBARK this division onto Naval Transports before launching an amphibious assault!`);
+      return;
+    }
+
+    // If overseas and beachhead not captured yet, must attack beachhead first
+    if (isEnemyOverseas && !sector.isBeachhead) {
+      const beachSector = currentSectors.find(s => s.isBeachhead);
+      if (beachSector && beachSector.controlledBy !== 'player') {
+        playSound('error');
+        addLog(`⚠️ AMPHIBIOUS DOCTRINE: You must capture and secure the Coastal Landing Beachhead before advancing deep inland!`);
+        return;
+      }
+    }
+
+    // Roll damage calculation
+    const damageDealt = Math.round(attacker.attackPower * (0.85 + Math.random() * 0.45));
+    const counterDamage = Math.round(20 * (1 + sector.entrenchment / 100));
+
+    const newStrength = Math.max(0, sector.enemyStrength - damageDealt);
+    const newEntrenchment = Math.max(0, sector.entrenchment - 15);
+    const isCaptured = newStrength === 0;
+
+    // Update Army HP
+    setArmies(prev => prev.map(a => {
+      if (a.id === attacker.id) {
+        return { ...a, hp: Math.max(10, a.hp - counterDamage) };
+      }
+      return a;
+    }));
+
+    // Update Sector
+    const updatedSectors = [...currentSectors];
+    updatedSectors[sectorIndex] = {
+      ...sector,
+      enemyStrength: newStrength,
+      entrenchment: newEntrenchment,
+      controlledBy: isCaptured ? 'player' : 'contested',
+      assignedArmyIds: Array.from(new Set([...sector.assignedArmyIds, attacker.id]))
+    };
+
+    setWarSectors(prev => ({ ...prev, [enemyCountryId]: updatedSectors }));
+    playSound(isCaptured ? 'win' : 'explosion');
+
+    if (isCaptured) {
+      addLog(`🚩 SECTOR CAPTURED: ${attacker.name} broke enemy fortifications in ${sector.name}!`);
+      
+      // Check if all sectors captured
+      const remainingEnemy = updatedSectors.filter(s => s.controlledBy !== 'player');
+      if (remainingEnemy.length === 0) {
+        // Victory in War!
+        addLog(`🏆 TOTAL MILITARY TRIUMPH: ${getCountryName(enemyCountryId)} High Command capitulated and signed peace treaty!`);
+        addTreasury(150000);
+        
+        if (onUpdateRelations) {
+          onUpdateRelations({
+            ...diplomaticRelations,
+            [enemyCountryId]: { status: 'Victorious Peace / Treaty', opinion: 35, alliance: false }
+          });
+        }
+        onBattleFinished(true);
+      }
+    } else {
+      addLog(`⚔️ ENGAGEMENT: ${attacker.name} -> assaulted ${sector.name}! (${damageDealt} damage, Enemy Remaining HP: ${newStrength})`);
+    }
+  };
+
+  // Deploy Historical Bomb / Ordnance Strike on Enemy Sector
+  const handleDeployBombOnSector = (sectorId: string, bombId: string) => {
+    if (!enemyCountryId) return;
     const bomb = HISTORICAL_BOMBS.find(b => b.id === bombId);
-    const count = inventoryBombs[bombId] || 0;
-    if (!bomb || count <= 0) return;
+    if (!bomb || (inventoryBombs[bombId] || 0) <= 0) {
+      playSound('error');
+      addLog(`⚠️ Out of stock for ${bomb ? bomb.name : 'this munition'}.`);
+      return;
+    }
 
-    const target = regionStatus[targetRegionId];
-    if (!target || target.type !== 'rebel') return;
+    const currentSectors = warSectors[enemyCountryId] || [];
+    const sectorIndex = currentSectors.findIndex(s => s.id === sectorId);
+    if (sectorIndex === -1) return;
 
-    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
+    const sector = currentSectors[sectorIndex];
+    const blastDamage = Math.round(bomb.damage * (1.1 + Math.random() * 0.3));
+    const newStrength = Math.max(0, sector.enemyStrength - blastDamage);
+    const isCaptured = newStrength === 0;
+
+    // Deduct bomb
     setInventoryBombs(prev => ({
       ...prev,
       [bombId]: Math.max(0, (prev[bombId] || 0) - 1)
     }));
-    setSelectedBombToDrop(null);
 
-    const damage = bomb.damage;
-    const newHp = Math.max(0, target.hp - damage);
-
-    // Increase casualties!
-    const addedEnemyCasualties = Math.floor(damage * 180 + Math.random() * 400);
-    const addedFriendlyCasualties = Math.floor(Math.random() * 30);
-    setRebelCasualties(prev => prev + addedEnemyCasualties);
-    setLoyalCasualties(prev => prev + addedFriendlyCasualties);
-    setRebelArmyCount(prev => Math.max(0, prev - Math.floor(addedEnemyCasualties * 0.9)));
-
-    playSound('explosion');
-    addLog(`🚀 BOMB STRIKE: Deployed ${bomb.name} on ${regName}! ${damage} Demolition Damage (+${addedEnemyCasualties.toLocaleString()} enemy casualties).`);
-
-    setRegionStatus(prev => {
-      const next = { ...prev };
-      if (newHp === 0) {
-        addLog(`🟢 OBLITERATION: Rebel garrison eradicated in ${regName}! Province secured.`);
-        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
-      } else {
-        next[targetRegionId] = { ...target, hp: newHp };
-      }
-      return next;
-    });
-  };
-
-  const handleAttack = (targetRegionId: string) => {
-    if (selectedBombToDrop) {
-      handleLaunchBomb(selectedBombToDrop, targetRegionId);
-      return;
-    }
-    const army = selectedArmyId ? armies.find(a => a.id === selectedArmyId) : armies[0];
-    if (army) {
-      handleOrderAssault(army.id, targetRegionId);
-    } else {
-      handleCallAirStrike(targetRegionId);
-    }
-  };
-
-  const handleOrderAssault = (armyId: string, targetRegionId: string) => {
-    const army = armies.find(a => a.id === armyId);
-    const target = regionStatus[targetRegionId];
-    if (!army || !target || target.type !== 'rebel') return;
-
-    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
-    const damageDealt = Math.floor(army.attackPower * (0.8 + Math.random() * 0.4));
-    const newHp = Math.max(0, target.hp - damageDealt);
-
-    // Dynamic casualties update
-    const addedRebelLosses = Math.floor(damageDealt * 120 + Math.random() * 300);
-    const addedLoyalLosses = Math.floor(180 + Math.random() * 250);
-    setRebelCasualties(prev => prev + addedRebelLosses);
-    setLoyalCasualties(prev => prev + addedLoyalLosses);
-    setRebelArmyCount(prev => Math.max(0, prev - Math.floor(addedRebelLosses * 0.7)));
-    setLoyalArmyCount(prev => Math.max(0, prev - Math.floor(addedLoyalLosses * 0.7)));
-
-    playSound('battle');
-    addLog(`⚔️ ${army.name} engaged rebel defenders in ${regName}!`);
-
-    setRegionStatus(prev => {
-      const next = { ...prev };
-      if (newHp === 0) {
-        addLog(`🟢 ASSAULT SUCCESSFUL: Province liberated from rebel control!`);
-        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
-      } else {
-        next[targetRegionId] = { ...target, hp: newHp };
-      }
-      return next;
-    });
-
-    const rebelDamage = Math.floor(20 + Math.random() * 25);
-    const newArmyHp = Math.max(0, army.hp - rebelDamage);
-
-    setArmies(prev => prev.map(a => {
-      if (a.id === armyId) {
-        if (newArmyHp === 0) {
-          addLog(`💥 HEAVY LOSSES: Unit destroyed in rebel skirmish!`);
-          return null;
-        }
-        return { ...a, hp: newArmyHp, regionId: targetRegionId, status: 'idle' };
-      }
-      return a;
-    }).filter(Boolean) as PlayerArmy[]);
-  };
-
-  const handleOrderSiege = (armyId: string, targetRegionId: string) => {
-    const army = armies.find(a => a.id === armyId);
-    const target = regionStatus[targetRegionId];
-    if (!army || !target || target.type !== 'rebel') return;
-
-    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
-    setArmies(prev => prev.map(a => a.id === armyId ? { ...a, status: 'sieging', targetRegionId, regionId: targetRegionId } : a));
-    playSound('success');
-    addLog(`🛡️ ${army.name}, ${regName} initiated a strategic siege! Rebels are cut off from supplies.`);
-  };
-
-  const handleCallAirStrike = (targetRegionId: string) => {
-    const cost = 20000;
-    if (militaryBudget < cost) {
-      playSound('error');
-      addLog(`⚠️ Insufficient Military Budget! Funds required for Precision Air Strike.`);
-      return;
-    }
-
-    const target = regionStatus[targetRegionId];
-    if (!target || target.type !== 'rebel') return;
-
-    const regName = country.regions.find(r => r.id === targetRegionId)?.name || targetRegionId;
-    setMilitaryBudget(prev => prev - cost);
-    const damage = 55;
-    const newHp = Math.max(0, target.hp - damage);
-
-    playSound('explosion');
-    addLog(`🛩️ F-16 Fighters bombed the rebel headquarters!`);
-
-    setRegionStatus(prev => {
-      const next = { ...prev };
-      if (newHp === 0) {
-        addLog(`🟢 AIR STRIKE VICTORY: Province liberated!`);
-        next[targetRegionId] = { ...target, hp: target.maxHp, type: 'loyal' };
-      } else {
-        next[targetRegionId] = { ...target, hp: newHp };
-      }
-      return next;
-    });
-  };
-
-  const handleDisbandArmy = (armyId: string) => {
-    const army = armies.find(a => a.id === armyId);
-    if (!army) return;
-    setMilitaryBudget(prev => prev + 8000);
-    setArmies(prev => prev.filter(a => a.id !== armyId));
-    if (selectedArmyId === armyId) setSelectedArmyId(null);
-    playSound('click');
-    addLog(`🗑️ ${army.name} disbanded. Funds returned to military budget.`);
-  };
-
-  // Initialize Leaflet Map
-  useEffect(() => {
-    if (mapMode !== 'GIS' || !mapContainerRef.current) return;
-    
-    if (!mapInstanceRef.current) {
-      let initialCenter: [number, number] = [38.9637, 35.2433];
-      let initialZoom = 5.5;
-      if (country.id === 'DE') { initialCenter = [51.1657, 10.4515]; initialZoom = 6; }
-      else if (country.id === 'US') { initialCenter = [37.0902, -95.7129]; initialZoom = 4; }
-      else if (country.id === 'BR') { initialCenter = [-14.235, -51.9253]; initialZoom = 4; }
-      else if (country.id === 'JP') { initialCenter = [36.2048, 138.2529]; initialZoom = 5; }
-      else if (country.id === 'EG') { initialCenter = [26.8206, 30.8025]; initialZoom = 5; }
-      else if (country.id === 'GB') { initialCenter = [54.3781, -3.4360]; initialZoom = 5; }
-      else if (country.id === 'FR') { initialCenter = [46.2276, 2.2137]; initialZoom = 5.5; }
-      else if (country.id === 'RO') { initialCenter = [45.9432, 24.9668]; initialZoom = 6.2; }
-      else if (country.id === 'HU') { initialCenter = [47.1625, 19.5033]; initialZoom = 6.8; }
-      else if (country.id === 'CA') { initialCenter = [56.1304, -106.3468]; initialZoom = 3.5; }
-      else if (country.id === 'ZA') { initialCenter = [-30.5595, 22.9375]; initialZoom = 5; }
-      else if (country.id === 'IN') { initialCenter = [20.5937, 78.9629]; initialZoom = 4.2; }
-      else if (country.id === 'MX') { initialCenter = [23.6345, -102.5528]; initialZoom = 4.5; }
-      else if (country.id === 'ES') { initialCenter = [40.4637, -3.7492]; initialZoom = 5.8; }
-      else if (country.id === 'AU') { initialCenter = [-25.2744, 133.7751]; initialZoom = 3.8; }
-      else if (country.id === 'IT') { initialCenter = [41.8719, 12.5674]; initialZoom = 5.8; }
-      else if (country.id === 'ID') { initialCenter = [-0.7893, 113.9213]; initialZoom = 4.2; }
-      else if (country.id === 'KR') { initialCenter = [35.9078, 127.7669]; initialZoom = 6.5; }
-      else if (country.id === 'AR') { initialCenter = [-38.4161, -63.6167]; initialZoom = 3.8; }
-
-      const map = L.map(mapContainerRef.current, {
-        center: initialCenter,
-        zoom: initialZoom,
-        zoomControl: true,
-      });
-
-      const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-
-      tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 18, attribution: 'Tiles &copy; Esri' }).addTo(map);
-      mapInstanceRef.current = map;
-    } else if (tileLayerRef.current) {
-       const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-       tileLayerRef.current.setUrl(tileUrl);
-    }
-  }, [mapMode, darkMode, country.id]);
-
-  // Fetch GeoJSON and apply it
-  useEffect(() => {
-    if (mapMode !== 'GIS') return;
-    const geojsonMapUrls: Record<string, string> = {
-      TR: 'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json',
-      DE: 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json',
-      US: 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
-      BR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson',
-      JP: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson',
-      EG: '/egypt-provinces.geojson',
-      GB: 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json',
-      CA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson',
-      ZA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson',
-      IN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/india.geojson',
-      MX: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/mexico.geojson',
-      ES: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson',
-      AU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/australia.geojson',
-      IT: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson',
-      ID: 'https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson',
-      KR: 'https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json',
-      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson',
-      FR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson',
-      RO: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson',
-      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson'
+    const updatedSectors = [...currentSectors];
+    updatedSectors[sectorIndex] = {
+      ...sector,
+      enemyStrength: newStrength,
+      entrenchment: Math.max(0, sector.entrenchment - 35),
+      controlledBy: isCaptured ? 'player' : sector.controlledBy
     };
 
-    if (geojsonMapUrls[country.id]) {
-      fetch(geojsonMapUrls[country.id])
-        .then(res => res.json())
-        .then(setGeoJsonData).catch(console.error);
+    setWarSectors(prev => ({ ...prev, [enemyCountryId]: updatedSectors }));
+    playSound('explosion');
+    addLog(`💥 STRATEGIC AIRSTRIKE: 1x ${bomb.icon} ${bomb.name} dropped on ${sector.name}! (${blastDamage} structural destruction)`);
+
+    if (isCaptured) {
+      addLog(`🚩 SECTOR DESTROYED: Enemy resistance in ${sector.name} collapsed!`);
     }
-  }, [country.id, mapMode]);
+  };
 
-  useEffect(() => {
-    if (!mapInstanceRef.current || !geoJsonData) return;
-    
-    if (geoJsonLayerRef.current) {
-      geoJsonLayerRef.current.remove();
+  // Drag and Drop handlers for army movement
+  const handleDragStart = (e: React.DragEvent, armyId: string) => {
+    e.dataTransfer.setData('text/plain', armyId);
+    setDraggedArmyId(armyId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDropOnSector = (e: React.DragEvent, sectorId: string) => {
+    e.preventDefault();
+    const armyId = e.dataTransfer.getData('text/plain') || draggedArmyId;
+    if (armyId) {
+      handleAssaultSector(sectorId, armyId);
     }
+    setDraggedArmyId(null);
+  };
 
-    geoJsonLayerRef.current = L.geoJSON(geoJsonData, {
-      style: (feature) => {
-        const normName = normalizeName(getFeatureName(feature));
-        let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
-        if (!matchRegion) {
-          matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-        }
-        if (matchRegion) {
-          regionId = matchRegion.id;
-        }
-
-        const status = matchRegion ? regionStatusRef.current[matchRegion.id] : null;
-        
-        if (status?.type === 'rebel') {
-          return { fillColor: '#ef4444', color: '#ef4444', weight: 1.5, fillOpacity: 0.85 };
-        } else if (status?.type === 'loyal') {
-          return { fillColor: '#10b981', color: '#10b981', weight: 1.5, fillOpacity: 0.7 };
-        }
-        return { fillColor: '#64748b', color: '#64748b', weight: 1, fillOpacity: 0.3 };
-      },
-      onEachFeature: (feature, layer) => {
-        const normName = normalizeName(getFeatureName(feature));
-        let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
-        if (!matchRegion) {
-          matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-        }
-        if (matchRegion) {
-          regionId = matchRegion.id;
-        }
-        
-        if (matchRegion) {
-          if ((layer as any).getBounds) {
-            try {
-              const center = (layer as any).getBounds().getCenter();
-              regionCentersRef.current[matchRegion.id] = { lat: center.lat, lng: center.lng };
-            } catch (e) {}
-          }
-          
-          layer.bindTooltip(matchRegion.name);
-          layer.on('click', () => {
-             const status = regionStatusRef.current[matchRegion.id];
-             if (status?.type === 'rebel') {
-                setTimeout(() => handleAttack(matchRegion.id), 10);
-             }
-          });
-        }
-      }
-    }).addTo(mapInstanceRef.current);
-    
-    setCentersReady(true);
-  }, [geoJsonData, country.regions]); // Only recreate when GeoJSON data changes
-
-  // Update styles and markers when regionStatus changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
-
-    const updateTimer = setTimeout(() => {
-      if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
-
-      // Update GeoJSON layer styles
-      if (mapInstanceRef.current && mapInstanceRef.current.hasLayer(geoJsonLayerRef.current)) geoJsonLayerRef.current.setStyle((feature: any) => {
-        const normName = normalizeName(getFeatureName(feature));
-        let regionId = getRegionIdFromNormalizedName(normName, country.id);
-        let matchRegion = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
-        if (!matchRegion) {
-          matchRegion = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-        }
-        if (matchRegion) {
-          regionId = matchRegion.id;
-        }
-
-        const status = matchRegion ? regionStatus[matchRegion.id] : null;
-        
-        if (status?.type === 'rebel') {
-          return { fillColor: '#ef4444', color: '#ef4444', weight: 1.5, fillOpacity: 0.85 };
-        } else if (status?.type === 'loyal') {
-          return { fillColor: '#10b981', color: '#10b981', weight: 1.5, fillOpacity: 0.7 };
-        }
-        return { fillColor: '#64748b', color: '#64748b', weight: 1, fillOpacity: 0.3 };
-      });
-
-      if (armyMarkersLayerRef.current) {
-        armyMarkersLayerRef.current.clearLayers();
-      } else {
-        armyMarkersLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
-      }
-
-      const regionsList = Object.values(regionStatus) as RegionUnit[];
-      const getDistance = (id1: string, id2: string) => {
-        const c1 = regionCentersRef.current[id1];
-        const c2 = regionCentersRef.current[id2];
-        if (!c1 || !c2) return 999999;
-        return Math.sqrt(Math.pow(c1.lat - c2.lat, 2) + Math.pow(c1.lng - c2.lng, 2));
-      };
-
-      const isBorder = (regionId: string, myType: 'loyal' | 'rebel' | 'contested') => {
-        const enemies = regionsList.filter(r => r.type !== myType);
-        if (enemies.length === 0) return false;
-        
-        let minDst = 999999;
-        for (const e of enemies) {
-          const d = getDistance(regionId, e.regionId);
-          if (d < minDst) minDst = d;
-        }
-        
-        const allOthers = regionsList.filter(r => r.regionId !== regionId);
-        let minAny = 999999;
-        for (const o of allOthers) {
-          const d = getDistance(regionId, o.regionId);
-          if (d < minAny) minAny = d;
-        }
-        
-        return minDst <= minAny * 2.8;
-      };
-
-      regionsList.forEach(status => {
-        const center = regionCentersRef.current[status.regionId];
-        if (center) {
-          const rName = country.regions.find(r => r.id === status.regionId)?.name || status.regionId;
-          const isL = status.type === 'loyal';
-          
-          const iconHtml = isL
-            ? `<div style="width: 36px; height: 24px; background: rgba(16,185,129,0.15); border: 1.5px solid #10b981; backdrop-filter: blur(4px); border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(16,185,129,0.3), inset 0 0 8px rgba(16,185,129,0.2); cursor: grab; position: relative; font-family: monospace;">
-                 <span style="font-size: 11px; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">${status.hp}</span>
-                 <div style="position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
-               </div>`
-            : `<div style="width: 36px; height: 24px; background: rgba(244,63,94,0.15); border: 1.5px solid #f43f5e; backdrop-filter: blur(4px); border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(244,63,94,0.3), inset 0 0 8px rgba(244,63,94,0.2); position: relative; font-family: monospace;">
-                 <span style="font-size: 11px; font-weight: 900; color: #f43f5e; letter-spacing: -0.5px;">${status.hp}</span>
-                 <div style="position: absolute; top: -3px; left: -3px; width: 6px; height: 6px; background: #f43f5e; border-radius: 50%;"></div>
-               </div>`;
-          
-          const customIcon = L.divIcon({
-            html: iconHtml,
-            className: 'custom-army-icon',
-            iconSize: [36, 24],
-            iconAnchor: [18, 12],
-          });
-
-          const marker = L.marker([center.lat, center.lng], { 
-            icon: customIcon,
-            draggable: isL // Only loyal armies are draggable
-          });
-
-          if (isL) {
-            marker.on('dragend', (e: any) => {
-              const droppedLatLng = e.target.getLatLng();
-              
-              // Find the closest rebel region center
-              let closestRegionId: string | null = null;
-              let minDistance = 999999;
-              
-              Object.entries(regionCentersRef.current).forEach(([regId, coords]) => {
-                const c = coords as { lat: number; lng: number };
-                const relStatus = regionStatusRef.current[regId];
-                if (relStatus && relStatus.type === 'rebel') {
-                  const dist = Math.sqrt(
-                    Math.pow(droppedLatLng.lat - c.lat, 2) + 
-                    Math.pow(droppedLatLng.lng - c.lng, 2)
-                  );
-                  if (dist < minDistance) {
-                    minDistance = dist;
-                    closestRegionId = regId;
-                  }
-                }
-              });
-              
-              if (closestRegionId && minDistance < 12.0) {
-                const rebelName = country.regions.find(r => r.id === closestRegionId)?.name || closestRegionId;
-                addLog(`🎯 Drag-and-Drop: Order received! Deploying military to attack rebel garrison in ${rebelName}!`);
-                handleAttack(closestRegionId);
-              } else {
-                addLog(`⚠️ Dropped too far from any active rebel territory! Deployed back to defensive base.`);
-              }
-              // Reset marker coordinates to its center base
-              marker.setLatLng([center.lat, center.lng]);
-            });
-          } else {
-            // Click target on rebel marker
-            marker.on('click', () => {
-              handleAttack(status.regionId);
-            });
-          }
-
-          marker.bindTooltip(`
-            <div style="font-family: monospace; padding: 4px 6px; background: rgba(15,23,42,0.9); border: 1px solid ${isL ? '#10b981' : '#f43f5e'}; border-radius: 4px; backdrop-filter: blur(4px);">
-              <b style="font-size: 10px; color: #f8fafc; text-transform: uppercase; letter-spacing: 0.5px;">${rName}</b>
-              <br/><span style="font-size: 9px; color: ${isL ? '#10b981' : '#f43f5e'}; text-transform: uppercase;">
-                ${isL ? 'Loyal Forces' : 'Rebel Militia'}
-              </span>
-              <br/><span style="font-size: 9px; color: #94a3b8;">INTEGRITY: <b style="color: #f8fafc;">${status.hp}/${status.maxHp}</b></span>
-              ${isL ? `<br/><i style="font-size: 8px; color: #10b981; opacity: 0.8;">Drag to attack</i>` : ''}
-            </div>
-          `, { direction: 'top', opacity: 1, className: 'tactical-tooltip' });
-          
-          marker.addTo(armyMarkersLayerRef.current!);
-        }
-      });
-    }, 100);
-
-    return () => clearTimeout(updateTimer);
-  }, [geoJsonData, regionStatus, country.regions]);
-
-  // Check victory / defeat
-  useEffect(() => {
-    const statuses = Object.values(regionStatus) as RegionUnit[];
-    if (statuses.length === 0) return;
-    
-    const rebelCount = statuses.filter(s => s.type === 'rebel').length;
-    const loyalCount = statuses.filter(s => s.type === 'loyal').length;
-    
-    if (rebelCount === 0) {
-      addLog("🏆 VICTORY: All regions have been secured!");
-      setTimeout(() => onBattleFinished(true), 2500);
-    } else if (loyalCount === 0) {
-      addLog("💀 DEFEAT: The government has collapsed. Rebels control all regions.");
-      setTimeout(() => onBattleFinished(false), 2500);
-    }
-  }, [regionStatus, onBattleFinished]);
+  const selectedProvince = country.regions.find(r => r.id === selectedProvinceId) || (selectedProvinceId ? { id: selectedProvinceId, name: selectedProvinceId } : null);
+  const selectedProvinceBuilt = selectedProvinceId ? (provinceFacilities[selectedProvinceId] || []) : [];
 
   return (
-    <div className={`h-full w-full flex flex-col ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div id="tactical-battle-view" className={`flex flex-col h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border shadow-2xl transition-colors duration-300 ${
+      darkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+    }`}>
       
-      {/* HEADER */}
-      <div className={`p-4 border-b flex flex-wrap justify-between items-center gap-4 ${darkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white'}`}>
+      {/* 1. TOP MILITARY TELEMETRY HUD BAR */}
+      <div className={`p-4 border-b flex flex-wrap items-center justify-between gap-4 ${
+        darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
-            <Swords className="w-5 h-5 animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
+            <Shield className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-sm uppercase tracking-tight flex items-center gap-2">
-              ARMY AND TACTICAL OPERATIONS CENTER
-              <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded font-mono font-bold">
-                Open Conflict
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black tracking-tight">{country.name} Strategic Command & War Operations</h2>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                activeWars.length > 0
+                  ? 'bg-rose-500/20 text-rose-400 border-rose-500/30 animate-pulse'
+                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              }`}>
+                {activeWars.length > 0 ? `⚠️ ${activeWars.length} Active Fronts` : '🕊️ Armed Readiness & Peace'}
               </span>
-            </h1>
-            <p className="text-[10px] uppercase font-mono tracking-wider opacity-60">
-              {country?.name} National Defense Headquarters
-            </p>
+            </div>
+            <p className="text-xs text-slate-400">National Defense Doctrine, Strategic Arsenals, Sealift & Frontline Command</p>
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Military Budget & Standing Armies HUD */}
-          <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900/80 border border-slate-700/60 rounded-xl">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Military Operations Budget</span>
-              <span className="text-xs font-black font-mono text-amber-400">${militaryBudget.toLocaleString()}</span>
-            </div>
-            <div className="h-6 w-px bg-slate-700/50" />
-            <div className="flex flex-col">
-              <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">Active Divisions</span>
-              <span className="text-xs font-black font-mono text-emerald-400">{armies.length} Divisions</span>
+
+        {/* HUD TELEMETRY METRIC CARDS */}
+        <div className="flex items-center flex-wrap gap-2 md:gap-3">
+          {/* Active Personnel */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-300'
+          }`}>
+            <Users className="w-4 h-4 text-blue-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Personnel</div>
+              <div className="text-sm font-extrabold text-blue-400">{(totalActiveSoldiers ?? 0).toLocaleString()}</div>
             </div>
           </div>
 
-          {/* TIME CONTROL SYSTEM */}
-          <div className="flex items-center gap-2 border border-slate-700/40 bg-slate-950/20 px-3 py-1.5 rounded-xl">
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono tracking-wide transition-all flex items-center gap-2 ${
-                isPlaying 
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20' 
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20'
-              }`}
-            >
-              {isPlaying ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
-                  </span>
-                  ⏱️ PAUSE
-                </>
-              ) : (
-                <>
-                  <span className="relative flex h-2 w-2 bg-slate-950 rounded-full" />
-                  ▶ ADVANCE TIME
-                </>
-              )}
-            </button>
-            <div className="text-xs font-bold font-mono px-2 opacity-80 border-l border-slate-700/30">
-              📅 {gameDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {/* Tanks */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-300'
+          }`}>
+            <Shield className="w-4 h-4 text-amber-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Main Battle Tanks</div>
+              <div className="text-sm font-extrabold text-amber-400">{(totalTanks ?? 0).toLocaleString()}</div>
             </div>
           </div>
+
+          {/* Aircraft */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-300'
+          }`}>
+            <Plane className="w-4 h-4 text-cyan-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Combat Aircraft</div>
+              <div className="text-sm font-extrabold text-cyan-400">{(totalAircraft ?? 0).toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Warships */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-300'
+          }`}>
+            <Anchor className="w-4 h-4 text-indigo-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Fleet Warships</div>
+              <div className="text-sm font-extrabold text-indigo-400">{(totalWarships ?? 0).toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Sealift Transports */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-100 border-slate-300'
+          }`}>
+            <Ship className="w-4 h-4 text-emerald-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sealift Transports</div>
+              <div className="text-sm font-extrabold text-emerald-400">{navalTransports} Ships</div>
+            </div>
+          </div>
+
+          {/* Nukes */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-yellow-950/30 border-yellow-800/50' : 'bg-yellow-50 border-yellow-200'
+          }`}>
+            <span className="text-base">☢️</span>
+            <div>
+              <div className="text-[10px] uppercase font-bold text-yellow-500 tracking-wider">Nuclear Warheads</div>
+              <div className="text-sm font-extrabold text-yellow-400">{(totalNukes ?? 0).toLocaleString()} ICBM</div>
+            </div>
+          </div>
+
+          {/* Treasury */}
+          <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 ${
+            darkMode ? 'bg-emerald-950/40 border-emerald-800/50' : 'bg-emerald-50 border-emerald-200'
+          }`}>
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">War Treasury</div>
+              <div className="text-sm font-extrabold text-emerald-400">{currency}{(currentTreasury ?? 0).toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Ordnance Arsenal Modal Trigger */}
+          <button
+            onClick={() => setShowOrdnanceFactory(true)}
+            className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              darkMode ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white' : 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-900'
+            }`}
+          >
+            <Factory className="w-4 h-4 text-amber-400" />
+            <span>Ordnance Arsenal</span>
+          </button>
         </div>
       </div>
 
-      {/* PROVINCE ARMY RECRUITMENT MODAL */}
-      {recruitingProvinceId && (() => {
-        const prov = country.regions.find(r => r.id === recruitingProvinceId);
-        if (!prov) return null;
+      {/* 2. THEATER SWITCHER TABS */}
+      <div className={`px-4 py-2 border-b flex items-center gap-2 overflow-x-auto ${
+        darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-100 border-slate-200'
+      }`}>
+        <button
+          onClick={() => {
+            setActiveTheater('HOME');
+            playSound('click');
+          }}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+            activeTheater === 'HOME'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : darkMode ? 'bg-slate-800/80 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <Building2 className="w-4 h-4 text-blue-400" />
+          <span>🏠 Homeland Defense & Base Construction ({country.name})</span>
+        </button>
 
-        return (
-          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className={`max-w-md w-full p-6 rounded-3xl border shadow-2xl flex flex-col gap-4 animate-scale-up ${
-              darkMode ? 'bg-slate-900 border-indigo-500/30 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
-            }`}>
-              <div className="flex justify-between items-center border-b pb-3 border-slate-700/50">
-                <div>
-                  <h3 className="font-extrabold text-base flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-indigo-400" />
-                    {prov.name} PROVINCE ARMY RECRUITMENT
-                  </h3>
-                  <p className="text-[11px] text-slate-400">Recruit and deploy a new military unit in this province.</p>
-                </div>
-                <button 
-                  onClick={() => setRecruitingProvinceId(null)}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 font-bold"
-                >
-                  ✕
-                </button>
-              </div>
+        {activeWars.map(cId => (
+          <button
+            key={cId}
+            onClick={() => {
+              setActiveTheater(cId);
+              playSound('click');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+              activeTheater === cId
+                ? 'bg-rose-600 text-white shadow-md shadow-rose-500/20 animate-pulse'
+                : darkMode ? 'bg-rose-950/40 text-rose-300 border border-rose-800/40 hover:bg-rose-900/50' : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+            }`}
+          >
+            <Swords className="w-4 h-4 text-rose-400" />
+            <span>⚔️ {getCountryName(cId)} Active Theater</span>
+          </button>
+        ))}
 
-              <div className="grid grid-cols-1 gap-2.5">
-                <button
-                  onClick={() => handleRecruitArmy(prov.id, 'infantry')}
-                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-lg">🪖</div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-100 group-hover:text-indigo-300">Infantry Division</div>
-                      <div className="text-[10px] text-slate-400">HP: 180 • Attack: 45 • Basic Defense</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-amber-400">₺15,000</span>
-                </button>
-
-                <button
-                  onClick={() => handleRecruitArmy(prov.id, 'armored')}
-                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-lg">🛡️</div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-100 group-hover:text-amber-300">Armored Brigade</div>
-                      <div className="text-[10px] text-slate-400">HP: 280 • Attack: 75 • Heavy Destruction</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-amber-400">₺35,000</span>
-                </button>
-
-                <button
-                  onClick={() => handleRecruitArmy(prov.id, 'specops')}
-                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold text-lg">🛩️</div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-100 group-hover:text-cyan-300">Special Operations Forces</div>
-                      <div className="text-[10px] text-slate-400">HP: 200 • Attack: 60 • Rapid Deployment</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-amber-400">₺25,000</span>
-                </button>
-
-                <button
-                  onClick={() => handleRecruitArmy(prov.id, 'artillery')}
-                  className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-orange-500/50 transition-all flex items-center justify-between group text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 font-bold text-lg">🎯</div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-100 group-hover:text-orange-300">Artillery Regiment</div>
-                      <div className="text-[10px] text-slate-400">HP: 150 • Attack: 85 • High Area Damage</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-amber-400">₺30,000</span>
-                </button>
-              </div>
-
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => setRecruitingProvinceId(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300"
-                >
-                  Close / Cancel
-                </button>
-              </div>
-            </div>
+        {/* If user has no active wars declared yet */}
+        {activeWars.length === 0 && (
+          <div className="flex items-center gap-2 ml-2">
+            <span className="text-[11px] text-slate-400">No active declared war. Engage strategic front:</span>
+            {['BE', 'RU', 'UA', 'GR', 'FR', 'DE'].filter(c => c !== country.id).slice(0, 3).map(cId => (
+              <button
+                key={cId}
+                onClick={() => {
+                  if (onUpdateRelations) {
+                    onUpdateRelations({
+                      ...diplomaticRelations,
+                      [cId]: { status: 'At War', opinion: 0, alliance: false }
+                    });
+                  }
+                  setActiveTheater(cId);
+                  addLog(`⚠️ WAR DECLARED / THEATER OPENED: Military engagement initiated with ${getCountryName(cId)}!`);
+                  playSound('battle');
+                }}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+              >
+                + {getCountryName(cId)} Front
+              </button>
+            ))}
           </div>
-        );
-      })()}
+        )}
+      </div>
 
-      <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
-        
-        {/* MAP VIEW */}
-        <div className="flex-grow p-4 md:p-8 flex flex-col relative overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xs font-bold opacity-50 uppercase tracking-widest font-mono">REGIONAL COMMAND MAP</h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 text-[10px] font-bold uppercase font-mono">
-                <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20"><Activity className="w-3 h-3"/> Loyal</span>
-                <span className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20"><Target className="w-3 h-3"/> Rebel</span>
+      {/* 3. MAIN WORKSPACE */}
+      {activeTheater === 'HOME' ? (
+        /* HOME DEFENSE & PROVINCE STRATEGIC CONSTRUCTION */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+          
+          {/* LEAFLET TACTICAL GIS MAP */}
+          <div className="flex-1 relative h-[50vh] lg:h-full bg-slate-900">
+            <div ref={mapContainerRef} className="w-full h-full" />
+
+            {/* Map Overlay Badge */}
+            <div className="absolute top-3 left-3 z-[400] bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 shadow-xl flex items-center gap-2">
+              <Target className="w-4 h-4 text-blue-400" />
+              <span>Homeland Tactical GIS: Select any province to commission Silos, Air Bases, Shipyards or Barracks</span>
+            </div>
+
+            {/* Bottom Live Operations Feed */}
+            <div className="absolute bottom-3 left-3 right-3 lg:right-96 z-[400] bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 max-h-24 overflow-y-auto text-xs text-slate-300 shadow-xl">
+              <div className="font-bold text-[11px] text-blue-400 mb-1 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Strategic Command Operations Log</span>
               </div>
-              
-              <div className="flex items-center rounded-lg overflow-hidden border border-slate-700/50">
-                 <button 
-                   onClick={() => setMapMode('GIS')}
-                   className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'GIS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                 >
-                   <MapIcon className="w-3 h-3" /> GIS
-                 </button>
-                 <button 
-                   onClick={() => setMapMode('CARDS')}
-                   className={`px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5 ${mapMode === 'CARDS' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                 >
-                   <Compass className="w-3 h-3" /> Grid
-                 </button>
-              </div>
+              {battleLogs.map((log, idx) => (
+                <div key={idx} className="text-[11px] py-0.5 border-b border-slate-800/40 last:border-none text-slate-300">
+                  {log}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* ACTIVE GIS MAP CONTAINER WITH CASUALTIES HUD */}
-          {mapMode === 'GIS' ? (
-            <div className="relative w-full h-[460px] rounded-3xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950">
-              <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
-
-              {/* TOP-RIGHT LIVE CASUALTIES & ORDNANCE HUD */}
-              <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 pointer-events-auto max-w-xs w-full sm:w-auto">
-                <div className="p-3.5 rounded-2xl bg-slate-950/95 border border-slate-700/90 shadow-2xl backdrop-blur-md flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-black uppercase text-rose-400 font-mono tracking-tight">
-                      <AlertTriangle className="w-3.5 h-3.5 animate-pulse text-rose-500" />
-                      CASUALTIES (ACTIVE WAR)
-                    </div>
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">LIVE FEED</span>
+          {/* SIDEBAR: PROVINCE STRATEGIC FACILITY CONSTRUCTION PANEL */}
+          <div className={`w-full lg:w-96 border-l flex flex-col h-[50vh] lg:h-full overflow-hidden ${
+            darkMode ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            
+            {selectedProvince ? (
+              <div className="flex-1 flex flex-col p-4 overflow-y-auto">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-400">Selected Province</div>
+                    <h3 className="text-lg font-black">{selectedProvince.name}</h3>
                   </div>
-                  
-                  <div className="flex flex-col gap-1 pt-0.5 font-mono text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-emerald-400 font-bold uppercase text-[11px]">US (LOYAL):</span>
-                      <span className="font-black text-slate-100">{loyalCasualties.toLocaleString()} DEAD</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-rose-400 font-bold uppercase text-[11px]">REBELS:</span>
-                      <span className="font-black text-rose-300">{rebelCasualties.toLocaleString()} DEAD</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-1 pt-1.5 border-t border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
-                    <span>FORCES: <strong className="text-emerald-400">{loyalArmyCount.toLocaleString()}</strong></span>
-                    <span>ENEMY: <strong className="text-rose-400">{rebelArmyCount.toLocaleString()}</strong></span>
-                  </div>
+                  <button
+                    onClick={() => setSelectedProvinceId(null)}
+                    className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Bomb Launch Targeting Status Indicator */}
-                {selectedBombToDrop && (() => {
-                  const b = HISTORICAL_BOMBS.find(x => x.id === selectedBombToDrop);
-                  return (
-                    <div className="p-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-between shadow-lg animate-pulse">
-                      <div className="flex items-center gap-1.5">
-                        <Bomb className="w-4 h-4" />
-                        <span>TARGETING: Click Rebel Province</span>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedBombToDrop(null)}
-                        className="px-2 py-0.5 bg-slate-950 text-white rounded text-[10px]"
+                {/* Current Built Facilities in Province */}
+                <div className="my-3">
+                  <div className="text-xs font-bold text-slate-400 mb-2">Commissioned Facilities:</div>
+                  {selectedProvinceBuilt.length === 0 ? (
+                    <div className="p-3 rounded-xl border border-dashed text-xs text-slate-400 text-center">
+                      No strategic facilities commissioned in this region yet. Choose from the catalog below.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProvinceBuilt.map((fId, idx) => {
+                        const fac = STRATEGIC_FACILITIES.find(f => f.id === fId);
+                        if (!fac) return null;
+                        return (
+                          <div key={idx} className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold flex items-center gap-1.5 text-slate-200">
+                            <span>{fac.icon}</span>
+                            <span>{fac.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Strategic Construction Options */}
+                <div className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Strategic Facility Catalog</span>
+                </div>
+
+                <div className="space-y-2.5 flex-1">
+                  {STRATEGIC_FACILITIES.map(fac => {
+                    const isBuilt = selectedProvinceBuilt.includes(fac.id);
+                    const canAfford = currentTreasury >= fac.cost;
+
+                    return (
+                      <div
+                        key={fac.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          isBuilt && fac.id !== 'fac_nuclear'
+                            ? 'bg-slate-800/40 border-slate-800 opacity-60'
+                            : darkMode 
+                              ? 'bg-slate-950/60 border-slate-800 hover:border-blue-500/50' 
+                              : 'bg-slate-50 border-slate-200 hover:border-blue-400'
+                        }`}
                       >
-                        Cancel
-                      </button>
-                    </div>
-                  );
-                })()}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{fac.icon}</span>
+                            <div>
+                              <div className="font-bold text-xs">{fac.name}</div>
+                              <div className="text-[11px] font-extrabold text-emerald-400">{currency}{fac.cost.toLocaleString()}</div>
+                            </div>
+                          </div>
 
-                {/* Quick Factory & Ordnance Arsenal Button */}
-                <button
-                  onClick={() => setShowOrdnanceFactory(true)}
-                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-600/30 transition-all cursor-pointer"
-                >
-                  <Factory className="w-4 h-4" />
-                  <span>Ordnance Factory & Bombs ({Object.values(inventoryBombs).reduce((a: number, b: number) => a + Number(b), 0)})</span>
-                </button>
+                          <button
+                            disabled={!canAfford || (isBuilt && fac.id !== 'fac_nuclear')}
+                            onClick={() => handleConstructFacility(fac.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer ${
+                              isBuilt && fac.id !== 'fac_nuclear'
+                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                : canAfford
+                                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
+                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                            }`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{isBuilt && fac.id === 'fac_nuclear' ? 'Expand' : isBuilt ? 'Built' : 'Construct'}</span>
+                          </button>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                          {fac.description}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Recruit Military Unit in Province */}
+                <div className="mt-4 pt-3 border-t border-slate-800">
+                  <div className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                    <Swords className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Mobilize Military Divisions</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleRecruitArmy(selectedProvince.id, 'infantry')}
+                      className="p-2 rounded-xl border border-slate-800 bg-slate-950/80 hover:bg-slate-800 text-left text-xs transition-all cursor-pointer"
+                    >
+                      <div className="font-bold">🪖 Infantry Division</div>
+                      <div className="text-[10px] text-emerald-400 font-extrabold">{currency}15,000</div>
+                    </button>
+                    <button
+                      onClick={() => handleRecruitArmy(selectedProvince.id, 'armored')}
+                      className="p-2 rounded-xl border border-slate-800 bg-slate-950/80 hover:bg-slate-800 text-left text-xs transition-all cursor-pointer"
+                    >
+                      <div className="font-bold">🛡️ Armored Brigade</div>
+                      <div className="text-[10px] text-emerald-400 font-extrabold">{currency}35,000</div>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-4 text-3xl">
+                  🗺️
+                </div>
+                <h4 className="text-sm font-bold text-slate-200 mb-1">Select a Province</h4>
+                <p className="text-xs max-w-xs leading-relaxed">
+                  Click any province on the tactical GIS map to commission Nuclear Silos, Air Bases, Tank Complexes, or Mobilize Divisions.
+                </p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      ) : (
+        /* ACTIVE ENEMY WAR FRONT: TACTICAL SECTOR BATTLE WITH DRAG-AND-DROP UNITS */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          
+          {/* LEFT: ENEMY WAR THEATER SECTORS */}
+          <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-4">
+            
+            {/* Enemy Assessment Header */}
+            <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-2xl">
+                  ⚔️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black uppercase text-rose-400">
+                      {getCountryName(enemyCountryId!)} Offensive Theater
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                      Active Belligerence
+                    </span>
+                    {isEnemyOverseas && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
+                        <Waves className="w-3 h-3" /> Overseas Theater • Naval Transport Required
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {isEnemyOverseas 
+                      ? 'Target is overseas. Embark divisions into transport ships on the right, secure the Beachhead, then break inner fortified sectors.'
+                      : 'Adjacent land border. Drag divisions from the right onto enemy sectors or issue direct assault commands.'}
+                  </p>
+                </div>
               </div>
 
-              {/* Bottom Instructions */}
-              <div className="absolute bottom-3 left-3 z-30 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[10px] font-mono text-slate-300 backdrop-blur-sm pointer-events-none">
-                💡 Drag green markers onto red rebel provinces to launch tactical assaults.
-              </div>
+              {/* Enemy Real Military Figures */}
+              {enemyBase && (
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] block font-bold">Enemy Troops</span>
+                    <span className="font-black text-rose-400">{(enemyBase.soldiers ?? 50000).toLocaleString()}</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] block font-bold">Enemy Tanks</span>
+                    <span className="font-black text-amber-400">{(enemyBase.tanks ?? 400).toLocaleString()}</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] block font-bold">Enemy Air Force</span>
+                    <span className="font-black text-cyan-400">{(enemyBase.aircraft ?? 150).toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            /* GRID CARDS VIEW */
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {country.regions.map(r => {
-                const status = regionStatus[r.id];
-                const isRebel = status?.type === 'rebel';
+
+            {/* SECTORS GRID (DRAG TARGETS) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(warSectors[enemyCountryId!] || []).map(sector => {
+                const isCaptured = sector.controlledBy === 'player';
+                const healthPercent = Math.round((sector.enemyStrength / sector.maxEnemyStrength) * 100);
+
                 return (
                   <div
-                    key={r.id}
-                    className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
-                      isRebel 
-                        ? 'bg-rose-950/30 border-rose-500/50' 
-                        : 'bg-emerald-950/30 border-emerald-500/50'
+                    key={sector.id}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDropOnSector(e, sector.id)}
+                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden flex flex-col justify-between ${
+                      isCaptured
+                        ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
+                        : darkMode 
+                          ? 'bg-slate-900/90 border-slate-800 hover:border-rose-500/50' 
+                          : 'bg-white border-slate-200 hover:border-rose-400 shadow-sm'
                     }`}
                   >
+                    {/* Top Sector Info */}
                     <div>
-                      <div className="flex justify-between items-start">
-                        <span className="font-bold text-xs">{r.name}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
-                          isRebel ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{sector.icon}</span>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="font-black text-sm">{sector.name}</h4>
+                              {sector.isBeachhead && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                  BEACHHEAD
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400">{sector.strategicValue}</span>
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          isCaptured 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                         }`}>
-                          {isRebel ? 'REBEL' : 'LOYAL'}
+                          {isCaptured ? '✓ SECURED' : 'ENEMY POSITION'}
                         </span>
                       </div>
-                      <div className="text-[10px] font-mono text-slate-400 mt-1">
-                        HP: {status?.hp || 200}/{status?.maxHp || 200}
-                      </div>
+
+                      {/* Health and Entrenchment Progress */}
+                      {!isCaptured ? (
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-400">Garrison Defense Strength:</span>
+                            <span className="text-rose-400">{sector.enemyStrength} / {sector.maxEnemyStrength} HP</span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-rose-500 transition-all duration-300"
+                              style={{ width: `${healthPercent}%` }}
+                            />
+                          </div>
+
+                          <div className="flex justify-between text-[10px] text-slate-400 pt-1">
+                            <span>Fortification & Entrenchment:</span>
+                            <span className="font-bold text-amber-400">%{sector.entrenchment}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-400 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Sector neutralized and under allied control.</span>
+                        </div>
+                      )}
                     </div>
 
-                    {isRebel ? (
-                      <button
-                        onClick={() => handleAttack(r.id)}
-                        className="w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold font-mono transition-all"
-                      >
-                        ⚔️ Attack
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setRecruitingProvinceId(r.id)}
-                        className="w-full py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold font-mono transition-all"
-                      >
-                        + Recruit Army
-                      </button>
+                    {/* Sector Actions (Assault & Bomb Drops) */}
+                    {!isCaptured && (
+                      <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => handleAssaultSector(sector.id)}
+                          className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-rose-600/20 cursor-pointer"
+                        >
+                          <Swords className="w-3.5 h-3.5" />
+                          <span>{sector.isBeachhead ? 'Launch Amphibious Landing' : 'Order Assault Strike'}</span>
+                        </button>
+
+                        {/* Quick Bomb Deployment Dropdown */}
+                        {Object.entries(inventoryBombs).filter(([_, count]) => (Number(count) || 0) > 0).length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {Object.entries(inventoryBombs).filter(([_, count]) => (Number(count) || 0) > 0).slice(0, 2).map(([bombId, count]) => {
+                              const b = HISTORICAL_BOMBS.find(item => item.id === bombId);
+                              if (!b) return null;
+                              return (
+                                <button
+                                  key={bombId}
+                                  onClick={() => handleDeployBombOnSector(sector.id, bombId)}
+                                  title={`${b.name} (${count} in stockpile)`}
+                                  className="px-2 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span>{b.icon}</span>
+                                  <span className="text-[10px]">x{count}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
-          )}
-          
-          {/* ACTIVE STANDING ARMIES ROSTER & COMMAND PANEL */}
-          <div className="mt-6 p-4 rounded-2xl bg-slate-900/90 border border-slate-700/60 shadow-xl flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-700/50 pb-3">
-              <div className="flex items-center gap-2">
-                <Swords className="w-4 h-4 text-amber-400" />
-                <h3 className="font-extrabold text-xs text-slate-100 uppercase tracking-wide">
-                  ACTIVE UNITS AND COMMAND ROSTER ({armies.length})
-                </h3>
+
+            {/* Battle Event Ticker */}
+            <div className={`p-3 rounded-2xl border max-h-36 overflow-y-auto ${
+              darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="font-bold text-[11px] text-rose-400 mb-1 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Tactical Battle Radio & Frontline Dispatch</span>
               </div>
-              <p className="text-[10px] text-slate-400">
-                Click on a loyal province on the map to recruit an army or issue attack orders from the units below.
-              </p>
+              {battleLogs.map((log, idx) => (
+                <div key={idx} className="text-[11px] py-0.5 border-b border-slate-800/40 last:border-none text-slate-300">
+                  {log}
+                </div>
+              ))}
             </div>
 
-            {armies.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400 bg-slate-800/30 rounded-xl border border-dashed border-slate-700">
-                You have no active armies! Click on a green (Loyal) province on the map to recruit an army immediately.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {armies.map(army => {
-                  const isSel = selectedArmyId === army.id;
-                  const stationProv = country.regions.find(r => r.id === army.regionId)?.name || army.regionId;
-                  const rebelProvinces = country.regions.filter(r => regionStatus[r.id]?.type === 'rebel');
-
-                  return (
-                    <div 
-                      key={army.id} 
-                      onClick={() => setSelectedArmyId(army.id)}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-2.5 ${
-                        isSel 
-                          ? 'bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10' 
-                          : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/80'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">
-                            {army.type === 'armored' ? '🛡️' : army.type === 'specops' ? '🛩️' : army.type === 'artillery' ? '🎯' : '🪖'}
-                          </span>
-                          <div>
-                            <div className="font-bold text-xs text-slate-100">{army.name}</div>
-                            <div className="text-[10px] text-slate-400">Location: <strong className="text-emerald-400">{stationProv}</strong></div>
-                          </div>
-                        </div>
-                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
-                          army.status === 'sieging' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}>
-                          {army.status === 'sieging' ? 'Sieging' : 'Ready'}
-                        </span>
-                      </div>
-
-                      {/* Army HP Bar */}
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                          <span>Strength / Durability</span>
-                          <span className="text-emerald-400 font-bold">{army.hp} / {army.maxHp} HP</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/50">
-                          <div 
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                            style={{ width: `${(army.hp / army.maxHp) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Orders & Action Dropdowns */}
-                      <div className="grid grid-cols-2 gap-1.5 mt-1">
-                        {rebelProvinces.length > 0 ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOrderAssault(army.id, rebelProvinces[0].id);
-                            }}
-                            className="py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer shadow-sm"
-                          >
-                            ⚔️ Assault ({rebelProvinces[0].name})
-                          </button>
-                        ) : (
-                          <div className="text-[10px] text-emerald-400 font-bold">Victory Achieved</div>
-                        )}
-
-                        {rebelProvinces.length > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOrderSiege(army.id, rebelProvinces[0].id);
-                            }}
-                            className="py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer"
-                          >
-                            🛡️ Siege
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex justify-end pt-1 border-t border-slate-700/30">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDisbandArmy(army.id);
-                          }}
-                          className="text-[9px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider"
-                        >
-                          Disband (+₺8k)
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
-        </div>
 
-        {/* BATTLE LOGS */}
-        <div className={`w-full md:w-80 border-t md:border-t-0 md:border-l p-4 flex flex-col ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white'}`}>
-          <h3 className="text-xs font-bold opacity-60 uppercase font-mono mb-4 flex items-center gap-2">
-            <Compass className="w-4 h-4" /> BATTLE LOGS
-          </h3>
-          
-          <div className="flex-grow overflow-y-auto space-y-3">
-            {battleLogs.map((log, i) => (
-              <div key={i} className={`text-xs p-3 rounded-lg border ${
-                i === 0 
-                  ? (darkMode ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-200' : 'border-indigo-500/30 bg-indigo-50 text-indigo-900') 
-                  : (darkMode ? 'border-slate-800 bg-slate-800/30 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600')
-              } animate-fade-in`}>
-                {log}
+          {/* RIGHT: PLAYER FORCES & DRAGGABLE ARMIES & SEALIFT CONVOYS */}
+          <div className={`w-full lg:w-96 border-l p-4 flex flex-col gap-4 overflow-y-auto ${
+            darkMode ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-400" />
+                <h3 className="font-black text-sm">Deployed Combat Divisions</h3>
               </div>
-            ))}
-          </div>
-        </div>
+              <span className="text-xs font-bold text-slate-400">{armies.length} Divisions</span>
+            </div>
 
-      </div>
-
-      {/* STRATEGIC ORDNANCE FACTORY & BOMB PRODUCTION MODAL */}
-      {showOrdnanceFactory && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full p-6 rounded-3xl bg-slate-900 border border-amber-500/40 text-slate-100 shadow-2xl flex flex-col gap-4 animate-scale-up max-h-[85vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  <Factory className="w-6 h-6" />
-                </div>
+            {/* Sealift Transports Status Box */}
+            <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+              darkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Ship className="w-5 h-5 text-cyan-400" />
                 <div>
-                  <h3 className="font-extrabold text-lg flex items-center gap-2 tracking-tight">
-                    HISTORICAL ORDNANCE FACTORY & ARSENAL
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded uppercase font-bold">
-                      ERA {scenario}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Manufacture authentic historical aerial bombs and munitions from {scenario} to bomb rebel fortifications.
-                  </p>
+                  <div className="text-xs font-bold">Sealift Fleet Capacity</div>
+                  <div className="text-[11px] text-slate-400">
+                    {armies.filter(a => a.status === 'embarked').length} / {navalTransports} Divisions Embarked
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowOrdnanceFactory(false)}
-                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 font-bold"
+
+              <button
+                onClick={handleCommissionTransports}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"
               >
-                ✕
+                +5 Ships ({currency}20k)
               </button>
             </div>
 
-            {/* Current Military Budget banner */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono">
-              <span className="text-xs text-slate-400">Available Military Operations Budget:</span>
-              <span className="text-base font-black text-amber-400">₺{militaryBudget.toLocaleString()}</span>
-            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Select or drag divisions into enemy sectors to strike. If the theater is overseas, click <span className="text-cyan-400 font-bold">"Embark"</span> first.
+            </p>
 
-            {/* Bombs List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {HISTORICAL_BOMBS.filter(b => b.era === scenario || (scenario === '2026' ? b.era === '2026' : b.era === scenario)).map(bomb => {
-                const owned = inventoryBombs[bomb.id] || 0;
-                const canAfford = militaryBudget >= bomb.cost;
+            <div className="space-y-3 flex-1">
+              {armies.map(army => {
+                const isSelected = selectedFrontArmyId === army.id;
+                const hpPercent = Math.round((army.hp / army.maxHp) * 100);
+                const isEmbarked = army.status === 'embarked';
 
                 return (
-                  <div 
-                    key={bomb.id}
-                    className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between gap-3"
+                  <div
+                    key={army.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, army.id)}
+                    onClick={() => {
+                      setSelectedFrontArmyId(army.id);
+                      playSound('click');
+                    }}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
+                        : darkMode ? 'bg-slate-950 border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
                   >
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl">{bomb.icon}</span>
-                          <div>
-                            <div className="font-bold text-xs text-slate-100">{bomb.name}</div>
-                            <div className="text-[10px] text-amber-400 font-mono uppercase">{bomb.type} Ordnance</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">
+                          {army.type === 'armored' ? '🛡️' : army.type === 'specops' ? '⚡' : army.type === 'artillery' ? '🎯' : '🪖'}
+                        </span>
+                        <div>
+                          <div className="font-bold text-xs">{army.name}</div>
+                          <div className="text-[10px] text-slate-400 uppercase flex items-center gap-1">
+                            <span>{army.type}</span>
+                            {isEmbarked && <span className="text-cyan-400 font-bold">• 🚢 Embarked</span>}
                           </div>
                         </div>
-                        <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
-                          x{owned} Owned
-                        </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                        {bomb.description}
-                      </p>
-                      <div className="mt-2 flex items-center gap-3 text-[10px] font-mono">
-                        <span className="text-rose-400 font-bold">💥 {bomb.damage} Blast Dmg</span>
-                        <span className="text-amber-400 font-bold">₺{bomb.cost.toLocaleString()}</span>
+
+                      <div className="text-right">
+                        <div className="text-xs font-black text-amber-400">⚔️ {army.attackPower} ATK</div>
+                        <div className="text-[10px] text-slate-400">{army.hp}/{army.maxHp} HP</div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                    <div className="mt-2.5 w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${hpPercent > 50 ? 'bg-blue-500' : 'bg-rose-500'}`}
+                        style={{ width: `${hpPercent}%` }}
+                      />
+                    </div>
+
+                    {/* Embark / Disembark Toggle */}
+                    <div className="mt-2.5 pt-2 border-t border-slate-800/40 flex justify-between items-center">
                       <button
-                        onClick={() => handleManufactureBomb(bomb.id)}
-                        disabled={!canAfford}
-                        className={`py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          canAfford
-                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/20'
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleEmbark(army.id);
+                        }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer ${
+                          isEmbarked
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                         }`}
                       >
-                        <Plus className="w-3.5 h-3.5" /> Produce (₺{bomb.cost / 1000}k)
+                        <Ship className="w-3 h-3" />
+                        <span>{isEmbarked ? 'Disembark' : 'Embark on Ship'}</span>
                       </button>
 
                       <button
-                        onClick={() => {
-                          setSelectedBombToDrop(bomb.id);
-                          setShowOrdnanceFactory(false);
-                          playSound('click');
-                          addLog(`🎯 TARGETING ACTIVE: Click any red rebel province to deploy ${bomb.name}!`);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const targetSec = (warSectors[enemyCountryId!] || []).find(s => s.controlledBy !== 'player');
+                          if (targetSec) handleAssaultSector(targetSec.id, army.id);
                         }}
-                        disabled={owned === 0}
-                        className={`py-2 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          owned > 0
-                            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20'
-                            : 'bg-slate-800/60 text-slate-600 cursor-not-allowed'
-                        }`}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer"
                       >
-                        <Radio className="w-3.5 h-3.5" /> Deploy Strike
+                        Quick Assault
                       </button>
                     </div>
                   </div>
@@ -1368,17 +1601,138 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
               })}
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            {/* Armistice & Peace Terms */}
+            <div className="pt-3 border-t border-slate-800 space-y-2">
+              <button
+                onClick={() => {
+                  if (onUpdateRelations && enemyCountryId) {
+                    onUpdateRelations({
+                      ...diplomaticRelations,
+                      [enemyCountryId]: { status: 'Armistice / Truce', opinion: 20, alliance: false }
+                    });
+                  }
+                  setActiveTheater('HOME');
+                  playSound('success');
+                  addLog(`🤝 ARMISTICE RATIFIED: Hostilities halted with ${getCountryName(enemyCountryId!)}.`);
+                }}
+                className="w-full py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>🤝 Sign Ceasefire / Armistice</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const currentSectors = warSectors[enemyCountryId!] || [];
+                  const capturedCount = currentSectors.filter(s => s.controlledBy === 'player').length;
+                  if (capturedCount < 2) {
+                    playSound('error');
+                    addLog(`⚠️ You must capture at least 2 sectors before demanding reparations.`);
+                    return;
+                  }
+                  if (onUpdateRelations && enemyCountryId) {
+                    onUpdateRelations({
+                      ...diplomaticRelations,
+                      [enemyCountryId]: { status: 'Reparations Treaty', opinion: 15, alliance: false }
+                    });
+                  }
+                  addTreasury(85000);
+                  setActiveTheater('HOME');
+                  playSound('win');
+                  addLog(`⚖️ REPARATIONS ENFORCED: ${getCountryName(enemyCountryId!)} ceded military facilities and paid ${currency}85,000 indemnities.`);
+                }}
+                className="w-full py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>⚖️ Enforce Demilitarization & Reparations</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* 4. ORDNANCE & BOMB FACTORY MODAL */}
+      {showOrdnanceFactory && (
+        <div className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ${
+            darkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="p-4 border-b flex items-center justify-between bg-gradient-to-r from-amber-500/10 to-transparent border-slate-800">
+              <div className="flex items-center gap-3">
+                <Factory className="w-6 h-6 text-amber-400" />
+                <div>
+                  <h3 className="font-black text-base">Strategic Ordnance & Weapon Arsenal</h3>
+                  <p className="text-xs text-slate-400">Manufacture era-appropriate precision guided weapons and heavy demolition bombs</p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowOrdnanceFactory(false)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300"
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
               >
-                Close Arsenal
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-3 flex-1">
+              {HISTORICAL_BOMBS.map(bomb => {
+                const count = inventoryBombs[bomb.id] || 0;
+                const canAfford = currentTreasury >= bomb.cost;
+
+                return (
+                  <div
+                    key={bomb.id}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 ${
+                      darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{bomb.icon}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm">{bomb.name}</span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-slate-800 text-slate-300">
+                            {bomb.era} • {bomb.type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{bomb.description}</p>
+                        <div className="text-xs font-extrabold text-amber-400 mt-1">Blast Power: {bomb.damage} Damage</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-xs font-bold text-slate-300">
+                        Stockpile: <span className="text-emerald-400 font-extrabold">{count} units</span>
+                      </div>
+                      <button
+                        disabled={!canAfford}
+                        onClick={() => handleManufactureBomb(bomb.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          canAfford
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Produce ({currency}{bomb.cost.toLocaleString()})</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setShowOrdnanceFactory(false)}
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

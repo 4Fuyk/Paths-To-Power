@@ -88,8 +88,8 @@ export const CongressView: React.FC<CongressViewProps> = ({
   const [purchasedUpgrades, setPurchasedUpgrades] = useState<string[]>([]);
 
   const getEnglishFaction = (fac: Delegate['faction']): string => {
-    if (fac === 'Gelenekçi') return 'Traditionalist';
-    if (fac === 'Yenilikçi') return 'Reformist';
+    if (fac === 'Traditionalist' || fac === 'Gelenekçi') return 'Traditionalist';
+    if (fac === 'Reformist' || fac === 'Yenilikçi') return 'Reformist';
     return 'Centrist';
   };
 
@@ -111,7 +111,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
 
   // Generate 8 local delegates dynamically on mount if not loaded
   useEffect(() => {
-    const factions: Delegate['faction'][] = ['Gelenekçi', 'Yenilikçi', 'Merkezci'];
+    const factions: Delegate['faction'][] = ['Traditionalist', 'Reformist', 'Centrist'];
     const demandsPool = [
       'Demands a more passionate stance during public election rallies.',
       'Wants legislative bills carrying civil liberties and constitutional rights approved.',
@@ -275,7 +275,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
   const handleAdoptDirective = (directive: PartyDirective) => {
     if (party.budget < directive.cost) {
       playSound('error');
-      showAlert('Insufficient Funds', `You need ${directive.cost.toLocaleString()} ${currency} to ratify this national directive.`, 'warning');
+      showAlert('Insufficient Funds', `You need ${(directive.cost ?? 0).toLocaleString()} ${currency} to ratify this national directive.`, 'warning');
       return;
     }
 
@@ -487,7 +487,7 @@ export const CongressView: React.FC<CongressViewProps> = ({
                           : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm'
                       }`}
                     >
-                      {isActive ? 'Current Directive' : `Adopt: ${dir.cost.toLocaleString()} ${currency}`}
+                      {isActive ? 'Current Directive' : `Adopt: ${(dir.cost ?? 0).toLocaleString()} ${currency}`}
                     </button>
                   </div>
                 </div>

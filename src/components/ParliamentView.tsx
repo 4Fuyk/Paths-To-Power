@@ -207,15 +207,25 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
       playSound('success');
       const combinedSeats = playerSeatsCount + selectedPartners.reduce((sum, p) => sum + (rivalsSeatsData.find(r => r.id === p.id)?.seats || 0), 0);
       const partnerNamesSuffix = selectedPartners.map(p => p.name.substring(0, 5)).join('-');
+      const participatingParties = [party.name, ...selectedPartners.map(p => p.name)];
       const newCoalition: Coalition = {
         name: `Grand ${party.name.substring(0, 5)}-${partnerNamesSuffix} Pact`,
-        parties: [party.name, ...selectedPartners.map(p => p.name)],
+        parties: participatingParties,
         totalSeats: combinedSeats,
         ideologyAvg: `${party.ideology} / Alliance`
       };
 
       if (onUpdateCoalitions) {
-        onUpdateCoalitions([...coalitions, newCoalition]);
+        // Enforce: 1 party can only be in 1 coalition. Remove all participating parties from previous coalitions!
+        const partySet = new Set(participatingParties);
+        const cleanedExisting = (coalitions || [])
+          .map(c => ({
+            ...c,
+            parties: c.parties.filter(p => !partySet.has(p))
+          }))
+          .filter(c => c.parties.length >= 2);
+
+        onUpdateCoalitions([...cleanedExisting, newCoalition]);
       }
       setLobbyAlert({
         title: 'COALITION FORMED SUCCESSFULLY',
@@ -574,9 +584,23 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                       <span className="text-xs font-black text-indigo-400 font-mono flex items-center gap-1">
                         🏛️ {coal.name}
                       </span>
-                      <span className="text-[10px] font-bold font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                        {liveSeats} / {country.seats} Seats ({((liveSeats / country.seats) * 100).toFixed(1)}%)
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {liveSeats} / {country.seats} Seats ({((liveSeats / country.seats) * 100).toFixed(1)}%)
+                        </span>
+                        {onUpdateCoalitions && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playSound('click');
+                              onUpdateCoalitions(coalitions.filter((_, cIndex) => cIndex !== idx));
+                            }}
+                            className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 font-bold text-[9px] uppercase cursor-pointer"
+                          >
+                            Dissolve
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 mt-0.5">
                       <strong className="text-slate-300">Alliance Members:</strong> 
@@ -667,7 +691,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
               <div>
                 <div className="text-[9px] text-slate-400 font-mono uppercase">BILL BUDGETY</div>
                 <div className="font-extrabold font-mono text-rose-400 mt-1">
-                  - {selectedBill.budgetCost.toLocaleString()} {currency}
+                  - {(selectedBill.budgetCost ?? 0).toLocaleString()} {currency}
                 </div>
               </div>
               <div>
@@ -863,6 +887,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                   {country.rivals.map((rival) => {
                     const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
                     const isAdded = selectedPartners.some(p => p.id === rival.id);
+                    const existingCoalition = (coalitions || []).find(c => c.parties.includes(rival.name) || c.parties.includes(rival.id));
                     return (
                       <div
                         key={rival.id}
@@ -874,6 +899,11 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                           <div className="flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rival.color }}></span>
                             <span className="text-xs font-bold">{rival.name}</span>
+                            {existingCoalition && (
+                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                In: {existingCoalition.name.length > 18 ? existingCoalition.name.substring(0, 18) + '...' : existingCoalition.name}
+                              </span>
+                            )}
                           </div>
                           <div className="text-[9px] text-slate-400 font-mono mt-0.5">
                             {rival.ideology} • {partnerSeats} Seats

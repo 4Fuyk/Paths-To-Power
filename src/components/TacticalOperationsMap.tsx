@@ -3,31 +3,41 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Country, ScenarioYear } from '../types';
 import { PLAYABLE_COUNTRIES, countryColors } from '../constants/countries';
 import { getPlayableCountriesForScenario } from '../constants/eraCountries';
+import { INITIAL_CIVIL_WARS, isCountryInCivilWar, getCivilWarState } from '../constants/civilWarData';
+import { CountryInfoSidePanel, CountryInfoData } from './CountryInfoSidePanel';
 import { 
   Globe, Shield, Swords, Users, Landmark, AlertTriangle, 
   MapPin, Flag, Award, Eye, Crosshair, ChevronRight, Activity,
-  Info, Zap, BarChart2
+  Info, Zap, BarChart2, Flame
 } from 'lucide-react';
 import { playSound } from '../lib/sounds';
 
-export type TacticalMapLayer = 'FREEDOM' | 'IDEOLOGY' | 'ACTIVE_WAR' | 'INFLUENCE';
+export type TacticalMapLayer = 'FREEDOM' | 'IDEOLOGY' | 'ACTIVE_WAR' | 'INFLUENCE' | 'CIVIL_WARS';
 
 interface TacticalOperationsMapProps {
   country: Country;
-  party: { name: string };
+  party: { name: string; ideology?: string };
   civilWarRisk?: number;
   freedomIndex?: number;
   internationalReputation?: number;
   countryIdeologies?: Record<string, string>;
   countryFreedomScores?: Record<string, number>;
+  diplomaticRelations?: Record<string, { status: string; opinion: number; alliance?: boolean }>;
   scenario?: ScenarioYear;
   darkMode: boolean;
+  playerTreasury?: number;
+  onDeclareWar?: (countryId: string) => void;
+  onProposeAlliance?: (countryId: string) => void;
+  onTradeDeal?: (countryId: string) => void;
+  onSendAid?: (countryId: string) => void;
+  onOpenEmbassy?: (countryId: string) => void;
+  onCivilWarAction?: (countryId: string, actionType: 'RECOGNIZE_GOV' | 'RECOGNIZE_REBEL' | 'AID_GOV' | 'AID_REBEL' | 'INTERVENE', factionId?: string) => void;
 }
 
 export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
@@ -38,14 +48,23 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   internationalReputation = 65,
   countryIdeologies = {},
   countryFreedomScores = {},
+  diplomaticRelations = {},
   scenario = '2026',
   darkMode,
+  playerTreasury = 100000,
+  onDeclareWar,
+  onProposeAlliance,
+  onTradeDeal,
+  onSendAid,
+  onOpenEmbassy,
+  onCivilWarAction,
 }) => {
   const activeScenarioId: ScenarioYear = (scenario as ScenarioYear) || '2026';
   const activeCountries = getPlayableCountriesForScenario(activeScenarioId);
 
   const [activeLayer, setActiveLayer] = useState<TacticalMapLayer>('FREEDOM');
-  const [selectedIntelCountry, setSelectedIntelCountry] = useState<Country | null>(country);
+  const [selectedIntelCountry, setSelectedIntelCountry] = useState<Country | null>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -53,12 +72,34 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // Active wars definition per scenario
+  // Active wars definition per scenario and dynamic diplomatic state
   const getActiveWarDetails = (cId: string) => {
+    // 1. Dynamic check from actual diplomatic state
+    if (diplomaticRelations && (diplomaticRelations[cId] as any)?.status === 'At War') {
+      return {
+        war: `Sovereign War vs ${country.name}`,
+        belligerent: 'Active Hostile Frontline',
+        intensity: 'Critical'
+      };
+    }
+    if (cId === country.id) {
+      const hasActiveWar = Object.values(diplomaticRelations || {}).some(r => (r as any)?.status === 'At War');
+      if (hasActiveWar) {
+        return {
+          war: 'National Mobilization Defense',
+          belligerent: 'Sovereign Homeland Command',
+          intensity: 'Critical'
+        };
+      }
+    }
+
+    // 2. Scenario-specific historical/active conflicts
     if (activeScenarioId === '2026') {
       if (['RU', 'UA'].includes(cId)) return { war: 'Russo-Ukrainian War', belligerent: 'Active Combatant', intensity: 'High' };
       if (['IL', 'PS'].includes(cId)) return { war: 'Middle East Conflict', belligerent: 'Active Combatant', intensity: 'High' };
-      if (['SD', 'MM'].includes(cId)) return { war: 'Civil Armed Conflict', belligerent: 'Armed Insurgency', intensity: 'Critical' };
+      if (['SD', 'MM', 'SY', 'LY', 'YE', 'SO', 'ML', 'CD', 'ET', 'HT'].includes(cId)) {
+        return { war: 'Civil Armed Conflict', belligerent: 'Civil War Theater', intensity: 'Critical' };
+      }
       if (['TW', 'CN', 'US'].includes(cId)) return { war: 'Taiwan Strait Standoff', belligerent: 'Strategic Deterrence', intensity: 'Moderate' };
     }
     if (activeScenarioId === '1950') {
@@ -84,37 +125,211 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   const getFreedomScore = (cId: string): number => {
     if (cId === country.id) return freedomIndex;
     if (countryFreedomScores[cId] !== undefined) return countryFreedomScores[cId];
-    if (['SU', 'DDR', 'CN', 'CS'].includes(cId)) return 18;
-    if (['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS', 'PT'].includes(cId)) return 88;
-    if (['TR', 'PL', 'RO', 'HU', 'IT', 'ES', 'CL', 'GR'].includes(cId)) return 62;
-    return 50;
+    if (['SU', 'DDR', 'CN', 'CS', 'BY', 'KP', 'IR', 'SY', 'MM', 'SD', 'YE', 'HT'].includes(cId)) return 14;
+    if (['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS', 'PT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'CH', 'AT', 'NZ', 'IE'].includes(cId)) return 92;
+    if (['TR', 'PL', 'RO', 'HU', 'IT', 'ES', 'CL', 'GR', 'BG', 'HR', 'RS', 'BR', 'MX', 'AR', 'IN', 'ID', 'ZA'].includes(cId)) return 68;
+    return 48;
   };
 
   const getIdeologyLabel = (cId: string): string => {
-    if (cId === country.id && party) return party.name;
+    if (cId === country.id && party) {
+      const pName = (party.name || '').toLowerCase();
+      const pIdeo = (party.ideology || '').toLowerCase();
+      if (pName.includes('rassemblement national') || pName.includes('rn') || pIdeo.includes('national') || pIdeo.includes('populism') || pName.includes('zafer') || pName.includes('mhp') || pName.includes('afd')) {
+        return 'Right-Wing Nationalist';
+      }
+      if (pIdeo.includes('socialist') || pIdeo.includes('communist') || pIdeo.includes('marxist')) {
+        return 'Socialist / Left';
+      }
+      if (pIdeo.includes('social dem') || pIdeo.includes('chp') || pIdeo.includes('labour') || pIdeo.includes('spd') || pIdeo.includes('democrat')) {
+        return 'Social Democrat';
+      }
+      if (pIdeo.includes('conservative') || pIdeo.includes('cdu') || pIdeo.includes('akp') || pIdeo.includes('tory') || pIdeo.includes('republican')) {
+        return 'Conservative';
+      }
+      if (pIdeo.includes('liberal') || pIdeo.includes('fdp') || pIdeo.includes('iyip') || pIdeo.includes('renaissance')) {
+        return 'Liberal Centrist';
+      }
+      return party.ideology || 'Centrist';
+    }
+
     if (countryIdeologies[cId]) return countryIdeologies[cId];
-    if (['SU', 'DDR', 'CN', 'CS', 'YU'].includes(cId)) return 'Marxist-Leninist / Communist';
-    if (['US', 'GB', 'JP', 'CA', 'AU', 'IS', 'PT'].includes(cId)) return 'Liberal Democracy / Conservative';
-    if (['DE', 'FR', 'IT', 'ES', 'CL', 'GR'].includes(cId)) return 'Social Democracy / Progressive';
-    if (['TR', 'EG', 'ZA', 'BR', 'MX', 'AR', 'IN', 'ID'].includes(cId)) return 'Republican / Centrist / Nationalist';
-    if (['RU'].includes(cId)) return 'Traditionalist / Sovereign';
-    return 'Constitutional Centrist';
+
+    if (activeScenarioId === '2026') {
+      if (['US', 'CA', 'GB', 'DE', 'FR', 'JP', 'AU', 'NZ'].includes(cId)) return 'Liberal Democracy';
+      if (['RU', 'BY'].includes(cId)) return 'Authoritarian Conservative';
+      if (['CN', 'KP', 'CU', 'VN'].includes(cId)) return 'Marxist-Leninist State';
+      if (['TR', 'HU', 'PL', 'RS'].includes(cId)) return 'Sovereign Conservative';
+      if (['IR', 'SA', 'QA'].includes(cId)) return 'Theocratic Monarchy / Islamic';
+      if (['SY', 'SD', 'MM', 'YE', 'LY', 'SO', 'ML', 'CD', 'ET', 'HT'].includes(cId)) return 'Civil Conflict Transitional';
+    }
+
+    return 'Sovereign Republic';
   };
+
+  // Convert selected country to CountryInfoData format
+  const sidePanelData: CountryInfoData | null = useMemo(() => {
+    if (!selectedIntelCountry) return null;
+    const cId = selectedIntelCountry.id;
+    const isPlayer = cId === country.id;
+    const rel = diplomaticRelations[cId];
+    const cw = getCivilWarState(cId);
+
+    // Find ruling party
+    let rPartyName = 'Government Council';
+    let rLeader = 'Head of State';
+    let rIdeology = getIdeologyLabel(cId);
+    let rColor = selectedIntelCountry.primaryColor || '#3b82f6';
+
+    if (isPlayer) {
+      rPartyName = party.name;
+      rLeader = 'Player Commander';
+      rIdeology = party.ideology || 'Democratic Sovereign';
+      rColor = selectedIntelCountry.primaryColor || '#6366f1';
+    } else if (selectedIntelCountry.rivals && selectedIntelCountry.rivals.length > 0) {
+      const topParty = selectedIntelCountry.rivals.reduce((prev, curr) => (curr.baseSupport > prev.baseSupport ? curr : prev), selectedIntelCountry.rivals[0]);
+      rPartyName = topParty.name;
+      rLeader = topParty.leader || 'Party Leader';
+      rIdeology = topParty.ideology || rIdeology;
+      rColor = topParty.color || rColor;
+    }
+
+    // Active wars
+    const warsList: Array<{ enemyName: string; enemyFlag: string; frontStatus: string }> = [];
+    const warDetails = getActiveWarDetails(cId);
+    if (warDetails) {
+      if (cId === 'RU') warsList.push({ enemyName: 'Ukraine', enemyFlag: '🇺🇦', frontStatus: 'High Intensity Front' });
+      else if (cId === 'UA') warsList.push({ enemyName: 'Russia', enemyFlag: '🇷🇺', frontStatus: 'Territorial Defense' });
+      else if (cId === 'IL') warsList.push({ enemyName: 'Gaza & Regional Fronts', enemyFlag: '🇵🇸', frontStatus: 'Active Strikes' });
+      else if (cId === 'PS') warsList.push({ enemyName: 'Israel', enemyFlag: '🇮🇱', frontStatus: 'Besieged Frontline' });
+      else if (cw) warsList.push({ enemyName: 'Internal Faction Insurgency', enemyFlag: '⚠️', frontStatus: `${cw.monthlyCasualties} Casualties/Mo` });
+      else if (rel && rel.status === 'At War') warsList.push({ enemyName: country.name, enemyFlag: country.flag, frontStatus: 'Sovereign Hostility' });
+    }
+
+    // Alliances
+    const alliancesList: string[] = [];
+    if (['US', 'GB', 'FR', 'DE', 'IT', 'CA', 'TR', 'PL', 'NO', 'NL', 'BE', 'ES', 'PT', 'GR', 'RO', 'IS', 'SE', 'FI'].includes(cId)) {
+      alliancesList.push('NATO');
+    }
+    if (['FR', 'DE', 'IT', 'ES', 'PL', 'RO', 'NL', 'BE', 'SE', 'PT', 'GR', 'AT', 'FI', 'IE'].includes(cId)) {
+      alliancesList.push('European Union');
+    }
+    if (['RU', 'BY', 'KZ', 'KG', 'TJ', 'AM'].includes(cId)) {
+      alliancesList.push('CSTO');
+    }
+    if (['CN', 'RU', 'KZ', 'UZ', 'TJ', 'KG', 'IN', 'PK', 'IR'].includes(cId)) {
+      alliancesList.push('SCO');
+    }
+    if (rel && (rel.status === 'Alliance' || rel.status === 'Defensive Pact')) {
+      alliancesList.push(`Pact with ${country.name}`);
+    }
+
+    // Stability & Next Election
+    let stabilityVal = isPlayer ? (100 - civilWarRisk) : 74;
+    let nextElectionStr = 'November 2028 (Scheduled)';
+
+    if (cw && cw.status === 'ACTIVE') {
+      stabilityVal = cw.stability;
+      nextElectionStr = 'No scheduled elections (Civil Conflict)';
+    } else if (getFreedomScore(cId) < 25 || ['SA', 'QA', 'OM', 'AE', 'KP', 'CN', 'CU', 'VN', 'BY'].includes(cId)) {
+      nextElectionStr = 'No scheduled elections (Autocratic State)';
+    } else if (isPlayer) {
+      nextElectionStr = 'End of Legislative Term';
+    }
+
+    // Recent news
+    const newsList: string[] = [];
+    if (cw && cw.status === 'ACTIVE') {
+      newsList.push(`Heavy clashes reported between ${cw.factions[0]?.name} and armed opposition factions.`);
+      newsList.push(`UN human rights delegation issues emergency report on internal displaced populations.`);
+      newsList.push(`Regional peace talks stalled over territorial recognition demands.`);
+    } else if (warsList.length > 0) {
+      newsList.push(`Supreme Command announces expanded military mobilization and logistics reinforcement.`);
+      newsList.push(`Diplomatic envoys convene multilateral security summit in Switzerland.`);
+      newsList.push(`Parliament authorizes supplemental war bonds and defense appropriations.`);
+    } else {
+      newsList.push(`Central bank announces monetary policy adjustment to stabilize annual inflation targets.`);
+      newsList.push(`Legislative assembly introduces comprehensive infrastructure and energy modernization bill.`);
+      newsList.push(`Bilateral trade delegates conclude strategic maritime export tariff framework.`);
+    }
+
+    return {
+      id: cId,
+      name: selectedIntelCountry.name,
+      flag: selectedIntelCountry.flag,
+      system: selectedIntelCountry.system,
+      rulingParty: {
+        name: rPartyName,
+        leader: rLeader,
+        ideology: rIdeology,
+        color: rColor,
+      },
+      population: selectedIntelCountry.population || '45.2 Million',
+      gdp: `$${(Math.round(selectedIntelCountry.seats * 12.5) / 10).toFixed(1)} Trillion`,
+      militaryStrength: `${Math.round(selectedIntelCountry.seats * 3.8 + 80)}k Active Forces`,
+      treasury: `$${Math.round(selectedIntelCountry.seats * 1.5 + 25)} Billion`,
+      freedomIndex: getFreedomScore(cId),
+      stability: stabilityVal,
+      nextElection: nextElectionStr,
+      wars: warsList,
+      alliances: alliancesList,
+      recentEvents: newsList,
+      civilWar: cw,
+      isPlayerCountry: isPlayer,
+      playerRelation: rel ? {
+        opinion: rel.opinion,
+        status: rel.status as any,
+        hasCB: false
+      } : {
+        opinion: 50,
+        status: 'Neutral',
+        hasCB: false
+      }
+    };
+  }, [selectedIntelCountry, country, party, diplomaticRelations, activeScenarioId, civilWarRisk, freedomIndex]);
+
 
   // Load GeoJSON polygons
   useEffect(() => {
     let isMounted = true;
-    fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
-      .then(res => res.json())
-      .then(data => {
-        if (isMounted && data) {
-          setGeoJsonData(data);
-          setIsLoading(false);
+
+    const fetchJsonSafely = async (url: string) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) return null;
+        const text = await res.text();
+        if (text.trim().startsWith('<')) return null;
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchUrls = [
+      '/world_admin0_50m.geojson',
+      'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson',
+      'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson'
+    ];
+
+    const fetchGeoData = async () => {
+      for (const url of fetchUrls) {
+        try {
+          const data = await fetchJsonSafely(url);
+          if (isMounted && data && data.features) {
+            setGeoJsonData(data);
+            setIsLoading(false);
+            return;
+          }
+        } catch {
+          // Ignore and continue to next fallback
         }
-      })
-      .catch(() => {
-        if (isMounted) setIsLoading(false);
-      });
+      }
+      if (isMounted) setIsLoading(false);
+    };
+
+    fetchGeoData();
     return () => { isMounted = false; };
   }, []);
 
@@ -153,53 +368,66 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
     layerGroupRef.current.clearLayers();
 
     if (geoJsonData && geoJsonData.features) {
+      const ISO3_TO_ISO2: Record<string, string> = {
+        USA: 'US', FRA: 'FR', TUR: 'TR', DEU: 'DE', GBR: 'GB', ITA: 'IT', RUS: 'RU', UKR: 'UA',
+        CHN: 'CN', JPN: 'JP', POL: 'PL', HUN: 'HU', ROU: 'RO', GRC: 'GR', PRT: 'PT', ESP: 'ES',
+        EGY: 'EG', BRA: 'BR', IND: 'IN', KOR: 'KR', CAN: 'CA', AUS: 'AU', CHL: 'CL', ISL: 'IS',
+        BEL: 'BE', NLD: 'NL', CHE: 'CH', AUT: 'AT', SWE: 'SE', NOR: 'NO', DNK: 'DK', FIN: 'FI',
+        BLR: 'BY', CZE: 'CZ', SVK: 'SK', BGR: 'BG', SRB: 'RS', HRV: 'HR', BIH: 'BA', SVN: 'SI',
+        ALB: 'AL', MKD: 'MK', MNE: 'ME', IRL: 'IE', EST: 'EE', LVA: 'LV', LTU: 'LT', MDA: 'MD',
+        GEO: 'GE', ARM: 'AM', AZE: 'AZ', KAZ: 'KZ', UZB: 'UZ', TKM: 'TM', TJK: 'TJ', KGZ: 'KG',
+        SAU: 'SA', IRN: 'IR', IRQ: 'IQ', SYR: 'SY', ISR: 'IL', PSE: 'PS', JOR: 'JO', LBN: 'LB',
+        ARE: 'AE', QAT: 'QA', KWT: 'KW', OMN: 'OM', YEM: 'YE', MEX: 'MX', ARG: 'AR', COL: 'CO',
+        PER: 'PE', VEN: 'VE', ZAF: 'ZA', NGA: 'NG', DZA: 'DZ', MAR: 'MA', TUN: 'TN', LBY: 'LY',
+        ETH: 'ET', KEN: 'KE', GHA: 'GH', SDN: 'SD', SSD: 'SS', SOM: 'SO', COD: 'CD', COG: 'CG',
+        PAK: 'PK', BGD: 'BD', IDN: 'ID', MYS: 'MY', THA: 'TH', VNM: 'VN', PHL: 'PH', TWN: 'TW',
+        PRK: 'KP', MNG: 'MN', AFG: 'AF', NZL: 'NZ', GUF: 'FR', GLP: 'FR', MTQ: 'FR', REU: 'FR', MYT: 'FR',
+        NCL: 'FR', PYF: 'FR', US1: 'US', FR1: 'FR', GB1: 'GB', NL1: 'NL', DN1: 'DK', IT1: 'IT'
+      };
+
       const getCountryCodeFromFeature = (f: any): string | null => {
-        const id = String(f.id || f.properties?.ISO_A3 || f.properties?.iso_a3 || '').toUpperCase();
-        const name = String(f.properties?.name || '').toUpperCase();
-        if (id === 'TUR' || name.includes('TURKEY')) return 'TR';
-        if (id === 'USA' || name.includes('UNITED STATES')) return 'US';
-        if (id === 'DEU' || name.includes('GERMANY')) return 'DE';
-        if (id === 'GBR' || name.includes('UNITED KINGDOM')) return 'GB';
-        if (id === 'FRA' || name.includes('FRANCE')) return 'FR';
-        if (id === 'ITA' || name.includes('ITALY')) return 'IT';
-        if (id === 'RUS' || name.includes('RUSSIA')) return 'RU';
-        if (id === 'UKR' || name.includes('UKRAINE')) return 'UA';
-        if (id === 'CHN' || name.includes('CHINA')) return 'CN';
-        if (id === 'JPN' || name.includes('JAPAN')) return 'JP';
-        if (id === 'POL' || name.includes('POLAND')) return 'PL';
-        if (id === 'HUN' || name.includes('HUNGARY')) return 'HU';
-        if (id === 'ROU' || name.includes('ROMANIA')) return 'RO';
-        if (id === 'GRC' || name.includes('GREECE')) return 'GR';
-        if (id === 'PRT' || name.includes('PORTUGAL')) return 'PT';
-        if (id === 'ESP' || name.includes('SPAIN')) return 'ES';
-        if (id === 'EGY' || name.includes('EGYPT')) return 'EG';
-        if (id === 'BRA' || name.includes('BRAZIL')) return 'BR';
-        if (id === 'IND' || name.includes('INDIA')) return 'IN';
-        if (id === 'KOR' || name.includes('KOREA')) return 'KR';
-        if (id === 'CAN' || name.includes('CANADA')) return 'CA';
-        if (id === 'AUS' || name.includes('AUSTRALIA')) return 'AU';
-        if (id === 'CHL' || name.includes('CHILE')) return 'CL';
-        if (id === 'ISL' || name.includes('ICELAND')) return 'IS';
+        const props = f.properties || {};
+        const iso3 = String(
+          (props.ISO_A3 && props.ISO_A3 !== '-99') ? props.ISO_A3 :
+          (props.iso_a3 && props.iso_a3 !== '-99') ? props.iso_a3 :
+          (props.adm0_a3 && props.adm0_a3 !== '-99') ? props.adm0_a3 :
+          (props.ADM0_A3 && props.ADM0_A3 !== '-99') ? props.ADM0_A3 :
+          (props.sov_a3 && props.sov_a3 !== '-99') ? props.sov_a3 :
+          (props.SOV_A3 && props.SOV_A3 !== '-99') ? props.SOV_A3 :
+          (props.gu_a3 && props.gu_a3 !== '-99') ? props.gu_a3 :
+          (props.su_a3 && props.su_a3 !== '-99') ? props.su_a3 :
+          (f.id && String(f.id).length === 3 && f.id !== '-99') ? f.id : ''
+        ).toUpperCase();
+
+        if (iso3 && ISO3_TO_ISO2[iso3]) return ISO3_TO_ISO2[iso3];
+
+        const iso2 = String(props.ISO_A2 || props.iso_a2 || '').toUpperCase();
+        if (iso2 && iso2.length === 2 && iso2 !== '-99') return iso2;
+
         return null;
       };
 
       const tacticalGeoLayer = L.geoJSON(geoJsonData, {
         style: (feature: any) => {
           const cId = getCountryCodeFromFeature(feature);
+
+          // All borders 1px solid white #ffffff, no glow/gradients
+          let borderColor = '#ffffff';
+          let weight = (cId && cId === country.id) ? 2.5 : 1;
+          let fillOpacity = 0.85;
+
           if (!cId) {
+            // Unassigned country with no game data: fill neutral gray #4a4a4a
             return {
-              fillColor: darkMode ? '#1e293b' : '#94a3b8',
-              color: darkMode ? '#0f172a' : '#64748b',
-              weight: 0.5,
-              fillOpacity: 0.35,
-              interactive: false
+              fillColor: '#4a4a4a',
+              color: '#ffffff',
+              weight: 1,
+              fillOpacity: 0.8,
+              interactive: true
             };
           }
 
-          let fillColor = '#64748b';
-          let fillOpacity = 0.75;
-          let weight = cId === country.id ? 2.5 : 1;
-          let borderColor = cId === country.id ? '#38bdf8' : (darkMode ? '#334155' : '#cbd5e1');
+          let fillColor = '#4a4a4a';
 
           if (activeLayer === 'FREEDOM') {
             const score = getFreedomScore(cId);
@@ -208,27 +436,48 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
             else fillColor = '#dc2626'; // Not Free
           } else if (activeLayer === 'IDEOLOGY') {
             const ideo = getIdeologyLabel(cId).toLowerCase();
-            if (ideo.includes('communist') || ideo.includes('marxist') || ideo.includes('socialist')) fillColor = '#991b1b';
-            else if (ideo.includes('conservative') || ideo.includes('capitalist') || ideo.includes('republican')) fillColor = '#2563eb';
-            else if (ideo.includes('social dem') || ideo.includes('progressive') || ideo.includes('liberal')) fillColor = '#0891b2';
-            else if (ideo.includes('centrist') || ideo.includes('nationalist') || ideo.includes('republican')) fillColor = '#ca8a04';
-            else fillColor = '#475569';
+            if (ideo.includes('communist') || ideo.includes('marxist') || ideo.includes('socialist') || ideo.includes('left')) {
+              fillColor = '#dc2626'; // Red (Left / Socialist)
+            } else if (ideo.includes('nationalist') || ideo.includes('sovereign right') || ideo.includes('populism')) {
+              fillColor = '#1e3a8a'; // Dark Navy Blue (Right / Nationalist)
+            } else if (ideo.includes('conservative') || ideo.includes('christian')) {
+              fillColor = '#2563eb'; // Royal Blue (Right / Conservative)
+            } else if (ideo.includes('social dem') || ideo.includes('progressive')) {
+              fillColor = '#0891b2'; // Cyan / Teal (Center-Left)
+            } else if (ideo.includes('centrist') || ideo.includes('liberal') || ideo.includes('pro-european')) {
+              fillColor = '#eab308'; // Amber / Yellow (Center / Liberal)
+            } else if (ideo.includes('traditionalist')) {
+              fillColor = '#7c3aed'; // Purple (Traditionalist)
+            } else {
+              fillColor = '#4a4a4a';
+            }
+          } else if (activeLayer === 'CIVIL_WARS') {
+            const isCW = isCountryInCivilWar(cId);
+            if (isCW) {
+              fillColor = '#b91c1c'; // Dark Red for civil war state
+              fillOpacity = 0.9;
+              borderColor = '#f59e0b'; // Amber border
+              weight = 2;
+            } else {
+              fillColor = darkMode ? '#1e293b' : '#94a3b8';
+              fillOpacity = 0.35;
+            }
           } else if (activeLayer === 'ACTIVE_WAR') {
             const warInfo = getActiveWarDetails(cId);
             if (warInfo) {
               fillColor = warInfo.intensity === 'Critical' ? '#e11d48' : '#ea580c';
-              fillOpacity = 0.9;
-              borderColor = '#fda4af';
+              fillOpacity = 0.95;
+              borderColor = '#ffffff';
               weight = 2;
             } else {
-              fillColor = darkMode ? '#1e293b' : '#cbd5e1';
-              fillOpacity = 0.3;
+              fillColor = darkMode ? '#334155' : '#64748b';
+              fillOpacity = 0.45;
             }
           } else if (activeLayer === 'INFLUENCE') {
             if (cId === country.id) fillColor = '#6366f1';
             else if (['US', 'GB', 'FR', 'DE'].includes(cId)) fillColor = '#0284c7';
             else if (['RU', 'CN'].includes(cId)) fillColor = '#b91c1c';
-            else fillColor = '#475569';
+            else fillColor = '#4a4a4a';
           }
 
           return {
@@ -241,20 +490,21 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
         },
         onEachFeature: (feature: any, layer: L.Layer) => {
           const cId = getCountryCodeFromFeature(feature);
-          if (!cId) return;
-
-          const matchedCountry = activeCountries.find(c => c.id === cId) || PLAYABLE_COUNTRIES.find(c => c.id === cId);
-          const cName = matchedCountry ? matchedCountry.name : feature.properties?.name || cId;
-          const war = getActiveWarDetails(cId);
-          const freedom = getFreedomScore(cId);
-          const ideology = getIdeologyLabel(cId);
+          const rawName = feature.properties?.name || feature.properties?.name_long || feature.properties?.ADMIN || feature.properties?.sovereignt || 'Sovereign Territory';
+          const matchedCountry = cId ? (activeCountries.find(c => c.id === cId) || PLAYABLE_COUNTRIES.find(c => c.id === cId)) : null;
+          const cName = matchedCountry ? matchedCountry.name : rawName;
+          const war = cId ? getActiveWarDetails(cId) : null;
+          const cw = cId ? getCivilWarState(cId) : null;
+          const freedom = cId ? getFreedomScore(cId) : 50;
+          const ideology = cId ? getIdeologyLabel(cId) : 'Neutral / Non-Aligned';
 
           layer.bindTooltip(`
-            <div style="font-family: inherit; font-size: 11px; padding: 2px;">
-              <div style="font-weight: 900; text-transform: uppercase; margin-bottom: 2px;">${cName} (${cId})</div>
-              <div>🕊️ Freedom: <strong>${freedom}/100</strong></div>
+            <div style="font-family: inherit; font-size: 11px; padding: 4px; color: #ffffff; background: #0f172a; border-radius: 6px;">
+              <div style="font-weight: 900; text-transform: uppercase; margin-bottom: 3px; font-size: 12px;">${cName} ${cId ? `(${cId})` : ''}</div>
+              <div>🕊️ Freedom Index: <strong>${freedom}/100</strong></div>
               <div>⚖️ Ideology: <strong>${ideology}</strong></div>
-              ${war ? `<div style="color: #f43f5e; font-weight: 800; margin-top: 2px;">⚔️ ${war.war} (${war.belligerent})</div>` : ''}
+              ${cw ? `<div style="color: #f59e0b; font-weight: 800; margin-top: 3px;">🔥 Civil War: Stability ${cw.stability}% (${cw.factions.length} Factions)</div>` : ''}
+              ${war && !cw ? `<div style="color: #f43f5e; font-weight: 800; margin-top: 3px;">⚔️ ${war.war} (${war.belligerent})</div>` : ''}
             </div>
           `, {
             sticky: true,
@@ -265,6 +515,28 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
           layer.on('click', () => {
             if (matchedCountry) {
               setSelectedIntelCountry(matchedCountry);
+              setIsSidePanelOpen(true);
+              playSound('click');
+            } else if (cId) {
+              // Create temporary country object for non-playable countries
+              const tempCountry: Country = {
+                id: cId,
+                name: cName,
+                flag: '🌐',
+                seats: 120,
+                system: 'Sovereign Republic',
+                parliamentName: 'National Assembly',
+                population: '38.5 Million',
+                description: `Sovereign territorial state ${cName}.`,
+                regions: [],
+                rivals: [],
+                bills: [],
+                campaignTurns: 10,
+                electionCycleYears: 4,
+                primaryColor: '#64748b'
+              };
+              setSelectedIntelCountry(tempCountry);
+              setIsSidePanelOpen(true);
               playSound('click');
             }
           });
@@ -273,28 +545,33 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
 
       layerGroupRef.current.addLayer(tacticalGeoLayer);
     }
-  }, [activeLayer, geoJsonData, country, freedomIndex, civilWarRisk, darkMode]);
+  }, [activeLayer, geoJsonData, country, party, freedomIndex, civilWarRisk, darkMode, diplomaticRelations, countryIdeologies, countryFreedomScores]);
 
   return (
-    <div className="flex flex-col gap-5 animate-fade-in">
+    <div className="flex flex-col gap-5 animate-fade-in relative">
       {/* Tactical Header Controls */}
       <div className={`p-5 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
         darkMode ? 'bg-slate-900/80 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
       }`}>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-mono text-[10px] font-bold uppercase tracking-wider border border-rose-500/20 flex items-center gap-1">
               <Crosshair className="w-3 h-3" /> Tactical Operations & Global Intelligence
             </span>
             <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 font-mono text-[10px] font-bold uppercase tracking-wider">
               {activeScenarioId} SCENARIO
             </span>
+            {isSidePanelOpen && (
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">
+                📋 INTEL DOSSIER ACTIVE
+              </span>
+            )}
           </div>
           <h2 className="text-xl font-black mt-1 flex items-center gap-2 font-mono">
             <span>🗺️</span> Global Geopolitical Theater ({country.name})
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Monitor international freedom indices, ideological sphere alignments, and active frontline war zones in real-time.
+            Click any sovereign nation to open its detailed intelligence dossier and diplomatic action console.
           </p>
         </div>
 
@@ -321,6 +598,16 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
             <span>⚖️</span> Ideological Spheres
           </button>
           <button
+            onClick={() => { setActiveLayer('CIVIL_WARS'); playSound('click'); }}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeLayer === 'CIVIL_WARS'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 ring-2 ring-amber-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🔥</span> Civil Wars & Insurgencies
+          </button>
+          <button
             onClick={() => { setActiveLayer('ACTIVE_WAR'); playSound('click'); }}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeLayer === 'ACTIVE_WAR'
@@ -343,132 +630,96 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
         </div>
       </div>
 
-      {/* Map & Intel Sidebar Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* Map Main Stage with Left Persistent Dossier Panel */}
+      <div className="relative w-full rounded-3xl border overflow-hidden shadow-2xl min-h-[580px] flex">
+        {/* Persistent HOI4/AoH3 Docked Left Country Info Side Panel */}
+        {isSidePanelOpen && sidePanelData && (
+          <div className="absolute inset-y-0 left-0 z-30 flex">
+            <CountryInfoSidePanel
+              country={sidePanelData}
+              onClose={() => setIsSidePanelOpen(false)}
+              onDeclareWar={onDeclareWar}
+              onProposeAlliance={onProposeAlliance}
+              onTradeDeal={onTradeDeal}
+              onSendAid={onSendAid}
+              onOpenEmbassy={onOpenEmbassy}
+              onCivilWarAction={onCivilWarAction}
+              playerTreasury={playerTreasury}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+
         {/* Leaflet Map Stage */}
-        <div className={`col-span-12 lg:col-span-8 rounded-3xl border overflow-hidden relative shadow-lg min-h-[460px] flex flex-col ${
-          darkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`w-full h-full min-h-[580px] relative flex flex-col ${
+          darkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-900 border-slate-200'
         }`}>
-          <div ref={mapRef} className="w-full flex-1 min-h-[460px] z-10" />
+          <div ref={mapRef} className="w-full flex-1 min-h-[580px] z-10" />
+
+          {/* Quick Select Playable Strip on Map Bottom */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 max-w-[50%] overflow-x-auto p-1.5 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
+            {activeCountries.slice(0, 7).map(c => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setSelectedIntelCountry(c);
+                  setIsSidePanelOpen(true);
+                  playSound('click');
+                }}
+                className={`px-2 py-1 rounded-xl text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  selectedIntelCountry?.id === c.id
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <span>{c.flag}</span>
+                <span className="hidden sm:inline">{c.id}</span>
+              </button>
+            ))}
+          </div>
 
           {/* Layer Legend Overlay */}
-          <div className="absolute bottom-4 left-4 z-20 p-3 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800 text-[10px] text-slate-300 font-mono shadow-xl flex flex-col gap-1.5">
-            <span className="font-bold uppercase tracking-wider text-slate-400">
+          <div className="absolute bottom-4 right-4 z-20 p-3 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800 text-[10px] text-slate-300 font-mono shadow-xl flex flex-col gap-1.5 max-w-xs">
+            <span className="font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               {activeLayer === 'FREEDOM' && '🕊️ Freedom Score Legend'}
               {activeLayer === 'IDEOLOGY' && '⚖️ Ideological Spectrum'}
+              {activeLayer === 'CIVIL_WARS' && '🔥 Active Civil Wars & Insurgencies'}
               {activeLayer === 'ACTIVE_WAR' && '⚔️ Frontline Intensity'}
               {activeLayer === 'INFLUENCE' && '🌐 Geopolitical Bloc'}
             </span>
             {activeLayer === 'FREEDOM' && (
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Free (70-100)</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Partly Free (40-69)</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Free (70+)</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Partly (40-69)</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Not Free (&lt;40)</span>
               </div>
             )}
+            {activeLayer === 'CIVIL_WARS' && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-700 animate-ping" />
+                  <span className="text-rose-300 font-bold">10 Active Civil War Theaters</span>
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  Syria, Libya, Sudan, Myanmar, Yemen, Somalia, Mali, DR Congo, Ethiopia, Haiti. Stability &lt; 30.
+                </div>
+              </div>
+            )}
             {activeLayer === 'IDEOLOGY' && (
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-700" /> Communist</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600" /> Conservative</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-cyan-600" /> Social Dem</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-600" /> Centrist/Nat.</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-700" /> Left</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-600" /> Conservative</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-600" /> SocDem</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-600" /> Centrist</span>
               </div>
             )}
             {activeLayer === 'ACTIVE_WAR' && (
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" /> Critical Combat Zone</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-600" /> Strategic Standoff</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-slate-600" /> Non-Belligerent</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" /> Combat Zone</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-slate-600" /> Peace</span>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Tactical Intel Inspector Sidebar */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
-          {selectedIntelCountry ? (
-            <div className={`p-5 rounded-3xl border flex flex-col gap-4 ${
-              darkMode ? 'bg-slate-900/80 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
-            }`}>
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{selectedIntelCountry.flag || '🌐'}</span>
-                  <div>
-                    <h3 className="text-base font-black font-mono">{selectedIntelCountry.name}</h3>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">{selectedIntelCountry.system}</span>
-                  </div>
-                </div>
-                {selectedIntelCountry.id === country.id && (
-                  <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-[9px] font-bold uppercase">
-                    OUR STATE
-                  </span>
-                )}
-              </div>
-
-              {/* Stat Chips */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-2xl bg-slate-950/50 border border-slate-800/80">
-                  <span className="text-[9px] text-slate-400 font-mono uppercase block">Freedom Index</span>
-                  <span className="text-sm font-black font-mono text-emerald-400">
-                    {getFreedomScore(selectedIntelCountry.id)} / 100
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-slate-950/50 border border-slate-800/80">
-                  <span className="text-[9px] text-slate-400 font-mono uppercase block">Parliament Seats</span>
-                  <span className="text-sm font-black font-mono text-cyan-400">
-                    {selectedIntelCountry.seats} Seats
-                  </span>
-                </div>
-              </div>
-
-              {/* Ideological alignment block */}
-              <div className="p-3.5 rounded-2xl bg-slate-950/50 border border-slate-800/80">
-                <span className="text-[9px] text-slate-400 font-mono uppercase block mb-1">Ideological Spectrum</span>
-                <div className="text-xs font-bold text-slate-200">
-                  {getIdeologyLabel(selectedIntelCountry.id)}
-                </div>
-              </div>
-
-              {/* Active War Check */}
-              {getActiveWarDetails(selectedIntelCountry.id) ? (
-                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                  <div className="flex items-center gap-1.5 font-bold mb-1">
-                    <AlertTriangle className="w-4 h-4 text-rose-500" /> Active Conflict Sector
-                  </div>
-                  <div><strong>Conflict:</strong> {getActiveWarDetails(selectedIntelCountry.id)?.war}</div>
-                  <div><strong>Deployment:</strong> {getActiveWarDetails(selectedIntelCountry.id)?.belligerent}</div>
-                </div>
-              ) : (
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
-                  <span>🕊️</span> Sovereign territory is at peace (No active military frontline).
-                </div>
-              )}
-
-              {/* Major Parties */}
-              <div>
-                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Parliamentary Factions ({selectedIntelCountry.rivals.length + 1})
-                </span>
-                <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-1">
-                  {selectedIntelCountry.rivals.map(r => (
-                    <div key={r.id} className="p-2 rounded-xl bg-slate-950/30 border border-slate-800/50 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                        <span className="font-bold text-slate-200 truncate max-w-[140px]">{r.name}</span>
-                      </div>
-                      <span className="font-mono text-[10px] text-slate-400">%{r.baseSupport}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-6 rounded-3xl border border-dashed border-slate-800 text-center text-slate-400 text-xs flex flex-col items-center justify-center min-h-[300px]">
-              <Globe className="w-8 h-8 text-slate-600 mb-2" />
-              <span>Click on any nation on the tactical operations map to inspect its geopolitical intelligence dossier.</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

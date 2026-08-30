@@ -51,7 +51,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
   // Effective budget/reserve balance to display & modify
   const isRulingActive = isRuling && onUpdateTreasury !== undefined;
-  const currentBalance = isRulingActive ? treasury : party.budget;
+  const currentBalance = isRulingActive ? (treasury ?? 0) : (party?.budget ?? 0);
+  const memberCount = party?.members ?? 500;
 
   const updateBalance = (newVal: number) => {
     if (isRulingActive) {
@@ -130,9 +131,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   // 2) Increase Membership Dues
   const handleIncreaseDues = () => {
     const rewardPerMember = 10;
-    const reward = party.members * rewardPerMember;
+    const reward = memberCount * rewardPerMember;
 
-    if (party.members < 50) {
+    if (memberCount < 50) {
       playSound('error');
       setErrorMessage(`Insufficient Members: You need at least 50 registered members to implement dues collection.`);
       setSuccessMessage(null);
@@ -144,7 +145,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
     updateBalance(currentBalance + reward);
 
-    setSuccessMessage(`Membership Dues increased! Collected ${currency}${reward.toLocaleString()} from your ${party.members.toLocaleString()} members. Popularity nationwide dropped slightly (-1%) due to agitation.`);
+    setSuccessMessage(`Membership Dues increased! Collected ${currency}${reward.toLocaleString()} from your ${memberCount.toLocaleString()} members. Popularity nationwide dropped slightly (-1%) due to agitation.`);
     setErrorMessage(null);
   };
 
@@ -298,7 +299,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-3 leading-relaxed">
-              Leverage your membership base. Collect a small monthly fee from all registered members. Directly scales with your current member count ({party.members.toLocaleString()}), but agitates voters slightly, decreasing overall popularity by -1%.
+              Leverage your membership base. Collect a small monthly fee from all registered members. Directly scales with your current member count ({(party?.members ?? 500).toLocaleString()}), but agitates voters slightly, decreasing overall popularity by -1%.
             </p>
           </div>
 
