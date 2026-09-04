@@ -5,6 +5,8 @@
 
 import { Country, ScenarioYear, Region, RivalParty, Bill } from '../types';
 import { PLAYABLE_COUNTRIES, getTurkeyRegions, getUSRegions, getGermanyRegions, getUKRegions, getFranceRegions, getItalyRegions } from './countries';
+import { BREAKAWAY_COUNTRIES } from './breakawayCountries';
+import { getTerritoryControlMap } from '../utils/territorialControl';
 
 // Helper to generate generic historical regions
 const generateHistoricalRegions = (
@@ -1816,5 +1818,17 @@ export const getPlayableCountriesForScenario = (scenario: ScenarioYear): Country
   if (scenario === '1936') return COUNTRIES_1936;
   if (scenario === '1920') return COUNTRIES_1920;
   if (scenario === '1914') return COUNTRIES_1914;
-  return PLAYABLE_COUNTRIES; // Default 2026
+
+  // For 2026: Include sovereign nations plus active playable breakaway states
+  const territoryControl = getTerritoryControlMap();
+  const activeBreakaways = BREAKAWAY_COUNTRIES.filter(b => {
+    // Check if the breakaway state holds at least 1 region in live territorial control
+    const heldRegions = b.regions.filter(r => {
+      const controller = territoryControl[r.id] || r.controlledBy || b.id;
+      return controller === b.id;
+    });
+    return heldRegions.length > 0;
+  });
+
+  return [...PLAYABLE_COUNTRIES, ...activeBreakaways];
 };

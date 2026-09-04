@@ -3,7 +3,7 @@ import { Country, Party } from '../types';
 import { playSound } from '../lib/sounds';
 import { 
   ShieldAlert, ShieldCheck, Swords, Anchor, Cpu, AlertTriangle, 
-  Sparkles, Check, Users, Coins, Map, Activity
+  Sparkles, Check, Users, Coins, Map, Activity, Lock
 } from 'lucide-react';
 
 interface MilitaryViewProps {
@@ -17,6 +17,7 @@ interface MilitaryViewProps {
   onUpdateFreedomIndex: (freedom: number) => void;
   publicApprovalImpact: (approvalChange: number) => void;
   darkMode: boolean;
+  isRuling?: boolean;
 }
 
 export const MilitaryView: React.FC<MilitaryViewProps> = ({
@@ -30,6 +31,7 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
   onUpdateFreedomIndex,
   publicApprovalImpact,
   darkMode,
+  isRuling = true,
 }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -49,8 +51,18 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
 
   const currency = getCurrencySymbol();
 
+  const checkRuling = () => {
+    if (!isRuling) {
+      playSound('error');
+      setErrorMessage("🔒 Only the sitting government commands the armed forces.");
+      return false;
+    }
+    return true;
+  };
+
   // 1) Deploy Martial Law / State Security Forces
   const handleDeployMartialLaw = () => {
+    if (!checkRuling()) return;
     if (civilWarRisk < 15) {
       playSound('error');
       setErrorMessage(`Tactical deployment rejected: Internal Civil War / Revolt risk is currently safe (${civilWarRisk}%). Martial Law only needed during crises.`);
@@ -68,6 +80,7 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
 
   // 2) Defense Budget procurement
   const handleDefenseProcurement = () => {
+    if (!checkRuling()) return;
     const cost = 55000;
     if (treasury < cost) {
       playSound('error');
@@ -86,6 +99,7 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
 
   // 3) Mobilize Border Defense
   const handleMobilizeBorders = () => {
+    if (!checkRuling()) return;
     const cost = 25000;
     if (treasury < cost) {
       playSound('error');
@@ -132,6 +146,16 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
         </div>
       </div>
 
+      {!isRuling && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-3">
+          <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+          <div>
+            <span className="font-bold uppercase tracking-wider block">Only the sitting government commands the armed forces</span>
+            <span className="text-slate-300 text-[11px]">Executive defense decrees and martial deployments are restricted to the sitting administration.</span>
+          </div>
+        </div>
+      )}
+
       {successMessage && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-start gap-2.5 animate-fade-in">
           <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -140,94 +164,113 @@ export const MilitaryView: React.FC<MilitaryViewProps> = ({
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-start gap-2.5 animate-fade-in">
-          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2.5 animate-fade-in">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Strategic Command Operations Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Defense Budgets */}
-        <div className={`p-5 rounded-3xl border flex flex-col justify-between gap-4 ${
-          darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
+        {/* 1. Martial Law & Internal Security */}
+        <div className={`p-6 rounded-3xl border flex flex-col justify-between gap-4 ${
+          darkMode ? 'bg-slate-900/40 border-slate-850' : 'bg-white border-slate-200'
         }`}>
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-500/10 mb-3.5">
-              <span className="p-1.5 bg-red-500/10 text-red-500 rounded-lg"><Cpu className="w-4 h-4" /></span>
-              <span className="text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full uppercase border border-indigo-500/10">
-                Procurement
-              </span>
+            <div className="p-2.5 bg-red-500/10 rounded-2xl text-red-400 w-fit mb-3">
+              <ShieldAlert className="w-5 h-5" />
             </div>
-            <h4 className="font-extrabold text-sm text-slate-100">Procure Tactical Logistics</h4>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Allocate National Treasury budget to procure cutting-edge defense platforms. Boosts overall defensive capability and national readiness score by +15%.
+            <h3 className="text-base font-bold">Martial Law & Curfew</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Authorize armed gendarme crackdowns on insurgent cells. Completely neutralizes civil revolt risk to 0%, but severely degrades national freedom.
             </p>
           </div>
 
-          <div className="pt-3 border-t border-slate-500/10 flex justify-between items-center text-xs">
-            <span className="font-mono text-[10px] text-slate-500">Cost: {currency}55,000</span>
-            <button
-              onClick={handleDefenseProcurement}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl cursor-pointer"
-            >
-              Order Shipment
-            </button>
-          </div>
-        </div>
-
-        {/* Secure Borders */}
-        <div className={`p-5 rounded-3xl border flex flex-col justify-between gap-4 ${
-          darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-500/10 mb-3.5">
-              <span className="p-1.5 bg-red-500/10 text-red-500 rounded-lg"><Anchor className="w-4 h-4" /></span>
-              <span className="text-[10px] font-mono font-bold bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full uppercase border border-green-500/10">
-                HQ Defense
-              </span>
+          <div className="pt-4 border-t border-slate-800/60 flex flex-col gap-2">
+            <div className="text-[11px] font-mono text-slate-400 flex justify-between">
+              <span>REVOLT THRESHOLD:</span>
+              <span className="font-bold text-red-400">Requires ≥15% Risk</span>
             </div>
-            <h4 className="font-extrabold text-sm text-slate-100">Secure Borders & Outposts</h4>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Deploy check-posts, naval patrols, and coordinate perimeter drones. Increases defense tier, protecting sovereign territory from hostile state incursions.
-            </p>
-          </div>
-
-          <div className="pt-3 border-t border-slate-500/10 flex justify-between items-center text-xs">
-            <span className="font-mono text-[10px] text-slate-500">Cost: {currency}25,000</span>
             <button
-              onClick={handleMobilizeBorders}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl cursor-pointer"
-            >
-              Mobilize Outposts
-            </button>
-          </div>
-        </div>
-
-        {/* Counter-Insurgency Martial Law */}
-        <div className={`p-5 rounded-3xl border flex flex-col justify-between gap-4 ${
-          darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-500/10 mb-3.5">
-              <span className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg"><ShieldAlert className="w-4 h-4" /></span>
-              <span className="text-[10px] font-mono font-bold bg-rose-500/10 text-rose-450 px-2 py-0.5 rounded-full uppercase border border-rose-500/10 animate-pulse">
-                Anti-Revolt
-              </span>
-            </div>
-            <h4 className="font-extrabold text-sm text-slate-100">Enforce Local Martial Law</h4>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              If Civil War Revolt Risk is dangerously elevated, authorize tactical security crackdowns. Forces internal rebellion risk to exactly 0%, but drastically lowers Freedom Index (-20).
-            </p>
-          </div>
-
-          <div className="pt-3 border-t border-slate-500/10 flex justify-between items-center text-xs">
-            <span className="font-mono text-[10px] text-slate-500">Cost: Free</span>
-            <button
+              disabled={!isRuling}
               onClick={handleDeployMartialLaw}
-              className="px-4 py-2 bg-rose-650 hover:bg-rose-600 text-white font-bold text-xs rounded-xl cursor-pointer"
+              className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isRuling
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'
+              }`}
             >
-              Deploy Martial Law
+              {!isRuling && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+              <span>Enforce Martial Law</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. Procurement & Modernization */}
+        <div className={`p-6 rounded-3xl border flex flex-col justify-between gap-4 ${
+          darkMode ? 'bg-slate-900/40 border-slate-850' : 'bg-white border-slate-200'
+        }`}>
+          <div>
+            <div className="p-2.5 bg-indigo-500/10 rounded-2xl text-indigo-400 w-fit mb-3">
+              <Cpu className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-bold">Air Defense & Drones</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Procure modern multi-spectrum radar grids, surface-to-air batteries and strike drones. Boosts military readiness by +15%.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800/60 flex flex-col gap-2">
+            <div className="text-[11px] font-mono text-slate-400 flex justify-between">
+              <span>TREASURY COST:</span>
+              <span className="font-bold text-emerald-400">{currency}55,000</span>
+            </div>
+            <button
+              disabled={!isRuling}
+              onClick={handleDefenseProcurement}
+              className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isRuling
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+              }`}
+            >
+              {!isRuling && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+              <span>Procure Defense Grid</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Border Hardening */}
+        <div className={`p-6 rounded-3xl border flex flex-col justify-between gap-4 ${
+          darkMode ? 'bg-slate-900/40 border-slate-850' : 'bg-white border-slate-200'
+        }`}>
+          <div>
+            <div className="p-2.5 bg-emerald-500/10 rounded-2xl text-emerald-400 w-fit mb-3">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-bold">Fortify Frontier Outposts</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Construct physical barriers, electronic sensors and fortified checkpoints across sovereign border perimeters.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800/60 flex flex-col gap-2">
+            <div className="text-[11px] font-mono text-slate-400 flex justify-between">
+              <span>LOGISTICS COST:</span>
+              <span className="font-bold text-emerald-400">{currency}25,000</span>
+            </div>
+            <button
+              disabled={!isRuling}
+              onClick={handleMobilizeBorders}
+              className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isRuling
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'
+              }`}
+            >
+              {!isRuling && <Lock className="w-3.5 h-3.5 text-slate-400" />}
+              <span>Fortify Borders</span>
             </button>
           </div>
         </div>

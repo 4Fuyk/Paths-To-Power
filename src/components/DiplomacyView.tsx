@@ -3,7 +3,11 @@ import { Country, Party, ScenarioYear } from '../types';
 import { countryColors, PLAYABLE_COUNTRIES } from '../constants/countries';
 import { getPlayableCountriesForScenario } from '../constants/eraCountries';
 import { playSound } from '../lib/sounds';
-import { Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, AlertTriangle, Swords, Flame, Check, Zap } from 'lucide-react';
+import { 
+  Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, 
+  AlertTriangle, Swords, Flame, Check, Zap, X, Lock, Building2, 
+  DollarSign, Activity, TrendingUp, Handshake 
+} from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -51,6 +55,7 @@ const countryCoords: Record<string, [number, number]> = {
 interface DiplomacyViewProps {
   country: Country;
   party: Party;
+  isRuling?: boolean;
   diplomaticRelations: Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>;
   onUpdateRelations: (updatedRelations: any) => void;
   treasury: number;
@@ -59,7 +64,7 @@ interface DiplomacyViewProps {
   onUpdateInfluence: (updatedInfluence: number) => void;
   internationalReputation: number;
   onUpdateReputation: (updatedReputation: number) => void;
-  publicApprovalImpact: (approvalChange: number) => void;
+  publicApprovalImpact: (delta: number) => void;
   darkMode: boolean;
   scenario?: ScenarioYear | string;
   freedomIndex?: number;
@@ -67,9 +72,21 @@ interface DiplomacyViewProps {
   countryFreedomScores?: Record<string, number>;
 }
 
+const getScenarioBg = (scenarioId: string) => {
+  switch (scenarioId) {
+    case '2026': return '/bg-2026.svg';
+    case '1950': return '/bg-1950.svg';
+    case '1936': return '/bg-1936.svg';
+    case '1914': return '/bg-1914.svg';
+    case '1920': return '/bg-1920.svg';
+    default: return '/bg-2026.svg';
+  }
+};
+
 export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   country,
   party,
+  isRuling = true,
   diplomaticRelations,
   onUpdateRelations,
   treasury,
@@ -124,11 +141,299 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     diplomatic: false
   });
 
-  // Selected country on the visual tactical world map
-  const [selectedMapCountryId, setSelectedMapCountryId] = useState<string>(() => {
-    const firstOther = Object.keys(diplomaticRelations).find(id => id !== country.id);
-    return firstOther || 'TR';
-  });
+  // Selected country on the visual tactical world map (null by default or ID when clicked)
+  const [selectedMapCountryId, setSelectedMapCountryId] = useState<string | null>(null);
+
+  // Esc key closes the floating panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedMapCountryId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const getCountryDetails = (cid: string) => {
+    const isSelf = cid === country.id;
+    const matchedCountry = PLAYABLE_COUNTRIES.find(c => c.id === cid) || 
+      getPlayableCountriesForScenario((scenario as ScenarioYear) || '2026').find(c => c.id === cid);
+
+    const rel = diplomaticRelations[cid] || { status: 'Neutral' as const, opinion: 50 };
+    
+    // Relation score (-100 to +100)
+    let relationScore = 0;
+    if (isSelf) {
+      relationScore = 100;
+    } else if (rel.status === 'At War') {
+      relationScore = -100;
+    } else {
+      relationScore = Math.max(-100, Math.min(100, Math.round((rel.opinion - 50) * 2)));
+    }
+
+    // Comprehensive government types & leaders per country & scenario
+    const database: Record<string, {
+      governmentType: string;
+      rulingParty: string;
+      ideology: string;
+      leader: string;
+      population: string;
+      gdp: string;
+      militaryStrength: string;
+      baseStability: number;
+    }> = {
+      US: {
+        governmentType: 'Federal Presidential Republic',
+        rulingParty: scenario === '1950' ? 'Democratic Party (Truman)' : scenario === '1936' ? 'Democratic Party (New Deal)' : scenario === '1914' ? 'Democratic Party (Wilson)' : 'Democratic Party',
+        ideology: 'Liberal / Centrist',
+        leader: scenario === '1950' ? 'Harry S. Truman' : scenario === '1936' ? 'Franklin D. Roosevelt' : scenario === '1920' ? 'Woodrow Wilson' : scenario === '1914' ? 'Woodrow Wilson' : 'Joe Biden',
+        population: scenario === '1950' ? '152M' : scenario === '1936' ? '128M' : scenario === '1914' ? '99M' : '335M',
+        gdp: scenario === '1950' ? '$300B' : scenario === '1936' ? '$85B' : scenario === '1914' ? '$40B' : '$27.4 Trillion',
+        militaryStrength: 'Rank #1 (Superpower)',
+        baseStability: 86
+      },
+      TR: {
+        governmentType: scenario === '1920' || scenario === '1914' ? 'Constitutional Grand Assembly' : 'Executive Presidential Republic',
+        rulingParty: scenario === '1950' ? 'Democrat Party (DP)' : scenario === '1936' || scenario === '1920' ? 'Republican People\'s Party (CHP)' : scenario === '1914' ? 'Committee of Union and Progress (İTC)' : 'AK Party (People\'s Alliance)',
+        ideology: countryIdeologies['TR'] || (scenario === '1920' ? 'Kemalist / Republican' : 'Conservative / Nationalist'),
+        leader: scenario === '1950' ? 'Adnan Menderes' : scenario === '1936' ? 'Mustafa Kemal Atatürk' : scenario === '1920' ? 'Mustafa Kemal Paşa' : scenario === '1914' ? 'Mehmed V / Enver Paşa' : 'Recep Tayyip Erdoğan',
+        population: scenario === '1950' ? '21M' : scenario === '1936' ? '16.5M' : scenario === '1920' ? '13M' : scenario === '1914' ? '18.5M' : '85.3M',
+        gdp: scenario === '1950' ? '$4.5B' : scenario === '1936' ? '$1.8B' : scenario === '1914' ? '$900M' : '$1.15 Trillion',
+        militaryStrength: 'Rank #8 (NATO Strategic Flank)',
+        baseStability: 80
+      },
+      DE: {
+        governmentType: scenario === '1936' ? 'Totalitarian Regime' : scenario === '1914' ? 'Imperial Monarchy' : 'Federal Parliamentary Republic',
+        rulingParty: scenario === '1950' ? 'CDU/CSU (Adenauer)' : scenario === '1936' ? 'NSDAP' : scenario === '1914' ? 'Imperial Reichstag' : 'SPD Traffic Light Coalition',
+        ideology: countryIdeologies['DE'] || 'Social Democrat / Centrist',
+        leader: scenario === '1950' ? 'Konrad Adenauer' : scenario === '1936' ? 'Adolf Hitler' : scenario === '1920' ? 'Friedrich Ebert' : scenario === '1914' ? 'Kaiser Wilhelm II' : 'Olaf Scholz',
+        population: scenario === '1950' ? '50M' : scenario === '1936' ? '67M' : scenario === '1914' ? '65M' : '84.4M',
+        gdp: scenario === '1950' ? '$45B' : scenario === '1936' ? '$40B' : scenario === '1914' ? '$30B' : '$4.45 Trillion',
+        militaryStrength: 'Rank #12 (European Heavyweight)',
+        baseStability: 90
+      },
+      GB: {
+        governmentType: 'Parliamentary Constitutional Monarchy',
+        rulingParty: scenario === '1950' ? 'Labour Party (Attlee)' : scenario === '1936' ? 'Conservative National Gov' : scenario === '1914' ? 'Liberal Party (Asquith)' : 'Labour Party',
+        ideology: countryIdeologies['GB'] || 'Social Democrat / Centrist',
+        leader: scenario === '1950' ? 'Clement Attlee' : scenario === '1936' ? 'Stanley Baldwin' : scenario === '1920' ? 'David Lloyd George' : scenario === '1914' ? 'H. H. Asquith' : 'Keir Starmer',
+        population: scenario === '1950' ? '50M' : scenario === '1936' ? '47M' : scenario === '1914' ? '45M' : '68.2M',
+        gdp: scenario === '1950' ? '$38B' : scenario === '1936' ? '$25B' : scenario === '1914' ? '$22B' : '$3.34 Trillion',
+        militaryStrength: 'Rank #5 (Royal Navy / Nuclear)',
+        baseStability: 92
+      },
+      FR: {
+        governmentType: scenario === '1914' || scenario === '1936' ? 'Third Republic Parliamentary' : 'Unitary Semi-Presidential Republic',
+        rulingParty: scenario === '1950' ? 'MRP-SFIO Third Force' : scenario === '1936' ? 'Popular Front (Blum)' : scenario === '1914' ? 'Sacred Union' : 'Ensemble / Renaissance',
+        ideology: countryIdeologies['FR'] || 'Liberal / Centrist',
+        leader: scenario === '1950' ? 'Vincent Auriol' : scenario === '1936' ? 'Léon Blum' : scenario === '1914' ? 'Raymond Poincaré' : 'Emmanuel Macron',
+        population: scenario === '1950' ? '42M' : scenario === '1936' ? '41M' : scenario === '1914' ? '39M' : '68.1M',
+        gdp: scenario === '1950' ? '$30B' : scenario === '1936' ? '$20B' : scenario === '1914' ? '$18B' : '$3.05 Trillion',
+        militaryStrength: 'Rank #6 (Nuclear Power)',
+        baseStability: 84
+      },
+      RU: {
+        governmentType: 'Federal Semi-Presidential Republic',
+        rulingParty: 'United Russia',
+        ideology: countryIdeologies['RU'] || 'Sovereign Nationalist',
+        leader: 'Vladimir Putin',
+        population: '144M',
+        gdp: '$2.02 Trillion',
+        militaryStrength: 'Rank #2 (Global Nuclear Arsenal)',
+        baseStability: 65
+      },
+      SU: {
+        governmentType: 'Soviet Socialist Federation',
+        rulingParty: 'Communist Party of Soviet Union (CPSU)',
+        ideology: 'Communist / Marxist-Leninist',
+        leader: scenario === '1950' || scenario === '1936' ? 'Joseph Stalin' : scenario === '1920' ? 'Vladimir Lenin' : 'Nikolai II / Provisional Duma',
+        population: scenario === '1950' ? '180M' : scenario === '1936' ? '160M' : '150M',
+        gdp: 'Planned Socialist State Economy',
+        militaryStrength: 'Rank #1 (Red Army Superpower)',
+        baseStability: 85
+      },
+      UA: {
+        governmentType: 'Unitary Semi-Presidential Republic',
+        rulingParty: 'Servant of the People',
+        ideology: countryIdeologies['UA'] || 'Centrist / Pro-European',
+        leader: 'Volodymyr Zelenskyy',
+        population: '38.0M',
+        gdp: '$180 Billion',
+        militaryStrength: 'Rank #15 (War-Mobilized Army)',
+        baseStability: 48
+      },
+      CN: {
+        governmentType: scenario === '1936' || scenario === '1920' ? 'Nationalist Republic (KMT)' : 'Unitary One-Party Socialist Republic',
+        rulingParty: scenario === '1936' || scenario === '1920' ? 'Kuomintang (KMT)' : 'Communist Party of China (CPC)',
+        ideology: scenario === '1936' || scenario === '1920' ? 'Tridemism / Nationalist' : 'Communist / Socialism',
+        leader: scenario === '1950' ? 'Mao Zedong' : scenario === '1936' || scenario === '1920' ? 'Chiang Kai-shek' : 'Xi Jinping',
+        population: scenario === '1950' ? '550M' : scenario === '1936' ? '470M' : '1.41 Billion',
+        gdp: scenario === '1950' ? '$30B' : '$17.8 Trillion',
+        militaryStrength: 'Rank #3 (PLA Superpower)',
+        baseStability: 92
+      },
+      JP: {
+        governmentType: scenario === '1936' || scenario === '1914' ? 'Imperial Constitutional Monarchy' : 'Parliamentary Monarchy',
+        rulingParty: scenario === '1950' ? 'Liberal Party (Yoshida)' : scenario === '1936' ? 'Imperial Rule Assistance' : 'Liberal Democratic Party (LDP)',
+        ideology: countryIdeologies['JP'] || 'Conservative / Centrist',
+        leader: scenario === '1950' ? 'Shigeru Yoshida' : scenario === '1936' ? 'Emperor Hirohito' : 'Shigeru Ishiba',
+        population: scenario === '1950' ? '83M' : scenario === '1936' ? '70M' : '124M',
+        gdp: scenario === '1950' ? '$20B' : '$4.21 Trillion',
+        militaryStrength: 'Rank #7 (JSDF High-Tech)',
+        baseStability: 94
+      },
+      IN: {
+        governmentType: 'Federal Parliamentary Republic',
+        rulingParty: scenario === '1950' ? 'Indian National Congress (Nehru)' : 'Bharatiya Janata Party (BJP / NDA)',
+        ideology: countryIdeologies['IN'] || 'Nationalist / Conservative',
+        leader: scenario === '1950' ? 'Jawaharlal Nehru' : 'Narendra Modi',
+        population: scenario === '1950' ? '360M' : '1.43 Billion',
+        gdp: scenario === '1950' ? '$15B' : '$3.75 Trillion',
+        militaryStrength: 'Rank #4 (Global Armed Forces)',
+        baseStability: 82
+      },
+      BR: {
+        governmentType: 'Federal Presidential Republic',
+        rulingParty: scenario === '1950' ? 'PSD-PTB Coalition (Vargas)' : 'Workers\' Party (PT)',
+        ideology: countryIdeologies['BR'] || 'Social Democrat / Left',
+        leader: scenario === '1950' ? 'Getúlio Vargas' : 'Luiz Inácio Lula da Silva',
+        population: scenario === '1950' ? '53M' : '216M',
+        gdp: scenario === '1950' ? '$12B' : '$2.17 Trillion',
+        militaryStrength: 'Rank #14 (Regional Power)',
+        baseStability: 76
+      },
+      IT: {
+        governmentType: scenario === '1936' ? 'Fascist Corporate State' : scenario === '1914' ? 'Constitutional Monarchy' : 'Parliamentary Republic',
+        rulingParty: scenario === '1950' ? 'Christian Democracy (DC)' : scenario === '1936' ? 'PNF' : 'Brothers of Italy (FdI)',
+        ideology: countryIdeologies['IT'] || 'National Conservative',
+        leader: scenario === '1950' ? 'Alcide De Gasperi' : scenario === '1936' ? 'Benito Mussolini' : 'Giorgia Meloni',
+        population: scenario === '1950' ? '46M' : '58.9M',
+        gdp: scenario === '1950' ? '$15B' : '$2.25 Trillion',
+        militaryStrength: 'Rank #10 (Air & Naval Force)',
+        baseStability: 85
+      },
+      IL: {
+        governmentType: 'Unitary Parliamentary Republic',
+        rulingParty: 'Likud Coalition',
+        ideology: countryIdeologies['IL'] || 'National Conservative',
+        leader: 'Benjamin Netanyahu',
+        population: '9.8M',
+        gdp: '$520 Billion',
+        militaryStrength: 'Rank #17 (IDF Air Superiority)',
+        baseStability: 62
+      },
+      PS: {
+        governmentType: 'State Administration under Occupation',
+        rulingParty: 'PLO / Fatah Authorities',
+        ideology: countryIdeologies['PS'] || 'Nationalist / Arab Socialist',
+        leader: 'Mahmoud Abbas',
+        population: '5.4M',
+        gdp: '$18 Billion',
+        militaryStrength: 'Asymmetric Local Defense',
+        baseStability: 25
+      },
+      SA: {
+        governmentType: 'Unitary Absolute Monarchy',
+        rulingParty: 'House of Saud',
+        ideology: 'Monarchist / Economic Reformist',
+        leader: 'Mohammed bin Salman',
+        population: '36.4M',
+        gdp: '$1.07 Trillion',
+        militaryStrength: 'Rank #22 (Modern Air Shield)',
+        baseStability: 88
+      },
+      IR: {
+        governmentType: scenario === '1950' || scenario === '1936' || scenario === '1914' ? 'Imperial Monarchy (Pahlavi/Qajar)' : 'Theocratic Islamic Republic',
+        rulingParty: scenario === '1950' ? 'National Front (Mossadegh)' : 'Principalist Coalition / IRGC',
+        ideology: countryIdeologies['IR'] || 'Theocratic / Anti-Imperialist',
+        leader: scenario === '1950' ? 'Mohammad Mossadegh' : 'Ali Khamenei',
+        population: scenario === '1950' ? '17M' : '88.5M',
+        gdp: scenario === '1950' ? '$5B' : '$415 Billion',
+        militaryStrength: 'Rank #13 (Missile & Drone Arsenal)',
+        baseStability: 60
+      }
+    };
+
+    const entry = database[cid];
+    const flag = getCountryFlag(cid);
+    const name = getCountryName(cid);
+    
+    // Fallbacks
+    const governmentType = entry?.governmentType || matchedCountry?.system || 'Representative Republic';
+    const rulingParty = isSelf ? party.name : (entry?.rulingParty || matchedCountry?.rivals?.[0]?.name || 'National Coalition');
+    const ideology = isSelf ? party.ideology : (countryIdeologies[cid] || entry?.ideology || matchedCountry?.rivals?.[0]?.ideology || 'Centrist / Moderate');
+    const leader = isSelf ? party.leader : (entry?.leader || matchedCountry?.rivals?.[0]?.leader || 'Head of State');
+    const population = entry?.population || matchedCountry?.population || '25.0M';
+    const gdp = entry?.gdp || '$450 Billion';
+    const militaryStrength = entry?.militaryStrength || 'Rank #24 (National Armed Forces)';
+    
+    // Stability calculation
+    let stability = entry?.baseStability || (countryFreedomScores[cid] ? Math.min(95, countryFreedomScores[cid] + 15) : 75);
+    if (fundedRebels[cid]) stability = Math.max(15, stability - 30);
+    if (rel.status === 'At War') stability = Math.max(10, stability - 25);
+    
+    let stabilityLabel: 'High' | 'Moderate' | 'Fragile' | 'Critical' = 'High';
+    if (stability >= 75) stabilityLabel = 'High';
+    else if (stability >= 50) stabilityLabel = 'Moderate';
+    else if (stability >= 30) stabilityLabel = 'Fragile';
+    else stabilityLabel = 'Critical';
+
+    // Active wars
+    const activeWars: string[] = [];
+    if (rel.status === 'At War') {
+      activeWars.push(`At War with ${country.name} (${country.flag})`);
+    }
+    globalConflicts.forEach(c => {
+      if (!c.resolved && (c.countryA === cid || c.countryB === cid)) {
+        const opp = c.countryA === cid ? c.countryB : c.countryA;
+        activeWars.push(`${getCountryName(cid)} ⚔️ ${getCountryName(opp)}`);
+      }
+    });
+
+    if (scenario === '2026') {
+      if ((cid === 'RU' || cid === 'UA') && !activeWars.some(w => w.includes('Ukraine') || w.includes('Russia'))) {
+        activeWars.push('Russia ⚔️ Ukraine (Territorial War)');
+      }
+      if ((cid === 'IL' || cid === 'PS') && !activeWars.some(w => w.includes('Israel') || w.includes('Palestine'))) {
+        activeWars.push('Israel ⚔️ Palestine (Regional Conflict)');
+      }
+    } else if (scenario === '1950') {
+      if (['KR', 'CN', 'US'].includes(cid) && !activeWars.some(w => w.includes('Korea'))) {
+        activeWars.push('Korean War (UN vs. DPRK/China)');
+      }
+    } else if (scenario === '1936') {
+      if (cid === 'ES' && !activeWars.some(w => w.includes('Civil War'))) {
+        activeWars.push('Spanish Civil War');
+      }
+    } else if (scenario === '1920') {
+      if (['TR', 'GR'].includes(cid) && !activeWars.some(w => w.includes('Independence'))) {
+        activeWars.push('Turkish War of Independence');
+      }
+    } else if (scenario === '1914') {
+      if (['DE', 'FR', 'GB', 'SU', 'RU', 'TR'].includes(cid) && !activeWars.some(w => w.includes('World War'))) {
+        activeWars.push('World War I (Entente vs Central Powers)');
+      }
+    }
+
+    return {
+      id: cid,
+      name,
+      flag,
+      governmentType,
+      rulingParty,
+      ideology,
+      leader,
+      population,
+      gdp,
+      militaryStrength,
+      stability,
+      stabilityLabel,
+      relationScore,
+      relationStatus: rel.status,
+      activeWars
+    };
+  };
 
   const getPlayableCountryIdFromFeature = (feature: any): string | null => {
     if (!feature) return null;
@@ -486,7 +791,8 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                 </div>
               `, { direction: 'top', opacity: 0.95 });
 
-              layer.on('click', () => {
+              layer.on('click', (e) => {
+                L.DomEvent.stopPropagation(e);
                 playSound('click');
                 setSelectedMapCountryId(cid);
               });
@@ -494,6 +800,11 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
           }
         }).addTo(map);
       }
+
+      // Clicking empty ocean/background closes the info card
+      map.on('click', () => {
+        setSelectedMapCountryId(null);
+      });
 
       markersRef.current = L.layerGroup().addTo(map);
       mapInstanceRef.current = map;
@@ -617,15 +928,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         opacity: 0.95
       });
 
-      marker.on('click', () => {
-        if (isSelf) {
-          playSound('click');
-          setSuccessMessage(`Sovereign Headquarters: ${name} is your ruling nation! Select other global nations on the map to manage diplomacy.`);
-          setErrorMessage(null);
-        } else {
-          playSound('click');
-          setSelectedMapCountryId(id);
-        }
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        playSound('click');
+        setSelectedMapCountryId(id);
       });
 
       marker.addTo(markersGroup);
@@ -813,6 +1119,41 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     onUpdateRelations(updated);
     playSound('success');
     setSuccessMessage(`Diplomatic aid package delivered to ${getCountryName(targetId)}! Bilateral opinion increased by +18.`);
+    setErrorMessage(null);
+  };
+
+  const handleTradeDeal = (targetId: string) => {
+    if (!isRuling) {
+      playSound('error');
+      setErrorMessage('Diplomatic trade accords are unlocked after you win the election and form the government.');
+      return;
+    }
+    const cost = 10000;
+    const infCost = 5;
+    if (treasury < cost) {
+      playSound('error');
+      setErrorMessage(`Insufficient National Treasury! Establishing a Trade Deal requires paying ₺/$/€ ${cost.toLocaleString()} commercial accord processing.`);
+      return;
+    }
+    if (influence < infCost) {
+      playSound('error');
+      setErrorMessage(`Insufficient Influence! Establishing a Trade Deal requires ${infCost} Political Influence.`);
+      return;
+    }
+    const rel = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
+    onUpdateTreasury(treasury - cost);
+    onUpdateInfluence(influence - infCost);
+    onUpdateReputation(Math.min(100, internationalReputation + 6));
+    publicApprovalImpact(2);
+
+    const updatedOpinion = Math.min(100, rel.opinion + 10);
+    const updated = {
+      ...diplomaticRelations,
+      [targetId]: { ...rel, opinion: updatedOpinion }
+    };
+    onUpdateRelations(updated);
+    playSound('success');
+    setSuccessMessage(`Bilateral Trade Deal signed with ${getCountryName(targetId)}! Commercial channels established, opinion increased by +10.`);
     setErrorMessage(null);
   };
 
@@ -1017,9 +1358,18 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     <div className="w-full max-w-5xl mx-auto p-4 lg:p-6 animate-fade-in flex flex-col gap-6">
       
       {/* Diplomacy Header */}
-      <div className={`p-6 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${
-        darkMode ? 'bg-slate-900/50 border-slate-850' : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div 
+        className={`p-6 rounded-3xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden ${
+          darkMode ? 'border-slate-850 shadow-xl' : 'border-slate-200 shadow-sm'
+        }`}
+        style={{
+          backgroundImage: darkMode
+            ? `linear-gradient(135deg, rgba(15, 23, 42, 0.50), rgba(2, 6, 23, 0.50)), url(${getScenarioBg(scenario)})`
+            : `linear-gradient(135deg, rgba(255, 255, 255, 0.50), rgba(248, 250, 252, 0.50)), url(${getScenarioBg(scenario)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div className="flex items-center gap-4">
           <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-400">
             <Globe className="w-8 h-8" />
@@ -1107,7 +1457,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
             </div>
 
             {/* Interactive Leaflet World Map */}
-            <div className="relative w-full rounded-2xl overflow-hidden border border-slate-500/20 shadow-lg min-h-[380px] h-[380px] z-10 bg-slate-950">
+            <div className="relative w-full rounded-2xl overflow-hidden border border-slate-500/20 shadow-lg min-h-[460px] h-[520px] md:h-[560px] z-10 bg-slate-950">
               <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
               
               {/* Active Conflicts Legend */}
@@ -1222,230 +1572,265 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                   )}
 
                   <div className="pt-1 border-t border-slate-800 text-[8.5px] text-slate-400 italic">
-                    Click any nation on the map to conduct bilateral diplomacy.
+                    Click any nation on the map to open country intelligence.
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Active Focused Diplomatic Controls Card */}
-          {(() => {
-            const id = selectedMapCountryId;
-            const isSelf = id === country.id;
-            const rel = diplomaticRelations[id] || { status: 'Neutral', opinion: 50 };
-            const hasCB = casusBelli[id];
+              {/* Floating Country Info Panel */}
+              {selectedMapCountryId && (() => {
+                const details = getCountryDetails(selectedMapCountryId);
+                const isSelf = selectedMapCountryId === country.id;
+                const rel = diplomaticRelations[selectedMapCountryId] || { status: 'Neutral', opinion: 50 };
 
-            return (
-              <div className={`p-6 rounded-3xl border flex flex-col gap-5 ${
-                rel.status === 'At War'
-                  ? 'bg-rose-950/10 border-rose-500/30'
-                  : rel.status === 'Alliance'
-                  ? 'bg-indigo-950/10 border-indigo-500/20'
-                  : darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
-              }`}>
-                {/* Nation Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-500/10 pb-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl">{getCountryFlag(id)}</span>
-                    <div>
-                      <h4 className="font-extrabold text-lg text-slate-100 uppercase tracking-tight flex items-center gap-2">
-                        {getCountryName(id)}
-                        <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase ${
-                          rel.status === 'At War' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                          rel.status === 'Alliance' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                          rel.status === 'Defensive Pact' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                          'bg-slate-500/10 text-slate-400 border border-slate-500/10'
+                return (
+                  <div 
+                    className={`absolute top-3 right-3 z-30 w-[calc(100%-24px)] max-w-[360px] max-h-[calc(100%-24px)] overflow-y-auto rounded-2xl p-4 border shadow-2xl backdrop-blur-xl flex flex-col gap-3.5 transition-all duration-200 animate-fade-in ${
+                      darkMode 
+                        ? 'bg-slate-900/95 border-slate-700/80 text-slate-100 shadow-black/80' 
+                        : 'bg-white/95 border-slate-300 text-slate-900 shadow-slate-900/30'
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Header with Flag, Name, Close Button */}
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-500/15 pb-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-3xl shrink-0 filter drop-shadow">{details.flag}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-black text-sm tracking-tight leading-tight truncate">
+                              {details.name}
+                            </h4>
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                              rel.status === 'At War' ? 'bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse' :
+                              rel.status === 'Alliance' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                              rel.status === 'Defensive Pact' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' :
+                              rel.status === 'Sanctioned' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                              rel.status === 'Non-Aggression' ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30' :
+                              'bg-slate-500/15 text-slate-400 border border-slate-500/20'
+                            }`}>
+                              {rel.status === 'At War' ? 'At War' : 
+                               rel.status === 'Alliance' ? 'Alliance' :
+                               rel.status === 'Defensive Pact' ? 'Defense Pact' :
+                               rel.status === 'Sanctioned' ? 'Sanctioned' :
+                               rel.status === 'Non-Aggression' ? 'Non-Aggression' : 'Neutral'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            Code: <strong className="text-slate-300">{details.id}</strong> {isSelf && '• (Your Country)'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound('click');
+                          setSelectedMapCountryId(null);
+                        }}
+                        title="Close (Esc)"
+                        className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Core Country Statistics */}
+                    <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">GOVERNMENT</span>
+                        <span className="font-bold text-slate-200 truncate mt-0.5" title={details.governmentType}>
+                          {details.governmentType}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">RULING PARTY</span>
+                        <span className="font-bold text-slate-200 truncate mt-0.5" title={details.rulingParty}>
+                          {details.rulingParty}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">IDEOLOGY</span>
+                        <span className="font-bold text-indigo-300 truncate mt-0.5" title={details.ideology}>
+                          {details.ideology}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">LEADER</span>
+                        <span className="font-bold text-slate-200 truncate mt-0.5" title={details.leader}>
+                          {details.leader}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">POPULATION</span>
+                        <span className="font-bold text-slate-200 font-mono mt-0.5">{details.population}</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">GDP (ECONOMY)</span>
+                        <span className="font-bold text-emerald-400 font-mono mt-0.5">{details.gdp}</span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">MILITARY</span>
+                        <span className="font-bold text-slate-200 truncate mt-0.5" title={details.militaryStrength}>
+                          {details.militaryStrength}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col">
+                        <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider">STABILITY</span>
+                        <span className={`font-bold font-mono mt-0.5 ${
+                          details.stability >= 75 ? 'text-emerald-400' : details.stability >= 45 ? 'text-amber-400' : 'text-rose-400'
                         }`}>
-                          {rel.status === 'At War' ? 'At War' : 
-                           rel.status === 'Alliance' ? 'Alliance' :
-                           rel.status === 'Defensive Pact' ? 'Defense Pact' :
-                           rel.status === 'Sanctioned' ? 'Sanctioned' :
-                           rel.status === 'Non-Aggression' ? 'Non-Aggression' : 'Neutral'}
+                          {details.stability}% ({details.stabilityLabel})
                         </span>
-                      </h4>
-                      <div className="flex items-center gap-3.5 mt-1">
-                        <span className="text-xs text-slate-400 font-mono">
-                          Bilateral Opinion: <strong className="text-indigo-400 font-bold">{rel.opinion}/100</strong>
+                      </div>
+                    </div>
+
+                    {/* Relation to Player (-100..+100) */}
+                    <div className="p-2.5 rounded-xl bg-black/25 border border-slate-500/10 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-mono">
+                        <span className="text-slate-400 font-bold uppercase">RELATION TO PLAYER</span>
+                        <span className={`font-black text-xs px-2 py-0.5 rounded ${
+                          details.relationScore > 30 ? 'bg-emerald-500/20 text-emerald-400' :
+                          details.relationScore < -30 ? 'bg-rose-500/20 text-rose-400' :
+                          'bg-slate-500/20 text-slate-300'
+                        }`}>
+                          {details.relationScore > 0 ? `+${details.relationScore}` : details.relationScore} / 100
                         </span>
-                        {hasCB && (
-                          <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase">
-                            <Flame className="w-3 h-3 text-amber-500 animate-pulse" /> Casus Belli Secured
-                          </span>
+                      </div>
+
+                      {/* Visual 2-sided relation bar */}
+                      <div className="relative h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10" />
+                        {details.relationScore >= 0 ? (
+                          <div 
+                            className="absolute left-1/2 top-0 bottom-0 bg-emerald-500 transition-all duration-300 rounded-r-full"
+                            style={{ width: `${(details.relationScore / 100) * 50}%` }}
+                          />
+                        ) : (
+                          <div 
+                            className="absolute top-0 bottom-0 bg-rose-500 transition-all duration-300 rounded-l-full"
+                            style={{ 
+                              right: '50%',
+                              width: `${(Math.abs(details.relationScore) / 100) * 50}%` 
+                            }}
+                          />
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Visual Opinion Bar */}
-                  <div className="w-full sm:w-40 flex flex-col gap-1.5">
-                    <div className="flex justify-between text-[10px] font-mono font-bold text-slate-400 uppercase">
-                      <span>Bilateral Mood</span>
-                      <span className={rel.opinion > 70 ? 'text-emerald-400' : rel.opinion < 35 ? 'text-rose-400' : 'text-slate-300'}>
-                        {rel.opinion > 70 ? 'Friendly' : rel.opinion < 35 ? 'Hostile' : 'Wary'}
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-black/30 overflow-hidden border border-slate-500/5">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          rel.opinion > 70 ? 'bg-emerald-500' : rel.opinion < 35 ? 'bg-rose-500' : 'bg-amber-500'
-                        }`}
-                        style={{ width: `${rel.opinion}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Diplomacy Movement Panels */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Pacifist Treaties & Alliances */}
-                  <div className="p-4 rounded-2xl bg-black/15 border border-slate-500/5 flex flex-col gap-3">
-                    <h5 className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> PEACEMAKING & TREATIES
-                    </h5>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Establish friendly coalitions, guarantee non-aggression, or form defensive networks. Friendly actions require high bilateral opinions and diplomatic soft power.
-                    </p>
-                    
-                    <div className="flex flex-col gap-2 mt-1">
-                      <button
-                        onClick={() => handleSignTreaty(id, 'Non-Aggression')}
-                        disabled={rel.status === 'Non-Aggression' || rel.status === 'Defensive Pact' || rel.status === 'Alliance' || rel.status === 'At War'}
-                        className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
-                          rel.status === 'Neutral'
-                            ? 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700 hover:scale-[1.01]'
-                            : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
-                        }`}
-                      >
-                        <span>Non-Aggression Pact</span>
-                        <span className="text-[10px] font-mono text-slate-400 font-bold">Opinion ≥40</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleSignTreaty(id, 'Defensive Pact')}
-                        disabled={rel.status === 'Defensive Pact' || rel.status === 'Alliance' || rel.status === 'At War'}
-                        className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
-                          rel.status === 'Non-Aggression' || rel.opinion >= 65
-                            ? 'bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-400 border-cyan-500/20 hover:scale-[1.01]'
-                            : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
-                        }`}
-                      >
-                        <span>Defense Pact</span>
-                        <span className="text-[10px] font-mono text-slate-400 font-bold">Opinion ≥65</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleSignTreaty(id, 'Alliance')}
-                        disabled={rel.status === 'Alliance' || rel.status === 'At War'}
-                        className={`w-full py-2.5 rounded-xl font-bold text-xs border cursor-pointer transition-all flex items-center justify-between px-3 ${
-                          rel.status === 'Defensive Pact' || rel.opinion >= 85
-                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/20 hover:scale-[1.01]'
-                            : 'opacity-50 pointer-events-none text-slate-500 border-transparent bg-slate-900/45'
-                        }`}
-                      >
-                        <span>Form Alliance</span>
-                        <span className="text-[10px] font-mono text-indigo-200 font-bold">Opinion ≥85</span>
-                      </button>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleSendGift(id)}
-                          disabled={rel.status === 'At War'}
-                          className="py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5"
-                        >
-                          <span>Send Aid Gift</span>
-                          <span className="text-[9px] font-mono text-emerald-300">+18 Op (20k ₺)</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleNormalizeRelations(id)}
-                          disabled={rel.status === 'At War' || (rel.status === 'Neutral' && rel.opinion >= 50)}
-                          className="py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5"
-                        >
-                          <span>Normalize / Lift Sanction</span>
-                          <span className="text-[9px] font-mono text-sky-300">10k ₺</span>
-                        </button>
+                      <div className="flex justify-between text-[8px] font-mono text-slate-500">
+                        <span>-100 (Hostile)</span>
+                        <span>0 (Neutral)</span>
+                        <span>+100 (Allied)</span>
                       </div>
+                    </div>
 
-                      {rel.status === 'At War' && (
-                        <button
-                          onClick={() => handleCeasefire(id)}
-                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl cursor-pointer transition-all flex items-center justify-between px-3 shadow-md shadow-amber-500/20 uppercase tracking-wide animate-pulse"
-                        >
-                          <span>Ceasefire & Peace Treaty</span>
-                          <span className="text-[10px] font-mono font-bold">30k ₺</span>
-                        </button>
+                    {/* Active Wars */}
+                    <div className="p-2.5 rounded-xl bg-black/20 border border-slate-500/10 flex flex-col gap-1 text-[10.5px]">
+                      <span className="text-[8.5px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <Swords className="w-3 h-3 text-rose-400" /> ACTIVE WARS
+                      </span>
+                      {details.activeWars.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {details.activeWars.map((war, idx) => (
+                            <div key={idx} className="text-[9.5px] text-rose-400 font-bold bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                              <span className="truncate">{war}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 italic">
+                          🕊️ None (Peaceful State)
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Hostile & Aggressive Actions */}
-                  <div className="p-4 rounded-2xl bg-black/15 border border-slate-500/5 flex flex-col gap-3">
-                    <h5 className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1">
-                      <Swords className="w-3.5 h-3.5 text-rose-400 animate-pulse" /> HOSTILITIES
-                    </h5>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Isolate hostile nations, fabricate justification, block commercial trade fleets, or declare total armed mobilization against rival states.
-                    </p>
+                    {/* Action Buttons: Improve Relations, Trade Deal, Alliance, Declare War */}
+                    {!isSelf ? (
+                      <div className="flex flex-col gap-2 pt-1 border-t border-slate-500/15">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleSendGift(selectedMapCountryId)}
+                            disabled={!isRuling || rel.status === 'At War'}
+                            title={!isRuling ? 'Unlocked after you win the election' : 'Improve diplomatic relations (+18 opinion, 20k ₺/$/€)'}
+                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                              !isRuling || rel.status === 'At War'
+                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                : 'bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border-emerald-500/30 cursor-pointer'
+                            }`}
+                          >
+                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                            <span>Improve Relations</span>
+                          </button>
 
-                    <div className="flex flex-col gap-2 mt-1">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleHostileAction(id, 'Sanction')}
-                          disabled={rel.status === 'At War'}
-                          className="py-2.5 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
-                        >
-                          Sanction
-                        </button>
-                        <button
-                          onClick={() => handleHostileAction(id, 'Embargo')}
-                          disabled={rel.status === 'At War'}
-                          className="py-2.5 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
-                        >
-                          Embargo
-                        </button>
+                          <button
+                            onClick={() => handleTradeDeal(selectedMapCountryId)}
+                            disabled={!isRuling || rel.status === 'At War' || rel.status === 'Sanctioned'}
+                            title={!isRuling ? 'Unlocked after you win the election' : 'Sign bilateral trade deal (+10 opinion, 10k ₺/$, 5 Inf)'}
+                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                              !isRuling || rel.status === 'At War' || rel.status === 'Sanctioned'
+                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                : 'bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border-indigo-500/30 cursor-pointer'
+                            }`}
+                          >
+                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                            <span>Trade Deal</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleSignTreaty(selectedMapCountryId, rel.opinion >= 85 ? 'Alliance' : 'Defensive Pact')}
+                            disabled={!isRuling || rel.status === 'Alliance' || rel.status === 'At War'}
+                            title={!isRuling ? 'Unlocked after you win the election' : 'Form defense pact or full alliance treaty'}
+                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                              !isRuling || rel.status === 'Alliance' || rel.status === 'At War'
+                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                : 'bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 border-cyan-500/30 cursor-pointer'
+                            }`}
+                          >
+                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                            <span>{rel.status === 'Alliance' ? 'Allied' : rel.opinion >= 85 ? 'Form Alliance' : 'Defense Pact'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleHostileAction(selectedMapCountryId, 'Declare War')}
+                            disabled={!isRuling || rel.status === 'At War'}
+                            title={!isRuling ? 'Unlocked after you win the election' : 'Declare armed conflict & mobilize frontlines'}
+                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                              !isRuling || rel.status === 'At War'
+                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                : 'bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border-rose-500/40 cursor-pointer'
+                            }`}
+                          >
+                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                            <span>{rel.status === 'At War' ? 'At War' : 'Declare War'}</span>
+                          </button>
+                        </div>
+
+                        {!isRuling && (
+                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-[9.5px] text-amber-300/90 leading-tight">
+                            <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>Unlocked after you win the election.</span>
+                          </div>
+                        )}
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleFabricateCB(id)}
-                          disabled={rel.status === 'At War' || casusBelli[id]}
-                          className={`py-2 border rounded-xl font-bold text-xs cursor-pointer transition-all ${
-                            casusBelli[id]
-                              ? 'bg-rose-950/20 text-rose-300 border-rose-500/20'
-                              : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
-                          }`}
-                        >
-                          {casusBelli[id] ? '✓ CB Secured' : 'Fabricate CB (15k)'}
-                        </button>
-
-                        <button
-                          onClick={() => handleFundRebels(id)}
-                          disabled={rel.status === 'At War'}
-                          className="py-2 bg-orange-500/5 hover:bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-xl font-bold text-xs cursor-pointer transition-all"
-                        >
-                          Fund Rebels (80k)
-                        </button>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300 text-center font-medium">
+                        🏛️ Sovereign Headquarters: Select any foreign nation on the map to conduct bilateral state diplomacy.
                       </div>
-
-                      <button
-                        onClick={() => handleHostileAction(id, 'Declare War')}
-                        disabled={rel.status === 'At War'}
-                        className={`w-full py-2.5 font-black text-xs rounded-xl cursor-pointer transition-all flex items-center justify-between px-3 uppercase tracking-wide ${
-                          rel.status === 'At War'
-                            ? 'opacity-40 pointer-events-none bg-slate-800 text-slate-500 border border-transparent'
-                            : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20'
-                        }`}
-                      >
-                        <span>Declare War & Mobilize</span>
-                        <span className="text-[10px] font-mono">{casusBelli[id] ? 'With Justification' : 'Surprise Strike'}</span>
-                      </button>
-                    </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            );
-          })()}
+                );
+              })()}
+            </div>
+          </div>
         </div>
 
         {/* Global Blocs & Supranational Integration (Right) */}

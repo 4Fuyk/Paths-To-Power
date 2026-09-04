@@ -1265,7 +1265,20 @@ export const countryColors: Record<string, { default: string; completed: string;
   CL: { default: '#b91c1c', completed: '#dc2626', selected: '#f87171' },
   IS: { default: '#0284c7', completed: '#0ea5e9', selected: '#38bdf8' },
   PT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
-  GR: { default: '#0369a1', completed: '#0284c7', selected: '#38bdf8' }
+  GR: { default: '#0369a1', completed: '#0284c7', selected: '#38bdf8' },
+  // Conflict & Breakaway Entities
+  SY: { default: '#15803d', completed: '#16a34a', selected: '#22c55e' },
+  SY_SDF: { default: '#ca8a04', completed: '#eab308', selected: '#fde047' }, // Rojava / AANES (Yellow)
+  LY: { default: '#047857', completed: '#10b981', selected: '#34d399' },
+  LY_LNA: { default: '#b91c1c', completed: '#dc2626', selected: '#ef4444' }, // Tobruk / LNA (Red)
+  SD: { default: '#0f766e', completed: '#14b8a6', selected: '#2dd4bf' },
+  SD_RSF: { default: '#b45309', completed: '#d97706', selected: '#f59e0b' }, // RSF (Amber)
+  MM: { default: '#4338ca', completed: '#6366f1', selected: '#818cf8' },
+  MM_NUG_PDF: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' }, // NUG Myanmar (Green)
+  YE: { default: '#b91c1c', completed: '#dc2626', selected: '#ef4444' },
+  YE_HOU: { default: '#15803d', completed: '#16a34a', selected: '#22c55e' }, // Ansar Allah (Green)
+  CD: { default: '#0284c7', completed: '#0ea5e9', selected: '#38bdf8' },
+  CD_M23: { default: '#991b1b', completed: '#dc2626', selected: '#f87171' } // M23 AFC (Red)
 };
 
 export const PLAYABLE_COUNTRIES: Country[] = [

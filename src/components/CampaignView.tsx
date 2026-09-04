@@ -118,6 +118,17 @@ const getPlateCodeForRegion = (region: any): string => {
   return String(cityCode).padStart(2, '0');
 };
 
+const getScenarioBg = (scenarioId: string) => {
+  switch (scenarioId) {
+    case '2026': return '/bg-2026.svg';
+    case '1950': return '/bg-1950.svg';
+    case '1936': return '/bg-1936.svg';
+    case '1914': return '/bg-1914.svg';
+    case '1920': return '/bg-1920.svg';
+    default: return '/bg-2026.svg';
+  }
+};
+
 let cachedAllDistrictsGeoJson: any = null;
 let allDistrictsGeoJsonPromise: Promise<any> | null = null;
 
@@ -2937,7 +2948,18 @@ const getPolygonCenter = (feat: any) => {
 
   return (
     <div className="flex flex-col gap-6 w-full py-2">
-      <div className="flex justify-between items-center p-4 md:p-6 rounded-3xl border bg-slate-900/60 border-slate-800 shadow-sm">
+      <div 
+        className={`flex justify-between items-center p-4 md:p-6 rounded-3xl border shadow-sm relative overflow-hidden ${
+          darkMode ? 'border-slate-850' : 'border-slate-200'
+        }`}
+        style={{
+          backgroundImage: darkMode
+            ? `linear-gradient(135deg, rgba(15, 23, 42, 0.50), rgba(2, 6, 23, 0.50)), url(${getScenarioBg(scenario)})`
+            : `linear-gradient(135deg, rgba(255, 255, 255, 0.50), rgba(248, 250, 252, 0.50)), url(${getScenarioBg(scenario)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div>
           <h2 className="text-xl font-black text-white">Campaign & Operations</h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">Strategize, manage budget, and increase your local support.</p>

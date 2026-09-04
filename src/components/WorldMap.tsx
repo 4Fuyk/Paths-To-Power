@@ -58,7 +58,20 @@ const countryCoords: Record<string, [number, number]> = {
   CL: [-35.6751, -71.543],
   IS: [64.9631, -19.0208],
   PT: [39.3999, -8.2245],
-  GR: [39.0742, 21.8243]
+  GR: [39.0742, 21.8243],
+  // Breakaway & Conflict States
+  SY: [34.8021, 38.9968],
+  SY_SDF: [36.5000, 40.7500], // Rojava / Hasakah
+  LY: [26.3351, 17.2283],
+  LY_LNA: [32.1167, 20.0667], // Benghazi / Tobruk
+  SD: [15.5007, 32.5599],
+  SD_RSF: [13.6300, 25.3500], // Darfur / Kordofan
+  MM: [21.9162, 95.9560],
+  MM_NUG_PDF: [23.8000, 97.5000], // Shan & Resistance Highlands
+  YE: [15.3694, 44.1910],
+  YE_HOU: [15.3500, 44.2000], // Sanaa / Hodeidah
+  CD: [-4.4419, 15.2663],
+  CD_M23: [-1.2800, 29.4500]  // North Kivu / Rutshuru
 };
 
 const englishNames: Record<string, string> = {
@@ -93,7 +106,19 @@ const englishNames: Record<string, string> = {
   CL: "Republic of Chile",
   IS: "Iceland",
   PT: "Portuguese Republic",
-  GR: "Hellenic Republic"
+  GR: "Hellenic Republic",
+  SY: "Syrian Arab Republic",
+  SY_SDF: "Autonomous Admin. of North & East Syria (Rojava)",
+  LY: "State of Libya (GNU)",
+  LY_LNA: "House of Representatives & LNA (Tobruk)",
+  SD: "Republic of the Sudan (SAF)",
+  SD_RSF: "Rapid Support Forces (Sudan)",
+  MM: "Republic of the Union of Myanmar",
+  MM_NUG_PDF: "National Unity Government & PDF (Myanmar)",
+  YE: "Republic of Yemen (PLC)",
+  YE_HOU: "Supreme Political Council (Ansar Allah / Sanaa)",
+  CD: "Democratic Republic of the Congo",
+  CD_M23: "Alliance Fleuve Congo & M23 Resistance"
 };
 
 const countryRadii: Record<string, number> = {
@@ -128,10 +153,33 @@ const countryRadii: Record<string, number> = {
   CL: 650000,
   IS: 250000,
   PT: 300000,
-  GR: 280000
+  GR: 280000,
+  SY: 300000,
+  SY_SDF: 240000,
+  LY: 450000,
+  LY_LNA: 350000,
+  SD: 600000,
+  SD_RSF: 450000,
+  MM: 450000,
+  MM_NUG_PDF: 350000,
+  YE: 350000,
+  YE_HOU: 280000,
+  CD: 650000,
+  CD_M23: 250000
 };
 
 export type MapFilterMode = 'POLITICAL' | 'FREEDOM' | 'IDEOLOGY' | 'ACTIVE_WAR';
+
+const getScenarioBg = (scenarioId: string) => {
+  switch (scenarioId) {
+    case '2026': return '/bg-2026.svg';
+    case '1950': return '/bg-1950.svg';
+    case '1936': return '/bg-1936.svg';
+    case '1914': return '/bg-1914.svg';
+    case '1920': return '/bg-1920.svg';
+    default: return '/bg-2026.svg';
+  }
+};
 
 export const WorldMap: React.FC<WorldMapProps> = ({
   completedCountries,
@@ -194,10 +242,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     };
   }, []);
 
-  const filteredCountries = activeCountries.filter(country => 
-    country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.system.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [countryTypeFilter, setCountryTypeFilter] = useState<'ALL' | 'SOVEREIGN' | 'BREAKAWAY'>('ALL');
+
+  const filteredCountries = activeCountries.filter(country => {
+    const matchesSearch = 
+      country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      country.system.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    if (countryTypeFilter === 'SOVEREIGN') return !country.isBreakaway;
+    if (countryTypeFilter === 'BREAKAWAY') return country.isBreakaway;
+    return true;
+  });
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -370,6 +426,30 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     }
     if (id3 === 'PSE' || id2 === 'PS' || name.includes('PALESTINE')) {
       if (activeCountries.some(c => c.id === 'PS')) return 'PS';
+    }
+    if (id3 === 'SYR' || id2 === 'SY' || name.includes('SYRIA')) {
+      if (activeCountries.some(c => c.id === 'SY')) return 'SY';
+      if (activeCountries.some(c => c.id === 'SY_SDF')) return 'SY_SDF';
+    }
+    if (id3 === 'LBY' || id2 === 'LY' || name.includes('LIBYA')) {
+      if (activeCountries.some(c => c.id === 'LY')) return 'LY';
+      if (activeCountries.some(c => c.id === 'LY_LNA')) return 'LY_LNA';
+    }
+    if (id3 === 'SDN' || id2 === 'SD' || name.includes('SUDAN')) {
+      if (activeCountries.some(c => c.id === 'SD')) return 'SD';
+      if (activeCountries.some(c => c.id === 'SD_RSF')) return 'SD_RSF';
+    }
+    if (id3 === 'MMR' || id2 === 'MM' || name.includes('MYANMAR') || name.includes('BURMA')) {
+      if (activeCountries.some(c => c.id === 'MM')) return 'MM';
+      if (activeCountries.some(c => c.id === 'MM_NUG_PDF')) return 'MM_NUG_PDF';
+    }
+    if (id3 === 'YEM' || id2 === 'YE' || name.includes('YEMEN')) {
+      if (activeCountries.some(c => c.id === 'YE')) return 'YE';
+      if (activeCountries.some(c => c.id === 'YE_HOU')) return 'YE_HOU';
+    }
+    if (id3 === 'COD' || id2 === 'CD' || id3 === 'ZAR' || name.includes('CONGO') || name.includes('DRC')) {
+      if (activeCountries.some(c => c.id === 'CD')) return 'CD';
+      if (activeCountries.some(c => c.id === 'CD_M23')) return 'CD_M23';
     }
 
     return null;
@@ -1011,11 +1091,20 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       `}</style>
 
       {/* Header Banner */}
-      <div className={`col-span-12 p-5 rounded-3xl border transition-all duration-300 ${
-        darkMode 
-          ? 'bg-slate-900/60 border-slate-800/80 text-slate-100' 
-          : 'bg-white border-slate-200 text-slate-800 shadow-xs'
-      }`}>
+      <div 
+        className={`col-span-12 p-5 rounded-3xl border transition-all duration-300 relative overflow-hidden ${
+          darkMode 
+            ? 'border-slate-800/80 text-slate-100 shadow-xl' 
+            : 'border-slate-200 text-slate-800 shadow-xs'
+        }`}
+        style={{
+          backgroundImage: darkMode
+            ? `linear-gradient(135deg, rgba(15, 23, 42, 0.50), rgba(2, 6, 23, 0.50)), url(${getScenarioBg(activeScenarioId)})`
+            : `linear-gradient(135deg, rgba(255, 255, 255, 0.50), rgba(248, 250, 252, 0.50)), url(${getScenarioBg(activeScenarioId)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1159,7 +1248,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-xl font-bold tracking-tight">{selectedPreview.name}</h3>
-                    {completedCountries.includes(selectedPreview.id) ? (
+                    {selectedPreview.isBreakaway ? (
+                      <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-mono">
+                        ⚡ DE FACTO BREAKAWAY ENTITY
+                      </span>
+                    ) : completedCountries.includes(selectedPreview.id) ? (
                       <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-1">
                         ★ VICTORIOUS / CAMPAIGN WON
                       </span>
@@ -1172,6 +1265,13 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                   <p className="text-xs mt-1 text-slate-400 max-w-xl leading-relaxed">
                     {selectedPreview.description}
                   </p>
+                  {selectedPreview.isBreakaway && selectedPreview.parentCountryId && (
+                    <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-300/90 font-mono bg-amber-950/30 px-2.5 py-1 rounded-lg border border-amber-500/20 w-fit">
+                      <span>Conflict: {selectedPreview.activeConflictId || 'Civil War'}</span>
+                      <span>•</span>
+                      <span>Opposing Central Gov: {selectedPreview.parentCountryId}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -1184,12 +1284,18 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       id="play-country-btn"
                       onClick={() => onSelectCountry(selectedPreview)}
                       className={`py-3 px-6 rounded-xl font-bold text-xs flex items-center gap-2 transition-all self-start lg:self-center group ${
-                        completedCountries.includes(selectedPreview.id)
+                        selectedPreview.isBreakaway
+                          ? 'bg-amber-600 hover:bg-amber-500 text-slate-950 shadow-lg shadow-amber-600/20 shrink-0 hover:scale-[1.02] cursor-pointer'
+                          : completedCountries.includes(selectedPreview.id)
                           ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shrink-0 cursor-pointer'
                           : 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 shrink-0 hover:scale-[1.02] cursor-pointer'
                       }`}
                     >
-                      {completedCountries.includes(selectedPreview.id) ? 'Relaunch Campaign' : 'Govern & Start Election Campaign'} 
+                      {selectedPreview.isBreakaway
+                        ? 'Govern & Command Breakaway Forces'
+                        : completedCountries.includes(selectedPreview.id) 
+                        ? 'Relaunch Campaign' 
+                        : 'Govern & Start Election Campaign'} 
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                     {wins > 0 && (
@@ -1252,14 +1358,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         <div className={`p-5 rounded-3xl border flex flex-col gap-3 h-full ${
           darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
         }`}>
-          <div className="p-4 rounded-2xl shadow-lg border border-blue-400/20" style={{ backgroundColor: '#1f5ba7' }}>
-            <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-              <MapIcon className="w-5 h-5 text-blue-200" />
-              Global Operations Map
-            </h2>
-            <p className="text-xs text-blue-100/80 mt-1 font-sans font-medium leading-relaxed">
-              Select a country to view properties and launch election campaigns directly from the list or the map.
-            </p>
+          <div 
+            className="p-4 rounded-2xl shadow-lg border relative overflow-hidden" 
+            style={{ 
+              backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.50), rgba(2, 6, 23, 0.50)), url(${getScenarioBg(activeScenarioId)})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              borderColor: activeScenarioId === '2026' ? 'rgba(99, 102, 241, 0.4)' 
+                : activeScenarioId === '1950' ? 'rgba(74, 222, 128, 0.35)' 
+                : activeScenarioId === '1936' ? 'rgba(217, 119, 6, 0.4)' 
+                : 'rgba(201, 162, 106, 0.4)'
+            }}
+          >
+            <div className="relative z-10">
+              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <MapIcon className="w-5 h-5 text-indigo-300" />
+                Global Operations Map ({activeScenarioMeta.year})
+              </h2>
+              <p className="text-xs text-slate-300 mt-1 font-sans font-medium leading-relaxed">
+                Select a country to view properties and launch election campaigns directly from the list or the map.
+              </p>
+            </div>
           </div>
 
           {/* Search bar input filter */}
@@ -1274,6 +1393,43 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 darkMode ? 'bg-slate-950 border-slate-800 text-slate-200 placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
               }`}
             />
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px] font-semibold">
+            <button
+              onClick={() => setCountryTypeFilter('ALL')}
+              className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                countryTypeFilter === 'ALL'
+                  ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                  : darkMode ? 'bg-slate-800/80 text-slate-400 hover:text-slate-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              All ({activeCountries.length})
+            </button>
+            <button
+              onClick={() => setCountryTypeFilter('SOVEREIGN')}
+              className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                countryTypeFilter === 'SOVEREIGN'
+                  ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                  : darkMode ? 'bg-slate-800/80 text-slate-400 hover:text-slate-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Sovereign ({activeCountries.filter(c => !c.isBreakaway).length})
+            </button>
+            {activeCountries.some(c => c.isBreakaway) && (
+              <button
+                onClick={() => setCountryTypeFilter('BREAKAWAY')}
+                className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                  countryTypeFilter === 'BREAKAWAY'
+                    ? 'bg-amber-600 text-white font-bold shadow-xs'
+                    : darkMode ? 'bg-amber-950/40 text-amber-400 hover:bg-amber-900/50 border border-amber-500/20' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-300'
+                }`}
+              >
+                <span>⚡ Breakaway</span>
+                <span>({activeCountries.filter(c => c.isBreakaway).length})</span>
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[300px] pr-1">
@@ -1296,10 +1452,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                       : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/50 text-slate-700'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl filter drop-shadow-xs select-none">{country.flag}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-2xl filter drop-shadow-xs select-none shrink-0">{country.flag}</span>
                     <div className="min-w-0">
-                      <div className="text-sm font-bold truncate tracking-wide">{country.name}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold truncate tracking-wide">{country.name}</span>
+                        {country.isBreakaway && (
+                          <span className="shrink-0 text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-mono border border-amber-500/30">
+                            DE FACTO
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-slate-400 truncate">{country.system}</div>
                     </div>
                   </div>

@@ -89,6 +89,8 @@ export interface Region {
   mayorName?: string;    // Winner mayor name
   playerCandidate?: string; // Nominated candidate for the player's party
   nominatedCandidates?: Record<string, string>; // Party-specific nominated regional leaders
+  controlledBy?: string; // Controller country or faction ID (e.g. TR, SY_SDF, LY_LNA, etc.)
+  originalOwnerId?: string; // Original sovereign parent country ID
 }
 
 export interface Bill {
@@ -129,6 +131,9 @@ export interface Country {
   electionCycleYears: number; // election cycle frequency in years
   termLimit?: number; // Maximum number of terms allowed (e.g. 2 for US). Infinite if undefined.
   freedomScore?: number;
+  isBreakaway?: boolean; // True if state is a de facto separatist/breakaway state from civil conflict
+  parentCountryId?: string; // e.g. 'SY', 'LY', 'SD', 'MM', 'YE', 'CD'
+  activeConflictId?: string; // Associated ongoing conflict ID
 }
 
 export interface Coalition {
@@ -285,4 +290,61 @@ export interface WartimeDecree {
     warWearinessDelta?: number;
   };
 }
+
+export type EventScope = 'DOMESTIC' | 'GLOBAL';
+
+export interface GameEventChoice {
+  id: string;
+  text: string;
+  flavorPreview: string;
+  expectedEffectsSummary: string;
+  requiresDiplomaticCapability?: boolean;
+  minReputationRequired?: number; // e.g. 45 for mediation
+  effects: {
+    treasuryDelta?: number;
+    inflationDelta?: number;
+    reputationDelta?: number;
+    confidenceDelta?: number;
+    freedomDelta?: number;
+    civilWarRiskDelta?: number;
+    approvalDelta?: number;
+    relationDeltas?: Record<string, number>; // e.g. { 'EG': 20, 'IL': -25 }
+    voterApprovalDelta?: Partial<Record<VoterGroup, number>>;
+    tradeModifierDelta?: number;
+    warRiskDelta?: number;
+  };
+  outcomeNarrative: string;
+  spawnSituation?: Omit<OngoingSituation, 'id'>;
+}
+
+export interface DynamicGameEvent {
+  id: string;
+  title: string;
+  icon: string;
+  scope: EventScope;
+  countryId?: string; // If domestic, specific country ID (e.g. 'EG', 'TR', 'US') or 'ALL'
+  partiesInvolved?: {
+    partyA: { id: string; name: string; flag?: string };
+    partyB: { id: string; name: string; flag?: string };
+  };
+  category: 'POLITICAL' | 'ECONOMIC' | 'MILITARY' | 'DIPLOMATIC' | 'SECURITY' | 'SOCIAL';
+  urgency: 'HIGH' | 'CRITICAL' | 'MODERATE';
+  description: string; // 2-4 sentences
+  choices: GameEventChoice[];
+  scenarioYear?: string; // '2026' | '1950' | '1936' | '1914' | '1920' | 'ANY'
+}
+
+export interface ResolvedEventLog {
+  id: string;
+  timestamp: string; // e.g. "Week 4 / 12" or "Month 14 (Year 2027)"
+  scope: EventScope;
+  title: string;
+  category: string;
+  icon: string;
+  countryName?: string;
+  chosenOptionText: string;
+  outcomeNarrative: string;
+  consequencesSummary: string;
+}
+
 

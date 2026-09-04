@@ -63,6 +63,8 @@ interface CountryInfoSidePanelProps {
   onSendAid?: (countryId: string) => void;
   onOpenEmbassy?: (countryId: string) => void;
   onCivilWarAction?: (countryId: string, actionType: 'RECOGNIZE_GOV' | 'RECOGNIZE_REBEL' | 'AID_GOV' | 'AID_REBEL' | 'INTERVENE', factionId?: string) => void;
+  className?: string;
+  darkMode?: boolean;
 }
 
 export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
@@ -75,6 +77,8 @@ export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
   onSendAid,
   onOpenEmbassy,
   onCivilWarAction,
+  className = '',
+  darkMode = true,
 }) => {
   // Listen for Escape key to close
   useEffect(() => {
@@ -134,31 +138,32 @@ export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
   return (
     <aside 
       aria-label={`Dossier for ${country.name}`}
-      className="fixed z-[1000] left-0 top-0 bottom-0 w-full md:w-[360px] h-[55vh] md:h-full md:max-h-screen bg-slate-950/98 text-slate-100 border-r border-t md:border-t-0 border-slate-800 flex flex-col justify-between shadow-2xl font-mono select-none overflow-hidden"
+      onClick={(e) => e.stopPropagation()}
+      className={`w-full max-w-[380px] max-h-[70vh] sm:max-h-[540px] bg-slate-950/95 backdrop-blur-md text-slate-100 border border-slate-750 rounded-2xl flex flex-col justify-between shadow-2xl font-mono select-none overflow-hidden transition-all ${className}`}
     >
       {/* 1. PANEL HEADER - DENSE HOI4 / AoH3 BANNER */}
-      <div className="shrink-0 bg-slate-900/90 border-b border-slate-800 p-3.5 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-9 bg-slate-800 border border-slate-700 rounded-sm flex items-center justify-center text-2xl shadow-inner shrink-0">
+      <div className="shrink-0 bg-slate-900/90 border-b border-slate-800 p-3 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-10 h-8 bg-slate-800 border border-slate-700 rounded-sm flex items-center justify-center text-xl shadow-inner shrink-0">
             {country.flag || '🌐'}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-black text-slate-100 truncate tracking-tight uppercase">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h2 className="text-xs font-black text-slate-100 truncate tracking-tight uppercase">
                 {country.name}
               </h2>
               {isSelf && (
-                <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.2 rounded-xs font-bold uppercase shrink-0">
-                  Player Nation
+                <span className="text-[8.5px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.2 rounded-xs font-bold uppercase shrink-0">
+                  Player
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
+            <div className="text-[9.5px] text-slate-400 truncate">
               {country.system || 'Sovereign State'}
             </div>
-            <div className="text-[10px] font-bold truncate flex items-center gap-1.5 mt-0.5">
+            <div className="text-[9.5px] font-bold truncate flex items-center gap-1.5 mt-0.5">
               <span 
-                className="w-2 h-2 rounded-full inline-block shrink-0" 
+                className="w-1.5 h-1.5 rounded-full inline-block shrink-0" 
                 style={{ backgroundColor: country.rulingParty.color || '#6366f1' }} 
               />
               <span style={{ color: country.rulingParty.color || '#e2e8f0' }} className="truncate">
@@ -170,8 +175,9 @@ export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
 
         <button
           onClick={onClose}
-          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 cursor-pointer transition-all shrink-0"
-          title="Close Panel (Esc)"
+          className="p-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 cursor-pointer transition-all shrink-0 flex items-center justify-center"
+          title="Close Dossier (Esc)"
+          aria-label="Close Dossier"
         >
           <X className="w-4 h-4" />
         </button>

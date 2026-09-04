@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg-coldwar" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1d3831" />
+      <stop offset="60%" stop-color="#132621" />
+      <stop offset="100%" stop-color="#0a1411" />
+    </radialGradient>
+    <clipPath id="usa-circle-clip">
+      <circle cx="1250" cy="505" r="225" />
+    </clipPath>
+  </defs>
+
+  <!-- Deep Cold War Military Green / Slate Canvas -->
+  <rect width="1920" height="1080" fill="url(#bg-coldwar)" />
+
+  <!-- Outer Framing (Muted Cold War Brass / Green) -->
+  <rect x="28" y="28" width="1864" height="1024" fill="none" stroke="#5d6e52" stroke-width="1.5" stroke-opacity="0.45" />
+
+  <!-- Central Vertical Dashed Dividing Line (Iron Curtain / 38th Parallel) -->
+  <line x1="960" y1="140" x2="960" y2="940" stroke="#7e9c70" stroke-width="1.5" stroke-dasharray="6 8" stroke-opacity="0.45" />
+
+  <!-- LEFT BLOC: Soviet Union / Eastern Bloc Sphere (Red Emblems) -->
+  <g transform="translate(670, 505)">
+    <!-- Concentric Circles -->
+    <circle cx="0" cy="0" r="230" fill="none" stroke="#9e3a34" stroke-width="1.8" stroke-opacity="0.45" />
+    <circle cx="0" cy="0" r="215" fill="none" stroke="#9e3a34" stroke-width="1.0" stroke-opacity="0.3" />
+
+    <!-- Red Soviet Star -->
+    <polygon points="0,-120 28,-36 114,-36 44,14 70,95 0,44 -70,95 -44,14 -114,-36 -28,-36" 
+      fill="#b8362d" fill-opacity="0.38" />
+
+    <!-- Stylized Sickle and Hammer -->
+    <!-- Hammer -->
+    <rect x="-10" y="-15" width="20" height="85" rx="3" transform="rotate(35)" fill="#9e3a34" fill-opacity="0.4" />
+    <rect x="-40" y="-28" width="55" height="24" rx="3" transform="rotate(35)" fill="#9e3a34" fill-opacity="0.45" />
+
+    <!-- Sickle Blade & Handle -->
+    <path d="M 30,5 C 5, -35 -45,-30 -65,5 C -75,25 -65,65 -35,85 C -25,92 -15,85 -20,75 C -45,60 -50,30 -40,15 C -25,-10 10,-10 18,20 Z" 
+      fill="#b8362d" fill-opacity="0.42" />
+    <path d="M -30,70 L -45,95 L -35,102 L -20,77 Z" fill="#9e3a34" fill-opacity="0.5" />
+  </g>
+
+  <!-- RIGHT BLOC: United States / Western Bloc Sphere (Stars & Stripes) -->
+  <g>
+    <!-- Outer Blue Circle Border -->
+    <circle cx="1250" cy="505" r="228" fill="none" stroke="#3d6980" stroke-width="1.8" stroke-opacity="0.45" />
+
+    <!-- Clipped US Flag Stripes inside Circle -->
+    <g clip-path="url(#usa-circle-clip)">
+      <!-- Alternating Stripes -->
+      <rect x="1000" y="280" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="315" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="350" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="385" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="420" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="455" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="490" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="525" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="560" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="595" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="630" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+      <rect x="1000" y="665" width="500" height="35" fill="#2d4a41" fill-opacity="0.45" />
+      <rect x="1000" y="700" width="500" height="35" fill="#6e3832" fill-opacity="0.45" />
+
+      <!-- Canton Box -->
+      <rect x="1090" y="405" width="150" height="100" fill="#3a6078" fill-opacity="0.65" rx="3" />
+
+      <!-- 6 Stars (2 rows of 3) -->
+      <g fill="#9ab8cc" fill-opacity="0.75">
+        <!-- Row 1 -->
+        <polygon points="1120,430 1123,439 1133,439 1125,444 1128,453 1120,447 1112,453 1115,444 1107,439 1117,439" transform="scale(0.8) translate(280, 100)" />
+        <polygon points="1165,430 1168,439 1178,439 1170,444 1173,453 1165,447 1157,453 1160,444 1152,439 1162,439" transform="scale(0.8) translate(292, 100)" />
+        <polygon points="1210,430 1213,439 1223,439 1215,444 1218,453 1210,447 1202,453 1205,444 1197,439 1207,439" transform="scale(0.8) translate(304, 100)" />
+        <!-- Row 2 -->
+        <polygon points="1120,470 1123,479 1133,479 1125,484 1128,493 1120,487 1112,493 1115,484 1107,479 1117,479" transform="scale(0.8) translate(280, 110)" />
+        <polygon points="1165,470 1168,479 1178,479 1170,484 1173,493 1165,487 1157,493 1160,484 1152,479 1162,479" transform="scale(0.8) translate(292, 110)" />
+        <polygon points="1210,470 1213,479 1223,479 1215,484 1218,493 1210,487 1202,493 1205,484 1197,479 1207,479" transform="scale(0.8) translate(304, 110)" />
+      </g>
+    </g>
+  </g>
+</svg>

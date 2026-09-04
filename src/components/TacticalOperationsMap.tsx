@@ -40,6 +40,17 @@ interface TacticalOperationsMapProps {
   onCivilWarAction?: (countryId: string, actionType: 'RECOGNIZE_GOV' | 'RECOGNIZE_REBEL' | 'AID_GOV' | 'AID_REBEL' | 'INTERVENE', factionId?: string) => void;
 }
 
+const getScenarioBg = (scenarioId: string) => {
+  switch (scenarioId) {
+    case '2026': return '/bg-2026.svg';
+    case '1950': return '/bg-1950.svg';
+    case '1936': return '/bg-1936.svg';
+    case '1914': return '/bg-1914.svg';
+    case '1920': return '/bg-1920.svg';
+    default: return '/bg-2026.svg';
+  }
+};
+
 export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   country,
   party,
@@ -65,9 +76,11 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   const [activeLayer, setActiveLayer] = useState<TacticalMapLayer>('FREEDOM');
   const [selectedIntelCountry, setSelectedIntelCountry] = useState<Country | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState<boolean>(false);
+  const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -346,6 +359,11 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
       attributionControl: false,
     });
 
+    // Dismiss floating country dossier when clicking empty map ocean/space
+    map.on('click', () => {
+      setIsSidePanelOpen(false);
+    });
+
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
       className: 'tactical-ocean-tile',
       noWrap: true
@@ -512,7 +530,13 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
             className: darkMode ? 'dark-tactical-tooltip' : 'light-tactical-tooltip'
           });
 
-          layer.on('click', () => {
+          layer.on('click', (e: any) => {
+            if (e && e.originalEvent) {
+              L.DomEvent.stopPropagation(e);
+            }
+            if (e && e.containerPoint) {
+              setPanelAnchor({ x: e.containerPoint.x, y: e.containerPoint.y });
+            }
             if (matchedCountry) {
               setSelectedIntelCountry(matchedCountry);
               setIsSidePanelOpen(true);
@@ -547,12 +571,52 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
     }
   }, [activeLayer, geoJsonData, country, party, freedomIndex, civilWarRisk, darkMode, diplomaticRelations, countryIdeologies, countryFreedomScores]);
 
+  // Calculate floating dossier panel position anchored near clicked country
+  const getPanelPositionStyle = (): React.CSSProperties => {
+    if (!containerRef.current || !panelAnchor) {
+      return { top: '16px', left: '16px' };
+    }
+    const containerWidth = containerRef.current.clientWidth || 900;
+    const containerHeight = containerRef.current.clientHeight || 600;
+    const panelWidth = Math.min(380, containerWidth - 32);
+
+    if (containerWidth < 640) {
+      return { top: '16px', left: '16px', right: '16px', maxWidth: 'calc(100% - 32px)' };
+    }
+
+    let targetLeft: number;
+    if (panelAnchor.x > containerWidth / 2) {
+      // Clicked on the right half: float to the left of the click
+      targetLeft = Math.max(16, panelAnchor.x - panelWidth - 20);
+    } else {
+      // Clicked on the left half: float to the right of the click
+      targetLeft = Math.min(containerWidth - panelWidth - 16, panelAnchor.x + 20);
+    }
+
+    // Clamp Y neatly inside viewport
+    const targetTop = Math.max(16, Math.min(containerHeight * 0.25, Math.max(16, panelAnchor.y - 40)));
+
+    return {
+      top: `${targetTop}px`,
+      left: `${targetLeft}px`,
+    };
+  };
+
   return (
     <div className="flex flex-col gap-5 animate-fade-in relative">
       {/* Tactical Header Controls */}
-      <div className={`p-5 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-        darkMode ? 'bg-slate-900/80 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900 shadow-sm'
-      }`}>
+      <div 
+        className={`p-5 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden ${
+          darkMode ? 'border-slate-800 text-slate-100 shadow-xl' : 'border-slate-200 text-slate-900 shadow-sm'
+        }`}
+        style={{
+          backgroundImage: darkMode
+            ? `linear-gradient(135deg, rgba(15, 23, 42, 0.50), rgba(2, 6, 23, 0.50)), url(${getScenarioBg(activeScenarioId)})`
+            : `linear-gradient(135deg, rgba(255, 255, 255, 0.50), rgba(248, 250, 252, 0.50)), url(${getScenarioBg(activeScenarioId)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-mono text-[10px] font-bold uppercase tracking-wider border border-rose-500/20 flex items-center gap-1">
@@ -630,11 +694,17 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
         </div>
       </div>
 
-      {/* Map Main Stage with Left Persistent Dossier Panel */}
-      <div className="relative w-full rounded-3xl border overflow-hidden shadow-2xl min-h-[580px] flex">
-        {/* Persistent HOI4/AoH3 Docked Left Country Info Side Panel */}
+      {/* Map Main Stage with Floating Dossier Panel */}
+      <div 
+        ref={containerRef}
+        className="relative w-full rounded-3xl border overflow-hidden shadow-2xl min-h-[580px] flex"
+      >
+        {/* Floating Dossier Panel anchored inside Map Viewport */}
         {isSidePanelOpen && sidePanelData && (
-          <div className="absolute inset-y-0 left-0 z-30 flex">
+          <div 
+            style={getPanelPositionStyle()}
+            className="absolute z-30 pointer-events-auto max-w-[380px] w-[calc(100%-2rem)] sm:w-[380px] max-h-[70%] flex flex-col transition-all duration-200"
+          >
             <CountryInfoSidePanel
               country={sidePanelData}
               onClose={() => setIsSidePanelOpen(false)}
@@ -662,6 +732,7 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
               <button
                 key={c.id}
                 onClick={() => {
+                  setPanelAnchor(null);
                   setSelectedIntelCountry(c);
                   setIsSidePanelOpen(true);
                   playSound('click');

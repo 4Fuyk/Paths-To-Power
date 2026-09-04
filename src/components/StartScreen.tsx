@@ -62,6 +62,17 @@ const ROUTES: [number, number, number, number][] = [
   [823.3, 139.2, 914.2, 348.1],
 ];
 
+const getScenarioBg = (scenarioId: string) => {
+  switch (scenarioId) {
+    case '2026': return '/bg-2026.svg';
+    case '1950': return '/bg-1950.svg';
+    case '1936': return '/bg-1936.svg';
+    case '1914': return '/bg-1914.svg';
+    case '1920': return '/bg-1920.svg';
+    default: return '/bg-2026.svg';
+  }
+};
+
 const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
 
 function project(lon: number, lat: number): [number, number] {
@@ -406,11 +417,18 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
                   <div className="lg:col-span-8 flex flex-col">
                     <div
                       key={activeScenario.id}
-                      className={`animate-slide-pop p-5 sm:p-6 rounded-2xl border transition-all flex flex-col justify-between ${
+                      className={`relative overflow-hidden animate-slide-pop p-5 sm:p-6 rounded-2xl border transition-all flex flex-col justify-between ${
                         darkMode
-                          ? 'bg-gradient-to-br from-slate-900/95 via-[#0b1120] to-[#05070d] border-[#c9a26a]/40 shadow-2xl shadow-black/80'
-                          : 'bg-gradient-to-br from-slate-50 via-amber-50/40 to-white border-amber-300 shadow-xl'
+                          ? 'border-[#c9a26a]/40 shadow-2xl shadow-black/80'
+                          : 'border-amber-300 shadow-xl'
                       }`}
+                      style={{
+                        backgroundImage: darkMode
+                          ? `linear-gradient(135deg, rgba(11, 17, 32, 0.50), rgba(5, 7, 13, 0.50)), url(${getScenarioBg(activeScenario.id)})`
+                          : `linear-gradient(135deg, rgba(254, 249, 237, 0.50), rgba(255, 255, 255, 0.50)), url(${getScenarioBg(activeScenario.id)})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
                     >
                       <div>
                         {/* Era Top Badges */}

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg-sepia" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#34281e" />
+      <stop offset="60%" stop-color="#241b14" />
+      <stop offset="100%" stop-color="#140f0a" />
+    </radialGradient>
+  </defs>
+
+  <!-- Deep Warm Vintage Sepia Canvas -->
+  <rect width="1920" height="1080" fill="url(#bg-sepia)" />
+
+  <!-- Outer Imperial Framing (Vintage Brass / Gold) -->
+  <rect x="28" y="28" width="1864" height="1024" fill="none" stroke="#6e5537" stroke-width="1.5" stroke-opacity="0.5" />
+
+  <!-- Large Cartographic Crosshair & Navigational Compass Rose (Center-Right) -->
+  <g transform="translate(1415, 505)">
+    <!-- Thin Meridian & Parallel Crosshairs -->
+    <line x1="-515" y1="0" x2="475" y2="0" stroke="#6e5537" stroke-width="0.8" stroke-opacity="0.35" />
+    <line x1="0" y1="-475" x2="0" y2="545" stroke="#6e5537" stroke-width="0.8" stroke-opacity="0.35" />
+
+    <!-- Outer Compass Circle -->
+    <circle cx="0" cy="0" r="108" fill="none" stroke="#6e5537" stroke-width="0.8" stroke-opacity="0.3" />
+    <circle cx="0" cy="0" r="6" fill="#7a603e" fill-opacity="0.4" />
+
+    <!-- 24 Radiating Navigational Azimuth Spokes -->
+    <g stroke="#6e5537" stroke-width="0.75" stroke-opacity="0.25">
+      <line x1="0" y1="-108" x2="0" y2="108" />
+      <line x1="-108" y1="0" x2="108" y2="0" />
+      <line x1="-76.4" y1="-76.4" x2="76.4" y2="76.4" />
+      <line x1="-76.4" y1="76.4" x2="76.4" y2="-76.4" />
+      
+      <line x1="-100" y1="-41.4" x2="100" y2="41.4" />
+      <line x1="-100" y1="41.4" x2="100" y2="-41.4" />
+      <line x1="-41.4" y1="-100" x2="41.4" y2="100" />
+      <line x1="41.4" y1="-100" x2="-41.4" y2="100" />
+      
+      <line x1="-92.4" y1="-55.5" x2="92.4" y2="55.5" />
+      <line x1="-92.4" y1="55.5" x2="92.4" y2="-55.5" />
+      <line x1="-55.5" y1="-92.4" x2="55.5" y2="92.4" />
+      <line x1="55.5" y1="-92.4" x2="-55.5" y2="92.4" />
+    </g>
+  </g>
+
+  <!-- Secondary Small Vintage Compass Point (Bottom-Left) -->
+  <g transform="translate(285, 835)">
+    <line x1="-70" y1="0" x2="70" y2="0" stroke="#6e5537" stroke-width="0.6" stroke-opacity="0.28" />
+    <line x1="0" y1="-70" x2="0" y2="70" stroke="#6e5537" stroke-width="0.6" stroke-opacity="0.28" />
+    <circle cx="0" cy="0" r="3" fill="#7a603e" fill-opacity="0.35" />
+    <polygon points="0,-18 3,-4 18,0 3,4 0,18 -3,4 -18,0 -3,-4" fill="#6e5537" fill-opacity="0.18" />
+  </g>
+</svg>
