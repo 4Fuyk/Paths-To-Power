@@ -278,11 +278,11 @@ export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
             Next Election
           </span>
           <span className={`font-bold px-2 py-0.5 rounded-xs border text-[11px] ${
-            country.nextElection.toLowerCase().includes('no') || country.nextElection.toLowerCase().includes('suspend')
+            (country.nextElection || '').toLowerCase().includes('no') || (country.nextElection || '').toLowerCase().includes('suspend')
               ? 'bg-rose-950/40 text-rose-300 border-rose-800/40'
               : 'bg-indigo-950/40 text-indigo-300 border-indigo-800/40'
           }`}>
-            {country.nextElection}
+            {country.nextElection || 'Scheduled'}
           </span>
         </div>
 
@@ -290,7 +290,7 @@ export const CountryInfoSidePanel: React.FC<CountryInfoSidePanelProps> = ({
         <div className="p-3 bg-slate-950 flex flex-col gap-1.5">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold flex items-center justify-between">
             <span>War Status</span>
-            {country.wars.length > 0 && (
+            {(country.wars || []).length > 0 && (
               <span className="text-[9px] text-rose-400 font-bold bg-rose-950/40 px-1.5 py-0.2 rounded-xs border border-rose-800/40 animate-pulse">
                 WAR ENGAGED
               </span>

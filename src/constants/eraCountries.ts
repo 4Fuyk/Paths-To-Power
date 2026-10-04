@@ -1440,6 +1440,41 @@ const COUNTRIES_1950: Country[] = [
     bills: createHistoricalBills('1950', 'YU'),
     campaignTurns: 53,
     electionCycleYears: 4,
+  },
+  {
+    id: 'KR',
+    name: 'Republic of Korea (South Korea 1950)',
+    description: 'Under President Syngman Rhee, the Republic of Korea fights for national survival in the Korean War alongside UN forces following the northern invasion.',
+    flag: '🇰🇷',
+    seats: 210,
+    parliamentName: 'National Assembly of the Republic of Korea (Gukhoe 1950)',
+    system: 'Presidential Republic',
+    population: '20.5 Million',
+    primaryColor: '#1d4ed8',
+    rivals: [
+      { id: 'DNP', name: 'Democratic Nationalist Party (DNP)', leader: 'Shin Ik-hee & Chough Pyung-ok', ideology: 'Conservative', symbol: 'Building', color: '#1e40af', baseSupport: 44 },
+      { id: 'NARKI', name: 'Nationalist & Ilmin Loyalists', leader: 'Syngman Rhee & Yun Chi-young', ideology: 'Nationalist', symbol: 'Shield', color: '#dc2626', baseSupport: 38 },
+      { id: 'KSP', name: 'Korea Socialists & Progressive Independents', leader: 'Cho Bong-am', ideology: 'Social Democrat', symbol: 'Flame', color: '#059669', baseSupport: 18 }
+    ],
+    regions: generateHistoricalRegions('KR', [
+      { name: 'Seoul Capital & Incheon', seats: 28, winner: 'DNP' },
+      { name: 'Gyeonggi-do Frontier', seats: 32, winner: 'NARKI' },
+      { name: 'Gangwon-do 38th Parallel', seats: 18, winner: 'NARKI' },
+      { name: 'Chungcheongnam-do & Daejeon', seats: 24, winner: 'DNP' },
+      { name: 'Chungcheongbuk-do Central', seats: 15, winner: 'DNP' },
+      { name: 'Jeollabuk-do Plain', seats: 22, winner: 'KSP' },
+      { name: 'Jeollanam-do & Gwangju', seats: 30, winner: 'DNP' },
+      { name: 'Gyeongsangbuk-do & Daegu', seats: 34, winner: 'NARKI' },
+      { name: 'Busan & Gyeongsangnam-do', seats: 32, winner: 'NARKI' },
+      { name: 'Jeju Island Bastion', seats: 3, winner: 'DNP' }
+    ], [
+      { id: 'DNP', name: 'DNP', leader: 'Shin Ik-hee', ideology: 'Conservative', symbol: 'Building', color: '#1e40af', baseSupport: 44 },
+      { id: 'NARKI', name: 'Nationalists', leader: 'Syngman Rhee', ideology: 'Nationalist', symbol: 'Shield', color: '#dc2626', baseSupport: 38 },
+      { id: 'KSP', name: 'Progressives', leader: 'Cho Bong-am', ideology: 'Social Democrat', symbol: 'Flame', color: '#059669', baseSupport: 18 }
+    ]),
+    bills: createHistoricalBills('1950', 'KR'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
   }
 ];
 

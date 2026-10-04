@@ -4,10 +4,12 @@ import {
   Map as MapIcon, Target, Activity, Shield, Flame, Plus, Zap, Navigation, 
   Bomb, Factory, Radio, Anchor, Plane, DollarSign, ChevronRight, CheckCircle2,
   Building2, X, RefreshCw, Ship, Waves, Skull, Check, Lock, ArrowRight,
-  ShieldAlert, ShieldCheck, CornerDownLeft, Eye, MessageSquare, Megaphone
+  ShieldAlert, ShieldCheck, CornerDownLeft, Eye, MessageSquare, Megaphone,
+  AlertCircle
 } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
-import { Country, ScenarioYear, Region } from '../types';
+import { loadCountryMapData, getCountryMapConfig, getFeatureRegionName } from '../data/mapRegistry';
+import { Country, ScenarioYear, Region, getCountryMode } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { playSound } from '../lib/sounds';
@@ -21,6 +23,8 @@ import {
   applyPeaceDealAnnexation 
 } from '../utils/territorialControl';
 import { WarFrontlineMap } from './WarFrontlineMap';
+import { CivilWarBattleMap } from './CivilWarBattleMap';
+import { PeaceConferenceModal, PeaceTreatyTerms } from './PeaceConferenceModal';
 
 export interface PlayerArmy {
   id: string;
@@ -203,6 +207,10 @@ export const getCountryMilitaryBaselines = (countryId: string, scenario: Scenari
     BE: { soldiers: 25000, tanks: 40, aircraft: 110, warships: 18, reserves: 6000, nukes: 0 },
     NL: { soldiers: 41000, tanks: 18, aircraft: 160, warships: 32, reserves: 7000, nukes: 0 },
     PL: { soldiers: 216000, tanks: 850, aircraft: 460, warships: 86, reserves: 150000, nukes: 0 },
+    FI: { soldiers: 24000, tanks: 200, aircraft: 160, warships: 64, reserves: 870000, nukes: 0 },
+    NO: { soldiers: 25000, tanks: 52, aircraft: 110, warships: 65, reserves: 45000, nukes: 0 },
+    SE: { soldiers: 24000, tanks: 120, aircraft: 210, warships: 75, reserves: 32000, nukes: 0 },
+    CH: { soldiers: 22000, tanks: 134, aircraft: 150, warships: 0, reserves: 120000, nukes: 0 },
     UA: { soldiers: 800000, tanks: 2100, aircraft: 320, warships: 25, reserves: 1200000, nukes: 0 },
     GR: { soldiers: 142000, tanks: 1240, aircraft: 570, warships: 120, reserves: 220000, nukes: 0 },
     IL: { soldiers: 170000, tanks: 2200, aircraft: 600, warships: 65, reserves: 465000, nukes: 90 },
@@ -277,6 +285,12 @@ interface TacticalBattleViewProps {
   isRuling?: boolean;
   onPoliticalStance?: (stance: 'SUPPORT' | 'CRITICIZE' | 'REFORM' | 'NEUTRAL') => void;
   darkMode?: boolean;
+  onAnnexProvinces?: (annexedProvinces: string[], defeatedCountryId: string, warReparations: number) => void;
+  onTurnAdvance?: () => void;
+  canCommandMilitary?: boolean;
+  foreignAidPackages?: Record<string, any>;
+  resolvedWarIds?: string[];
+  countryMode?: string;
 }
 
 export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
@@ -295,7 +309,13 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   civilWarRisk = 0,
   isRuling = true,
   onPoliticalStance,
-  darkMode = true
+  darkMode = true,
+  onAnnexProvinces,
+  onTurnAdvance,
+  canCommandMilitary = true,
+  foreignAidPackages,
+  resolvedWarIds,
+  countryMode
 }) => {
   // Safe Treasury accessor
   const effectiveTreasury = currentTreasury !== undefined ? currentTreasury : (treasury !== undefined ? treasury : 500000);
@@ -337,6 +357,25 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   // Naval Transports for Overseas Wars
   const [navalTransports, setNavalTransports] = useState<number>(10);
+
+  // Track finished / concluded fronts to prevent duplicate listings and remove resolved wars immediately
+  const [finishedFrontIds, setFinishedFrontIds] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    if (resolvedWarIds) {
+      resolvedWarIds.forEach(id => s.add(id));
+    }
+    return s;
+  });
+
+  useEffect(() => {
+    if (resolvedWarIds && resolvedWarIds.length > 0) {
+      setFinishedFrontIds(prev => {
+        const next = new Set(prev);
+        resolvedWarIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  }, [resolvedWarIds]);
 
   const totalActiveSoldiers = initialBase.soldiers + extraSoldiers;
   const totalTanks = initialBase.tanks + extraTanks;
@@ -380,58 +419,100 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   // 1. DYNAMIC FRONT GENERATION FROM GAME STATE
   // Derived dynamically from declared interstate wars and civil wars/insurgencies.
-  const activeFronts: ActiveWarFront[] = [];
+  // Deduplicate conflicts by a unique conflictId (${countryIso}-${type}) to guarantee
+  // exactly one frontline card and one battle map per civil war or interstate war.
+  const rawActiveFronts: ActiveWarFront[] = [];
+  const processedConflictIds = new Set<string>();
 
-  // A) Civil War Front (Triggered whenever civilWarRisk >= 15 or in recognized initial civil war country)
-  const isCivilWarActive = civilWarRisk >= 15 || Boolean(INITIAL_CIVIL_WARS[country.id]);
+  // A) Civil War Front (Triggered in civilwar mode or unrecognized civil war countries until resolved)
+  const isCivilWarResolved = finishedFrontIds.has('CIVIL_WAR') || finishedFrontIds.has(`CIVIL_WAR_${country.id}`) || finishedFrontIds.has(country.id);
+  const isCivilWarActive = !isCivilWarResolved && (country.countryMode === 'civilwar' || Boolean(INITIAL_CIVIL_WARS[country.id]));
   if (isCivilWarActive) {
-    const cwData = INITIAL_CIVIL_WARS[country.id];
-    const friendlyTroops = Math.round(initialBase.soldiers * 0.7);
-    const rebelTroops = Math.round(initialBase.soldiers * Math.max(0.2, (civilWarRisk / 100) * 0.6));
-    const friendlyDivs = Math.max(4, Math.round(friendlyTroops / 25000));
-    const rebelDivs = Math.max(3, Math.round(rebelTroops / 25000));
+    const conflictId = `${country.id}-CIVIL_WAR`;
+    if (!processedConflictIds.has(conflictId)) {
+      processedConflictIds.add(conflictId);
+      const cwData = INITIAL_CIVIL_WARS[country.id];
+      const friendlyTroops = Math.round(initialBase.soldiers * 0.7);
+      const rebelTroops = Math.round(initialBase.soldiers * Math.max(0.2, (civilWarRisk / 100) * 0.6));
+      const friendlyDivs = Math.max(4, Math.round(friendlyTroops / 25000));
+      const rebelDivs = Math.max(3, Math.round(rebelTroops / 25000));
 
-    activeFronts.push({
-      id: 'CIVIL_WAR',
-      type: 'CIVIL_WAR',
-      conflictName: cwData?.conflictName || `${country.name} Civil War & Anti-Insurgency Front`,
-      sides: {
-        friendlyName: `${country.name} Armed Forces (Government Loyalists)`,
-        friendlyDivisions: friendlyDivs,
-        friendlyTroops,
-        enemyName: cwData?.factions.find(f => !f.isGovernment)?.name || 'National Salvation Rebel Militias',
-        enemyDivisions: rebelDivs,
-        enemyTroops: rebelTroops
-      },
-      status: civilWarRisk > 50 ? 'Critical Urban Siege & Sector Contestation' : 'Counter-Insurgency Encirclement',
-      momentum: Math.max(-100, Math.min(100, 50 - civilWarRisk)),
-      isOverseas: false
-    });
+      rawActiveFronts.push({
+        id: 'CIVIL_WAR',
+        type: 'CIVIL_WAR',
+        conflictName: cwData?.conflictName || `${country.name} Civil War & Anti-Insurgency Front`,
+        sides: {
+          friendlyName: `${country.name} Armed Forces (Government Loyalists)`,
+          friendlyDivisions: friendlyDivs,
+          friendlyTroops,
+          enemyName: cwData?.factions.find(f => !f.isGovernment)?.name || 'National Salvation Rebel Militias',
+          enemyDivisions: rebelDivs,
+          enemyTroops: rebelTroops
+        },
+        status: civilWarRisk > 50 ? 'Critical Urban Siege & Sector Contestation' : 'Counter-Insurgency Encirclement',
+        momentum: Math.max(-100, Math.min(100, 50 - civilWarRisk)),
+        isOverseas: false
+      });
+    }
   }
 
   // B) Interstate Wars (From Global Wars state or declared diplomatic relations)
-  const processedEnemies = new Set<string>();
-
   // Check global wars involving the player country
   if (globalWars && globalWars.length > 0) {
     globalWars.forEach(war => {
-      const isSideA = war.belligerentsA.includes(country.id);
-      const isSideB = war.belligerentsB.includes(country.id);
+      // Guard against duplicate civil war entries from globalWars
+      if (war.type === 'CIVIL_WAR') {
+        if (war.belligerentsA?.includes(country.id) || war.belligerentsB?.includes(country.id)) {
+          const conflictId = `${country.id}-CIVIL_WAR`;
+          if (processedConflictIds.has(conflictId) || finishedFrontIds.has('CIVIL_WAR')) {
+            return;
+          }
+          processedConflictIds.add(conflictId);
+          rawActiveFronts.push({
+            id: 'CIVIL_WAR',
+            type: 'CIVIL_WAR',
+            conflictName: war.name || `${country.name} Civil War Front`,
+            sides: {
+              friendlyName: `${country.name} Armed Forces`,
+              friendlyDivisions: Math.max(4, Math.round((initialBase.soldiers * 0.7) / 25000)),
+              friendlyTroops: Math.round(initialBase.soldiers * 0.7),
+              enemyName: war.namesB[0] || 'Insurgent Faction',
+              enemyDivisions: Math.max(3, Math.round((initialBase.soldiers * 0.3) / 25000)),
+              enemyTroops: Math.round(initialBase.soldiers * 0.3)
+            },
+            status: 'Active Civil Conflict & Urban Defense',
+            momentum: 0,
+            isOverseas: false
+          });
+          return;
+        }
+      }
+
+      const isSideA = Boolean(war.belligerentsA?.includes(country.id));
+      const isSideB = Boolean(war.belligerentsB?.includes(country.id));
       if (isSideA || isSideB) {
-        const enemies = isSideA ? war.belligerentsB : war.belligerentsA;
-        const enemyId = enemies[0] || (isSideA ? war.countryB : war.countryA);
-        if (enemyId && enemyId !== country.id) {
-          processedEnemies.add(enemyId);
+        const enemies = isSideA ? (war.belligerentsB || []) : (war.belligerentsA || []);
+        const enemyId = enemies[0] || (isSideA ? (war as any).countryB : (war as any).countryA);
+        const conflictId = `${country.id}-INTERSTATE-${enemyId}`;
+        if (
+          enemyId &&
+          enemyId !== country.id &&
+          !processedConflictIds.has(conflictId) &&
+          !finishedFrontIds.has(enemyId) &&
+          !finishedFrontIds.has(war.id)
+        ) {
+          processedConflictIds.add(conflictId);
           const eBase = getCountryMilitaryBaselines(enemyId, scenario as ScenarioYear);
           const isOverseas = !checkIsLandAdjacent(country.id, enemyId);
           const friendlyDivs = Math.max(5, Math.round(totalActiveSoldiers / 25000));
           const enemyDivs = Math.max(4, Math.round(eBase.soldiers / 25000));
 
-          activeFronts.push({
+          rawActiveFronts.push({
             id: enemyId,
             type: 'INTERSTATE',
             conflictName: war.name || `${country.name} - ${getCountryName(enemyId)} Conflict`,
             targetCountryId: enemyId,
+            enemyCountryId: enemyId,
             sides: {
               friendlyName: `${country.name} Armed Forces`,
               friendlyDivisions: friendlyDivs,
@@ -451,18 +532,26 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   // Also check any declared wars in diplomaticRelations not yet in activeFronts
   Object.entries(diplomaticRelations).forEach(([cId, rel]) => {
-    if (rel && (rel as any).status === 'At War' && cId !== country.id && !processedEnemies.has(cId)) {
-      processedEnemies.add(cId);
+    const conflictId = `${country.id}-INTERSTATE-${cId}`;
+    if (
+      rel &&
+      (rel as any).status === 'At War' &&
+      cId !== country.id &&
+      !processedConflictIds.has(conflictId) &&
+      !finishedFrontIds.has(cId)
+    ) {
+      processedConflictIds.add(conflictId);
       const eBase = getCountryMilitaryBaselines(cId, scenario as ScenarioYear);
       const isOverseas = !checkIsLandAdjacent(country.id, cId);
       const friendlyDivs = Math.max(5, Math.round(totalActiveSoldiers / 25000));
       const enemyDivs = Math.max(4, Math.round(eBase.soldiers / 25000));
 
-      activeFronts.push({
+      rawActiveFronts.push({
         id: cId,
         type: 'INTERSTATE',
         conflictName: `${country.name} - ${getCountryName(cId)} Sovereign Conflict`,
         targetCountryId: cId,
+        enemyCountryId: cId,
         sides: {
           friendlyName: `${country.name} Sovereign Armed Forces`,
           friendlyDivisions: friendlyDivs,
@@ -476,6 +565,19 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         isOverseas
       });
     }
+  });
+
+  // Final deduplication before rendering: ensure exactly one card per unique conflictId
+  const activeFronts: ActiveWarFront[] = rawActiveFronts.filter((front, index, self) => {
+    const key = front.type === 'CIVIL_WAR'
+      ? `${country.id}-CIVIL_WAR`
+      : `${country.id}-INTERSTATE-${front.targetCountryId || front.id}`;
+    return index === self.findIndex(f => {
+      const fKey = f.type === 'CIVIL_WAR'
+        ? `${country.id}-CIVIL_WAR`
+        : `${country.id}-INTERSTATE-${f.targetCountryId || f.id}`;
+      return fKey === key;
+    });
   });
 
   // Active Theater state: 'HOME' or an active front id
@@ -565,7 +667,11 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     `🛡️ Strategic Command and Sovereign Defense Center online. Monitoring active theaters and defense posture.`
   ]);
 
+  // Peace Conference State
+  const [peaceConferenceTarget, setPeaceConferenceTarget] = useState<{ id: string; name: string } | null>(null);
+
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -579,50 +685,20 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     setBattleLogs(prev => [msg, ...prev.slice(0, 24)]);
   };
 
-  // Load geojson for home country
+  // Load geojson for home country via unified central map registry
   useEffect(() => {
     let isMounted = true;
-
-    const fetchJsonSafely = async (url: string) => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('text/html')) return null;
-        const text = await res.text();
-        if (text.trim().startsWith('<')) return null;
-        return JSON.parse(text);
-      } catch {
-        return null;
-      }
-    };
-
-    const countryGeoJsonUrls: Record<string, string[]> = {
-      TR: ['https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json', '/world_admin0_50m.geojson'],
-      DE: ['https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json', '/world_admin0_50m.geojson'],
-      US: ['https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json', '/world_admin0_50m.geojson'],
-      RU: ['/russia.geojson', '/world_admin0_50m.geojson'],
-      UA: ['/ukraine.geojson', '/world_admin0_50m.geojson'],
-      EG: ['/egypt-provinces.geojson', '/world_admin0_50m.geojson'],
-      BR: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson', '/world_admin0_50m.geojson'],
-      JP: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson', '/world_admin0_50m.geojson'],
-      GB: ['https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json', '/world_admin0_50m.geojson'],
-      CA: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson', '/world_admin0_50m.geojson'],
-      FR: ['https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson', '/world_admin0_50m.geojson']
-    };
+    setMapError(null);
 
     const loadCountryGeoJson = async () => {
-      const candidates = countryGeoJsonUrls[country.id] || [
-        `/${country.name.toLowerCase().replace(/\s+/g, '-')}.geojson`,
-        '/world_admin0_50m.geojson',
-        'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson'
-      ];
-
-      for (const url of candidates) {
-        const data = await fetchJsonSafely(url);
-        if (isMounted && data && (data.features || data.type === 'FeatureCollection')) {
-          setGeoJsonData(data);
-          return;
+      const res = await loadCountryMapData(country.id, country.name);
+      if (isMounted) {
+        if (res.data) {
+          setGeoJsonData(res.data);
+          setMapError(null);
+        } else {
+          setGeoJsonData(null);
+          setMapError(res.error || `Map data unavailable for ${country.name}`);
         }
       }
     };
@@ -630,6 +706,21 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     loadCountryGeoJson();
     return () => { isMounted = false; };
   }, [country.id, country.name]);
+
+  // Reset selection, map, and units when switching countries to ensure valid regions and projections
+  useEffect(() => {
+    setSelectedProvinceId(null);
+    setDraggedArmyId(null);
+    cleanupMap();
+
+    const validRegions = country.regions && country.regions.length > 0 ? country.regions : [{ id: 'r1', name: 'Capital Region' }];
+    setArmies([
+      { id: 'army_1', name: '1st Armored Corps', type: 'armored', regionId: validRegions[0].id, hp: 280, maxHp: 280, attackPower: 80, status: 'idle' },
+      { id: 'army_2', name: '2nd Infantry Division', type: 'infantry', regionId: validRegions[1]?.id || validRegions[0].id, hp: 180, maxHp: 180, attackPower: 50, status: 'idle' },
+      { id: 'army_3', name: '3rd Special Operations Brigade', type: 'specops', regionId: validRegions[2]?.id || validRegions[0].id, hp: 200, maxHp: 200, attackPower: 65, status: 'idle' },
+      { id: 'army_4', name: '4th Heavy Artillery Regiment', type: 'artillery', regionId: validRegions[0].id, hp: 150, maxHp: 150, attackPower: 85, status: 'idle' }
+    ]);
+  }, [country.id]);
 
   const cleanupMap = () => {
     if (mapInstanceRef.current) {
@@ -676,6 +767,28 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     };
   }, [activeTheater, darkMode]);
 
+  // Re-fit map on container resize
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      const map = mapInstanceRef.current;
+      const geoLayer = geoJsonLayerRef.current as any;
+      if (map) {
+        try {
+          map.invalidateSize();
+          if (geoLayer && typeof geoLayer.getBounds === 'function') {
+            const bounds = geoLayer.getBounds();
+            if (bounds && bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [20, 20], animate: false });
+            }
+          }
+        } catch (e) {}
+      }
+    });
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Update map geojson
   useEffect(() => {
     if (activeTheater !== 'HOME' || !mapInstanceRef.current || !geoJsonData) return;
@@ -689,22 +802,99 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
     const centers: Record<string, { lat: number; lng: number }> = {};
 
+    const civilWarData = INITIAL_CIVIL_WARS[country.id];
+
+    const getFeatureFaction = (feature: any) => {
+      if (!civilWarData || !civilWarData.factions || civilWarData.factions.length === 0) return null;
+      const name1 = feature.properties?.NAME_1 || feature.properties?.shapeName || '';
+      const rawName = getFeatureName(feature);
+      const varName = feature.properties?.VARNAME_1 || '';
+      
+      const n1 = normalizeName(name1);
+      const nr = normalizeName(rawName);
+      const nv = normalizeName(varName);
+
+      for (const faction of civilWarData.factions) {
+        for (const reg of faction.controlledRegions) {
+          const nreg = normalizeName(reg);
+          if (!nreg) continue;
+          if (
+            n1.includes(nreg) || nreg.includes(n1) ||
+            nr.includes(nreg) || nreg.includes(nr) ||
+            nv.includes(nreg)
+          ) {
+            return faction;
+          }
+        }
+      }
+
+      if (country.id === 'LY') {
+        const gnuKeywords = ['tarabulus', 'tripoli', 'misrata', 'zawiy', 'jabalalgharbi', 'gharyan', 'jafarah', 'nuqat', 'marqab', 'nalut'];
+        if (gnuKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) {
+          return civilWarData.factions.find(f => f.id.includes('GNU') || f.isGovernment) || civilWarData.factions[0];
+        }
+        return civilWarData.factions.find(f => f.id.includes('LNA') || !f.isGovernment) || civilWarData.factions[1] || civilWarData.factions[0];
+      }
+
+      if (country.id === 'SY') {
+        const sdfKeywords = ['hasakah', 'qamishli', 'raqqa', 'deirez'];
+        const snaKeywords = ['idlib', 'afrin', 'albab', 'jarabulus'];
+        if (sdfKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) return civilWarData.factions.find(f => f.id.includes('SDF')) || civilWarData.factions[1];
+        if (snaKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) return civilWarData.factions.find(f => f.id.includes('SNA')) || civilWarData.factions[2];
+        return civilWarData.factions.find(f => f.isGovernment) || civilWarData.factions[0];
+      }
+
+      if (country.id === 'SD') {
+        const rsfKeywords = ['darfur', 'kordofan', 'omdurman', 'wadmadani', 'jazirah'];
+        if (rsfKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) return civilWarData.factions.find(f => f.id.includes('RSF')) || civilWarData.factions[1];
+        return civilWarData.factions.find(f => f.isGovernment) || civilWarData.factions[0];
+      }
+
+      if (country.id === 'MM') {
+        const resKeywords = ['shan', 'rakhine', 'kachin', 'kayah', 'kayin', 'chin', 'sagaing'];
+        if (resKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) return civilWarData.factions.find(f => f.id.includes('NUG') || f.id.includes('PDF')) || civilWarData.factions[1];
+        return civilWarData.factions.find(f => f.isGovernment) || civilWarData.factions[0];
+      }
+
+      if (country.id === 'YE') {
+        const houKeywords = ['sanaa', 'asimah', 'hudaydah', 'hodeidah', 'saada', 'sadah', 'dhamar', 'ibb', 'amran', 'hajjah', 'mahwit', 'raymah', 'taiz'];
+        if (houKeywords.some(k => n1.includes(k) || nr.includes(k) || nv.includes(k))) return civilWarData.factions.find(f => f.id.includes('HOU')) || civilWarData.factions[0];
+        return civilWarData.factions.find(f => f.id.includes('PLC')) || civilWarData.factions[1];
+      }
+
+      return null;
+    };
+
     const geoLayer = L.geoJSON(geoJsonData, {
       style: (feature: any) => {
         const rawName = getFeatureName(feature);
-        const rId = getRegionIdFromNormalizedName(rawName, country.regions);
+        const name1 = feature.properties?.NAME_1 || rawName;
+        const rId = getRegionIdFromNormalizedName(name1, country.regions) || getRegionIdFromNormalizedName(rawName, country.regions);
         const isSelected = rId && rId === selectedProvinceId;
+        const faction = getFeatureFaction(feature);
+
+        let defaultFill = darkMode ? '#1e293b' : '#cbd5e1';
+        let defaultColor = darkMode ? '#475569' : '#94a3b8';
+        let fillOpacity = isSelected ? 0.85 : 0.45;
+
+        if (faction) {
+          defaultFill = faction.color;
+          defaultColor = darkMode ? '#0f172a' : '#ffffff';
+          fillOpacity = isSelected ? 0.9 : 0.65;
+        }
 
         return {
-          fillColor: isSelected ? '#3b82f6' : darkMode ? '#1e293b' : '#cbd5e1',
-          fillOpacity: isSelected ? 0.75 : 0.45,
-          color: isSelected ? '#60a5fa' : darkMode ? '#475569' : '#94a3b8',
-          weight: isSelected ? 2.5 : 1
+          fillColor: isSelected ? '#38bdf8' : defaultFill,
+          fillOpacity: fillOpacity,
+          color: isSelected ? '#ffffff' : defaultColor,
+          weight: isSelected ? 2.5 : 1.2
         };
       },
       onEachFeature: (feature: any, layer: L.Layer) => {
         const rawName = getFeatureName(feature);
-        const rId = getRegionIdFromNormalizedName(rawName, country.regions) || rawName;
+        const name1 = feature.properties?.NAME_1 || rawName;
+        const rId = getRegionIdFromNormalizedName(name1, country.regions) || getRegionIdFromNormalizedName(rawName, country.regions) || rawName;
+        const faction = getFeatureFaction(feature);
 
         try {
           if ((layer as any).getBounds) {
@@ -712,6 +902,16 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
             centers[rId] = bounds.getCenter();
           }
         } catch (e) {}
+
+        const tooltipContent = faction 
+          ? `<div style="font-size: 11px; padding: 2px 4px;"><strong>${name1}</strong><br/><span style="color:${faction.color}; font-weight: bold;">● ${faction.name}</span></div>`
+          : `<div style="font-size: 11px; padding: 2px 4px;"><strong>${name1}</strong></div>`;
+
+        layer.bindTooltip(tooltipContent, {
+          sticky: true,
+          direction: 'top',
+          opacity: 0.95
+        });
 
         layer.on({
           click: () => {
@@ -759,6 +959,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   // Check if player has power to command armed forces
   const checkRulingControl = (actionName: string): boolean => {
+    if (getCountryMode(country) === 'civilwar') return true;
     if (!isRuling) {
       playSound('error');
       addLog(`🔒 ACTION LOCKED: Only the sitting government commands the armed forces.`);
@@ -1104,6 +1305,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
           });
 
           safeAddTreasury(100000);
+          setFinishedFrontIds(prev => new Set([...prev, 'CIVIL_WAR']));
+          setActiveTheater('HOME');
           onBattleFinished(true);
         } else {
           const enemyId = currentFront.targetCountryId!;
@@ -1143,6 +1346,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
               [currentFront.targetCountryId]: { status: 'Victorious Peace / Treaty', opinion: 35, alliance: false }
             });
           }
+          setFinishedFrontIds(prev => new Set([...prev, enemyId]));
+          setActiveTheater('HOME');
           onBattleFinished(true);
         }
       }
@@ -1215,6 +1420,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
   const selectedProvince = country.regions.find(r => r.id === selectedProvinceId) || (selectedProvinceId ? { id: selectedProvinceId, name: selectedProvinceId } : null);
   const selectedProvinceBuilt = selectedProvinceId ? (provinceFacilities[selectedProvinceId] || []) : [];
+  const isCivilWarCountry = !isCivilWarResolved && (country.countryMode === 'civilwar' || activeTheater === 'CIVIL_WAR' || Boolean(INITIAL_CIVIL_WARS[country.id]));
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden select-none">
@@ -1305,20 +1511,22 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       <div className={`px-4 py-2 border-b flex items-center gap-2 overflow-x-auto ${
         darkMode ? 'bg-slate-900/60 border-slate-850' : 'bg-slate-100 border-slate-200'
       }`}>
-        <button
-          onClick={() => {
-            setActiveTheater('HOME');
-            playSound('click');
-          }}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-            activeTheater === 'HOME'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : darkMode ? 'bg-slate-800/80 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-200'
-          }`}
-        >
-          <Building2 className="w-4 h-4 text-blue-400" />
-          <span>🏠 Homeland Defense & Base HQ ({country.name})</span>
-        </button>
+        {!isCivilWarCountry && (
+          <button
+            onClick={() => {
+              setActiveTheater('HOME');
+              playSound('click');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+              activeTheater === 'HOME'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                : darkMode ? 'bg-slate-800/80 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Building2 className="w-4 h-4 text-blue-400" />
+            <span>🏠 Homeland Defense & Base HQ ({country.name})</span>
+          </button>
+        )}
 
         {/* Dynamic active war fronts */}
         {activeFronts.map(front => (
@@ -1338,6 +1546,23 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
             <span>⚔️ {front.conflictName}</span>
           </button>
         ))}
+
+        {/* Peace Conference Action Button for active interstate front */}
+        {currentFront && currentFront.targetCountryId && (
+          <button
+            onClick={() => {
+              playSound('click');
+              const targetId = currentFront.targetCountryId!;
+              setPeaceConferenceTarget({
+                id: targetId,
+                name: getCountryName(targetId)
+              });
+            }}
+            className="ml-auto px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 via-indigo-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer shrink-0"
+          >
+            <span>🕊️ Peace Conference</span>
+          </button>
+        )}
 
         {/* Peacetime Status Badge (when no active conflicts exist) */}
         {activeFronts.length === 0 && (
@@ -1408,7 +1633,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
       )}
 
       {/* 4. MAIN WORKSPACE */}
-      {activeTheater === 'HOME' ? (
+      {activeTheater === 'HOME' && !isCivilWarCountry ? (
         /* HOME DEFENSE & PROVINCE STRATEGIC CONSTRUCTION */
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
           
@@ -1416,10 +1641,38 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
           <div className="flex-1 relative h-[50vh] lg:h-full bg-slate-900">
             <div ref={mapContainerRef} className="w-full h-full" />
 
+            {mapError && (
+              <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm p-6 text-center">
+                <AlertCircle className="w-10 h-10 text-rose-500 mb-2" />
+                <h3 className="text-base font-bold text-slate-100 mb-1">{mapError}</h3>
+                <p className="text-xs text-slate-400 max-w-sm">No map boundary file could be loaded for this territory.</p>
+              </div>
+            )}
+
             <div className="absolute top-3 left-3 z-[400] bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 shadow-xl flex items-center gap-2">
               <Target className="w-4 h-4 text-blue-400" />
               <span>Homeland Defense Operations: Select any province to commission Strategic Silos, Air Bases, or Barracks</span>
             </div>
+
+            {INITIAL_CIVIL_WARS[country.id] && (
+              <div className="absolute top-14 left-3 z-[400] bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 shadow-xl max-w-xs">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Faction Territorial Control</span>
+                </div>
+                <div className="space-y-1">
+                  {INITIAL_CIVIL_WARS[country.id].factions.map(f => (
+                    <div key={f.id} className="flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: f.color }} />
+                        <span className="font-semibold text-slate-200 truncate text-[11px]">{f.name}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">{f.strength}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="absolute bottom-3 left-3 right-3 lg:right-96 z-[400] bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 max-h-24 overflow-y-auto text-xs text-slate-300 shadow-xl">
               <div className="font-bold text-[11px] text-blue-400 mb-1 flex items-center gap-1.5">
@@ -1585,16 +1838,36 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
           </div>
         </div>
+      ) : isCivilWarCountry ? (
+        <div className="relative flex-1 min-h-0 h-[60vh] lg:h-full flex flex-col overflow-hidden p-2">
+          <CivilWarBattleMap
+            country={country}
+            playerParty={party}
+            scenario={scenario}
+            darkMode={darkMode}
+            isRuling={isRuling}
+            foreignAidPackages={foreignAidPackages}
+            onTurnAdvance={onTurnAdvance}
+            onVictory={(winnerId) => {
+              setFinishedFrontIds(prev => new Set([...prev, 'CIVIL_WAR', `CIVIL_WAR_${country.id}`]));
+              setActiveTheater('HOME');
+              if (onBattleFinished) onBattleFinished(true);
+            }}
+          />
+        </div>
       ) : (
         /* REAL INTERACTIVE WAR MAP (STEP 4): LEAFLET THEATER MAP WITH NATO DIVISION COUNTERS, DRAG-AND-DROP MOVEMENT & CASUALTY HUD */
         <div className="flex-1 flex flex-col overflow-hidden relative p-3">
           <WarFrontlineMap
             country={country}
+            playerParty={party}
             enemyCountryId={currentFront?.enemyCountryId || enemyCountryId}
             theaterKey={currentFront?.id || activeTheater}
             conflictName={currentFront?.conflictName}
             scenario={scenario}
             darkMode={darkMode}
+            onTurnAdvance={onTurnAdvance}
+            canCommandMilitary={canCommandMilitary}
             onTerritoryChanged={() => {
               // Trigger sync with world map and tactical homeland
               if (onUpdateRelations && (currentFront?.enemyCountryId || enemyCountryId)) {
@@ -1602,8 +1875,15 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
               }
             }}
             onCeasefireOrVictory={(won) => {
-              if (won && onUpdateRelations && (currentFront?.enemyCountryId || enemyCountryId)) {
-                const eId = currentFront?.enemyCountryId || enemyCountryId || '';
+              const eId = currentFront?.enemyCountryId || enemyCountryId || '';
+              if (won && eId) {
+                // Trigger Peace Conference (Barış Konferansı)
+                playSound('win');
+                setPeaceConferenceTarget({
+                  id: eId,
+                  name: getCountryName(eId)
+                });
+              } else if (won && onUpdateRelations && eId) {
                 onUpdateRelations({
                   ...diplomaticRelations,
                   [eId]: { status: 'Armistice / Victory', opinion: 30, alliance: false }
@@ -1696,6 +1976,61 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 6. PEACE CONFERENCE MODAL (BARIŞ KONFERANSI) */}
+      {peaceConferenceTarget && (
+        <PeaceConferenceModal
+          victorCountry={country}
+          targetCountryId={peaceConferenceTarget.id}
+          targetCountryName={peaceConferenceTarget.name}
+          scenario={scenario}
+          darkMode={darkMode}
+          warSuperiority={85}
+          onClose={() => setPeaceConferenceTarget(null)}
+          onRatifyTreaty={(terms) => {
+            playSound('win');
+            // 1. War Reparations
+            const repAmount = terms.warReparationsAmount || 0;
+            if (repAmount > 0) {
+              safeAddTreasury(repAmount);
+            }
+            // 2. Annexed Provinces (eyaletleri alma ve oyuncu devletine geçmesi)
+            if (terms.annexedProvinces && terms.annexedProvinces.length > 0) {
+              terms.annexedProvinces.forEach(pName => {
+                setRegionController(pName, country.id);
+              });
+              if (onAnnexProvinces) {
+                onAnnexProvinces(terms.annexedProvinces, terms.targetCountryId, repAmount);
+              }
+            }
+            // 3. Imposed Ideology, Settlement & Confiscations
+            if (onUpdateRelations) {
+              onUpdateRelations({
+                ...diplomaticRelations,
+                [terms.targetCountryId]: {
+                  status: 'Peace Treaty / Demilitarized Accord',
+                  opinion: 45,
+                  alliance: terms.newIdeology === 'Install Allied Coalition Governance',
+                  ideology: terms.newIdeology,
+                  government: terms.newGovernmentType,
+                  disarmed: terms.fullDisarmament,
+                  confiscateFleet: terms.confiscateFleet,
+                  confiscateTanks: terms.confiscateTanks,
+                  confiscateAircraft: terms.confiscateAircraft
+                }
+              });
+            }
+            setBattleLogs(prev => [
+              `🕊️ PEACE RATIFIED: Peace conference concluded with ${terms.targetCountryName}. Annexed ${terms.annexedProvinces.length} provinces, secured $${repAmount.toLocaleString()} indemnities, established ${terms.newIdeology}.`,
+              ...prev
+            ]);
+            setPeaceConferenceTarget(null);
+            setFinishedFrontIds(prev => new Set([...prev, terms.targetCountryId]));
+            setActiveTheater('HOME');
+            onBattleFinished(true);
+          }}
+        />
       )}
 
     </div>

@@ -169,7 +169,7 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
     if (countryIdeologies[cId]) return countryIdeologies[cId];
 
     if (activeScenarioId === '2026') {
-      if (['US', 'CA', 'GB', 'DE', 'FR', 'JP', 'AU', 'NZ'].includes(cId)) return 'Liberal Democracy';
+      if (['US', 'CA', 'GB', 'DE', 'FR', 'JP', 'AU', 'NZ', 'FI', 'NO', 'SE', 'CH'].includes(cId)) return 'Liberal Democracy';
       if (['RU', 'BY'].includes(cId)) return 'Authoritarian Conservative';
       if (['CN', 'KP', 'CU', 'VN'].includes(cId)) return 'Marxist-Leninist State';
       if (['TR', 'HU', 'PL', 'RS'].includes(cId)) return 'Sovereign Conservative';
@@ -377,6 +377,18 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
       try { map.remove(); } catch(e) {}
       mapInstanceRef.current = null;
     };
+  }, []);
+
+  // Auto-fit & resize handling
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
   }, []);
 
   // Re-draw tactical layers on change

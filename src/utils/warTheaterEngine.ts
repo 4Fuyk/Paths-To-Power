@@ -12,6 +12,7 @@ import {
   CombatBelligerentForces,
   FrontlineBattleResult
 } from './territorialControl';
+import { getKoreanWarTheater } from './koreanWarTheater';
 
 export type DivisionType = 'INFANTRY' | 'ARMORED' | 'ARTILLERY' | 'SPECOPS' | 'MARINE' | 'AIRBORNE';
 
@@ -958,7 +959,15 @@ export function getTheaterRegions(
     }
   }
 
-  // 2. Interstate Theaters (e.g. Ukraine vs Russia, Turkey vs Greece, etc.)
+  // 2. Interstate Theaters (e.g. Korea, Ukraine vs Russia, Turkey vs Greece, etc.)
+  const isKoreanWar = (countryId === 'KR') || 
+                      (enemyCountryId === 'KP' || enemyCountryId === 'KR') ||
+                      (countryId === 'KP') ||
+                      (enemyCountryId && ['KR', 'KP'].includes(enemyCountryId));
+  if (isKoreanWar) {
+    return getKoreanWarTheater(currentControlMap, countryId);
+  }
+
   if (enemyCountryId) {
     const isUaRu = (countryId === 'UA' && enemyCountryId === 'RU') || (countryId === 'RU' && enemyCountryId === 'UA');
     if (isUaRu) {
@@ -987,7 +996,7 @@ export function getTheaterRegions(
         originalOwnerId: r.originalOwnerId || customCountry.id,
         center,
         polygon: generateRegionPolygon(center, 0.9, 1.2, 8, r.id),
-        terrain: (r.id.includes('coast') || r.id.includes('sea') || idx % 3 === 0) ? 'COAST' : (idx % 2 === 0 ? 'URBAN' : 'PLAINS'),
+        terrain: (Boolean(r.id && (r.id.includes('coast') || r.id.includes('sea'))) || idx % 3 === 0) ? 'COAST' : (idx % 2 === 0 ? 'URBAN' : 'PLAINS'),
         isPort: idx % 3 === 0,
         adjacentRegionIds: adj,
         strategicValue: Math.max(2, Math.min(5, r.infrastructure || 3)),
@@ -1034,7 +1043,10 @@ const PREDEFINED_CIVIL_WARS: Record<string, boolean> = {
 };
 
 function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCountryId: string) {
+  const isPlayerRu = playerCountryId === 'RU';
+
   const regions: TheaterRegion[] = [
+    // --- UKRAINIAN SECTORS ---
     {
       id: 'UA_kyiv',
       name: 'Kyiv Capital & Dnieper Bastion',
@@ -1045,15 +1057,47 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([50.45, 30.52], 0.9, 1.2, 8, 'UA_kyiv'),
       terrain: 'URBAN',
       isPort: false,
-      adjacentRegionIds: ['UA_kharkiv', 'UA_dnipro', 'UA_lviv', 'RU_belgorod'],
+      adjacentRegionIds: ['UA_chernihiv', 'UA_kharkiv', 'UA_dnipro', 'UA_lviv'],
       strategicValue: 5,
       fortificationLevel: 4,
       infrastructureLevel: 4,
       population: 3000000
     },
     {
+      id: 'UA_chernihiv',
+      name: 'Chernihiv Northern Frontier',
+      countryId: 'UA',
+      originalOwnerId: 'UA',
+      controllerId: controlMap['UA_chernihiv'] || 'UA',
+      center: [51.49, 31.29],
+      polygon: generateRegionPolygon([51.49, 31.29], 0.9, 1.2, 8, 'UA_chernihiv'),
+      terrain: 'PLAINS',
+      isPort: false,
+      adjacentRegionIds: ['UA_kyiv', 'UA_sumy', 'RU_bryansk'],
+      strategicValue: 4,
+      fortificationLevel: 3,
+      infrastructureLevel: 3,
+      population: 980000
+    },
+    {
+      id: 'UA_sumy',
+      name: 'Sumy Border Frontier',
+      countryId: 'UA',
+      originalOwnerId: 'UA',
+      controllerId: controlMap['UA_sumy'] || 'UA',
+      center: [50.91, 34.80],
+      polygon: generateRegionPolygon([50.91, 34.80], 0.9, 1.2, 8, 'UA_sumy'),
+      terrain: 'PLAINS',
+      isPort: false,
+      adjacentRegionIds: ['UA_chernihiv', 'UA_kharkiv', 'RU_kursk', 'RU_belgorod'],
+      strategicValue: 4,
+      fortificationLevel: 3,
+      infrastructureLevel: 3,
+      population: 1050000
+    },
+    {
       id: 'UA_kharkiv',
-      name: 'Kharkiv & Northern Frontline',
+      name: 'Kharkiv Industrial & Frontier Bulwark',
       countryId: 'UA',
       originalOwnerId: 'UA',
       controllerId: controlMap['UA_kharkiv'] || 'UA',
@@ -1061,15 +1105,31 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([49.99, 36.23], 0.9, 1.3, 8, 'UA_kharkiv'),
       terrain: 'URBAN',
       isPort: false,
-      adjacentRegionIds: ['UA_kyiv', 'UA_donbas', 'UA_dnipro', 'RU_belgorod', 'RU_kursk'],
+      adjacentRegionIds: ['UA_sumy', 'UA_kyiv', 'UA_luhansk', 'UA_donbas', 'UA_dnipro', 'RU_belgorod'],
       strategicValue: 5,
       fortificationLevel: 4,
       infrastructureLevel: 4,
       population: 1500000
     },
     {
+      id: 'UA_luhansk',
+      name: 'Luhansk Siverskyi Donets Sector',
+      countryId: 'UA',
+      originalOwnerId: 'UA',
+      controllerId: controlMap['UA_luhansk'] || 'RU',
+      center: [48.57, 39.31],
+      polygon: generateRegionPolygon([48.57, 39.31], 1.0, 1.3, 8, 'UA_luhansk'),
+      terrain: 'PLAINS',
+      isPort: false,
+      adjacentRegionIds: ['UA_kharkiv', 'UA_donbas', 'RU_belgorod', 'RU_rostov', 'RU_voronezh'],
+      strategicValue: 4,
+      fortificationLevel: 4,
+      infrastructureLevel: 3,
+      population: 1400000
+    },
+    {
       id: 'UA_donbas',
-      name: 'Donbas Fortified Bulwark (Donetsk/Luhansk)',
+      name: 'Donbas Fortified Bulwark (Donetsk)',
       countryId: 'UA',
       originalOwnerId: 'UA',
       controllerId: controlMap['UA_donbas'] || 'RU',
@@ -1077,11 +1137,11 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([48.01, 37.80], 1.1, 1.4, 8, 'UA_donbas'),
       terrain: 'URBAN',
       isPort: false,
-      adjacentRegionIds: ['UA_kharkiv', 'UA_dnipro', 'UA_zaporizhzhia', 'RU_rostov'],
+      adjacentRegionIds: ['UA_kharkiv', 'UA_luhansk', 'UA_dnipro', 'UA_zaporizhzhia', 'RU_rostov'],
       strategicValue: 5,
       fortificationLevel: 5,
       infrastructureLevel: 3,
-      population: 3500000
+      population: 2300000
     },
     {
       id: 'UA_zaporizhzhia',
@@ -1104,16 +1164,32 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       name: 'Kherson & Lower Dnieper Delta',
       countryId: 'UA',
       originalOwnerId: 'UA',
-      controllerId: controlMap['UA_kherson'] || 'UA',
+      controllerId: controlMap['UA_kherson'] || 'RU',
       center: [46.63, 32.61],
       polygon: generateRegionPolygon([46.63, 32.61], 1.0, 1.2, 8, 'UA_kherson'),
       terrain: 'MARSH',
       isPort: true,
-      adjacentRegionIds: ['UA_zaporizhzhia', 'UA_odesa', 'UA_crimea'],
+      adjacentRegionIds: ['UA_zaporizhzhia', 'UA_mykolaiv', 'UA_crimea'],
       strategicValue: 4,
       fortificationLevel: 3,
       infrastructureLevel: 3,
       population: 900000
+    },
+    {
+      id: 'UA_mykolaiv',
+      name: 'Mykolaiv Shipbuilding & Estuary',
+      countryId: 'UA',
+      originalOwnerId: 'UA',
+      controllerId: controlMap['UA_mykolaiv'] || 'UA',
+      center: [46.97, 31.99],
+      polygon: generateRegionPolygon([46.97, 31.99], 0.9, 1.2, 8, 'UA_mykolaiv'),
+      terrain: 'COAST',
+      isPort: true,
+      adjacentRegionIds: ['UA_dnipro', 'UA_kherson', 'UA_odesa'],
+      strategicValue: 4,
+      fortificationLevel: 3,
+      infrastructureLevel: 4,
+      population: 1100000
     },
     {
       id: 'UA_odesa',
@@ -1125,7 +1201,7 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([46.48, 30.72], 1.1, 1.3, 8, 'UA_odesa'),
       terrain: 'COAST',
       isPort: true,
-      adjacentRegionIds: ['UA_kherson', 'UA_dnipro', 'UA_lviv'],
+      adjacentRegionIds: ['UA_mykolaiv', 'UA_dnipro', 'UA_lviv'],
       strategicValue: 5,
       fortificationLevel: 4,
       infrastructureLevel: 4,
@@ -1141,7 +1217,7 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([48.46, 35.04], 1.0, 1.3, 8, 'UA_dnipro'),
       terrain: 'PLAINS',
       isPort: false,
-      adjacentRegionIds: ['UA_kyiv', 'UA_kharkiv', 'UA_donbas', 'UA_zaporizhzhia', 'UA_odesa'],
+      adjacentRegionIds: ['UA_kyiv', 'UA_kharkiv', 'UA_donbas', 'UA_zaporizhzhia', 'UA_mykolaiv'],
       strategicValue: 4,
       fortificationLevel: 3,
       infrastructureLevel: 4,
@@ -1179,25 +1255,27 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       infrastructureLevel: 4,
       population: 2200000
     },
+
+    // --- RUSSIAN ADMINISTRATIVE BORDER SECTORS ---
     {
-      id: 'RU_belgorod',
-      name: 'Belgorod Frontier & Staging Hub',
+      id: 'RU_bryansk',
+      name: 'Bryansk Northern Staging Sector',
       countryId: 'RU',
       originalOwnerId: 'RU',
-      controllerId: controlMap['RU_belgorod'] || 'RU',
-      center: [50.59, 36.58],
-      polygon: generateRegionPolygon([50.59, 36.58], 1.0, 1.3, 8, 'RU_belgorod'),
+      controllerId: controlMap['RU_bryansk'] || 'RU',
+      center: [53.25, 34.37],
+      polygon: generateRegionPolygon([53.25, 34.37], 1.0, 1.3, 8, 'RU_bryansk'),
       terrain: 'PLAINS',
       isPort: false,
-      adjacentRegionIds: ['UA_kharkiv', 'UA_kyiv', 'RU_kursk', 'RU_rostov'],
+      adjacentRegionIds: ['UA_chernihiv', 'RU_kursk'],
       strategicValue: 4,
       fortificationLevel: 3,
-      infrastructureLevel: 4,
-      population: 1400000
+      infrastructureLevel: 3,
+      population: 1180000
     },
     {
       id: 'RU_kursk',
-      name: 'Kursk Border Sector',
+      name: 'Kursk Border Staging Sector',
       countryId: 'RU',
       originalOwnerId: 'RU',
       controllerId: controlMap['RU_kursk'] || 'RU',
@@ -1205,15 +1283,47 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([51.73, 36.19], 1.1, 1.4, 8, 'RU_kursk'),
       terrain: 'PLAINS',
       isPort: false,
-      adjacentRegionIds: ['UA_kharkiv', 'RU_belgorod'],
+      adjacentRegionIds: ['RU_bryansk', 'UA_sumy', 'RU_belgorod', 'RU_voronezh'],
       strategicValue: 4,
       fortificationLevel: 3,
       infrastructureLevel: 3,
       population: 1100000
     },
     {
+      id: 'RU_belgorod',
+      name: 'Belgorod Frontier & Assault Staging Hub',
+      countryId: 'RU',
+      originalOwnerId: 'RU',
+      controllerId: controlMap['RU_belgorod'] || 'RU',
+      center: [50.59, 36.58],
+      polygon: generateRegionPolygon([50.59, 36.58], 1.0, 1.3, 8, 'RU_belgorod'),
+      terrain: 'PLAINS',
+      isPort: false,
+      adjacentRegionIds: ['RU_kursk', 'UA_sumy', 'UA_kharkiv', 'UA_luhansk', 'RU_voronezh'],
+      strategicValue: 4,
+      fortificationLevel: 4,
+      infrastructureLevel: 4,
+      population: 1400000
+    },
+    {
+      id: 'RU_voronezh',
+      name: 'Voronezh Strategic Reserve Hub',
+      countryId: 'RU',
+      originalOwnerId: 'RU',
+      controllerId: controlMap['RU_voronezh'] || 'RU',
+      center: [51.67, 39.20],
+      polygon: generateRegionPolygon([51.67, 39.20], 1.1, 1.4, 8, 'RU_voronezh'),
+      terrain: 'PLAINS',
+      isPort: false,
+      adjacentRegionIds: ['RU_kursk', 'RU_belgorod', 'UA_luhansk', 'RU_rostov'],
+      strategicValue: 4,
+      fortificationLevel: 3,
+      infrastructureLevel: 4,
+      population: 2300000
+    },
+    {
       id: 'RU_rostov',
-      name: 'Rostov-on-Don Southern Command',
+      name: 'Rostov-on-Don Southern Military District HQ',
       countryId: 'RU',
       originalOwnerId: 'RU',
       controllerId: controlMap['RU_rostov'] || 'RU',
@@ -1221,7 +1331,7 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
       polygon: generateRegionPolygon([47.23, 39.72], 1.2, 1.5, 8, 'RU_rostov'),
       terrain: 'URBAN',
       isPort: true,
-      adjacentRegionIds: ['UA_donbas', 'UA_crimea', 'RU_belgorod'],
+      adjacentRegionIds: ['UA_donbas', 'UA_luhansk', 'UA_crimea', 'RU_voronezh'],
       strategicValue: 5,
       fortificationLevel: 4,
       infrastructureLevel: 4,
@@ -1231,11 +1341,21 @@ function getUkraineRussiaTheater(controlMap: Record<string, string>, playerCount
 
   return {
     conflictName: 'Russo-Ukrainian War Frontline',
-    center: [48.5, 34.0] as [number, number],
+    center: [49.2, 35.5] as [number, number],
     zoom: 6,
     factions: [
-      { id: 'UA', name: 'Armed Forces of Ukraine (ZSU)', color: '#2563eb', isGovernment: true },
-      { id: 'RU', name: 'Armed Forces of the Russian Federation', color: '#dc2626', isGovernment: false }
+      {
+        id: isPlayerRu ? 'RU' : 'UA',
+        name: isPlayerRu ? 'Armed Forces of the Russian Federation' : 'Armed Forces of Ukraine (ZSU)',
+        color: isPlayerRu ? '#dc2626' : '#2563eb',
+        isGovernment: true
+      },
+      {
+        id: isPlayerRu ? 'UA' : 'RU',
+        name: isPlayerRu ? 'Armed Forces of Ukraine (ZSU)' : 'Armed Forces of the Russian Federation',
+        color: isPlayerRu ? '#2563eb' : '#dc2626',
+        isGovernment: false
+      }
     ],
     regions,
     neighborIsoCodes: ['PL', 'RO', 'MD', 'BY', 'HU', 'SK']

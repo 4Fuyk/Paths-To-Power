@@ -3,10 +3,11 @@ import { Country, Party, ScenarioYear } from '../types';
 import { countryColors, PLAYABLE_COUNTRIES } from '../constants/countries';
 import { getPlayableCountriesForScenario } from '../constants/eraCountries';
 import { playSound } from '../lib/sounds';
+import { isCountryActive, getSuccessorCountryId, migrateCountryId } from '../utils/countryUtils';
 import { 
   Globe, Shield, Landmark, Sparkles, Heart, Scale, Users, Coins, 
   AlertTriangle, Swords, Flame, Check, Zap, X, Lock, Building2, 
-  DollarSign, Activity, TrendingUp, Handshake 
+  DollarSign, Activity, TrendingUp, Handshake, ShieldCheck, ShieldAlert 
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -43,20 +44,35 @@ const countryCoords: Record<string, [number, number]> = {
   PL: [51.919, 19.145],
   GR: [39.074, 21.824],
   SE: [60.128, 18.643],
+  CD: [-4.4419, 15.2663],
+  COD: [-4.4419, 15.2663],
+  CG: [-4.2634, 15.2429],
+  COG: [-4.2634, 15.2429],
+  KP: [40.339, 127.510],
   SU: [60.000, 90.000],
   DDR: [52.520, 13.405],
   CS: [49.817, 15.473],
   YU: [44.016, 20.911],
   CL: [-35.675, -71.543],
   IS: [64.963, -19.020],
-  PT: [39.399, -8.224]
+  PT: [39.399, -8.224],
+  AZ: [40.143, 47.576]
 };
+
+export interface ForeignAidPackage {
+  id: string;
+  countryName: string;
+  status: 'ACCEPTED' | 'PENDING' | 'REJECTED';
+  type: 'funds' | 'equipment' | 'divisions' | 'humanitarian' | 'intel';
+  amountPerTurn: number;
+  description: string;
+}
 
 interface DiplomacyViewProps {
   country: Country;
   party: Party;
   isRuling?: boolean;
-  diplomaticRelations: Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>;
+  diplomaticRelations: Record<string, { status: 'Allies' | 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>;
   onUpdateRelations: (updatedRelations: any) => void;
   treasury: number;
   onUpdateTreasury: (updatedTreasury: number) => void;
@@ -70,6 +86,9 @@ interface DiplomacyViewProps {
   freedomIndex?: number;
   countryIdeologies?: Record<string, string>;
   countryFreedomScores?: Record<string, number>;
+  onNavigateToWar?: () => void;
+  foreignAidPackages?: Record<string, ForeignAidPackage>;
+  onUpdateForeignAid?: (updater: any) => void;
 }
 
 const getScenarioBg = (scenarioId: string) => {
@@ -101,6 +120,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   freedomIndex = 75,
   countryIdeologies = {},
   countryFreedomScores = {},
+  onNavigateToWar,
+  foreignAidPackages = {},
+  onUpdateForeignAid,
 }) => {
   const [mapMode, setMapMode] = useState<'RELATIONS' | 'WARS' | 'IDEOLOGY' | 'FREEDOM' | 'INFLUENCE'>('RELATIONS');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -155,10 +177,20 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const getCountryDetails = (cid: string) => {
+  // Auto-migrate or clear obsolete country selection for the active scenario (e.g. 2026)
+  useEffect(() => {
+    if (selectedMapCountryId && !isCountryActive(selectedMapCountryId, scenario)) {
+      const successor = getSuccessorCountryId(selectedMapCountryId, scenario);
+      setSelectedMapCountryId(isCountryActive(successor, scenario) ? successor : null);
+    }
+  }, [selectedMapCountryId, scenario]);
+
+  const getCountryDetails = (rawCid: string) => {
+    const activeCid = isCountryActive(rawCid, scenario) ? rawCid : getSuccessorCountryId(rawCid, scenario);
+    const cid = isCountryActive(activeCid, scenario) ? activeCid : rawCid;
     const isSelf = cid === country.id;
-    const matchedCountry = PLAYABLE_COUNTRIES.find(c => c.id === cid) || 
-      getPlayableCountriesForScenario((scenario as ScenarioYear) || '2026').find(c => c.id === cid);
+    const scenarioCountries = getPlayableCountriesForScenario((scenario as ScenarioYear) || '2026');
+    const matchedCountry = scenarioCountries.find(c => c.id === cid) || PLAYABLE_COUNTRIES.find(c => c.id === cid);
 
     const rel = diplomaticRelations[cid] || { status: 'Neutral' as const, opinion: 50 };
     
@@ -183,6 +215,26 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       militaryStrength: string;
       baseStability: number;
     }> = {
+      CD: {
+        governmentType: 'Semi-Presidential Democratic Republic',
+        rulingParty: 'Union for Democracy and Social Progress (UDPS)',
+        ideology: 'Social Democrat / African Nationalism',
+        leader: 'Félix Tshisekedi',
+        population: '102M',
+        gdp: '$67.5 Billion',
+        militaryStrength: 'Rank #72 (FARDC Armed Forces)',
+        baseStability: 45
+      },
+      CG: {
+        governmentType: 'Presidential Republic',
+        rulingParty: 'Congolese Party of Labour (PCT)',
+        ideology: 'Social Democrat / African Socialism',
+        leader: 'Denis Sassou Nguesso',
+        population: '6.1M',
+        gdp: '$15.8 Billion',
+        militaryStrength: 'Rank #115 (FAC Congolese Armed Forces)',
+        baseStability: 62
+      },
       US: {
         governmentType: 'Federal Presidential Republic',
         rulingParty: scenario === '1950' ? 'Democratic Party (Truman)' : scenario === '1936' ? 'Democratic Party (New Deal)' : scenario === '1914' ? 'Democratic Party (Wilson)' : 'Democratic Party',
@@ -196,7 +248,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       TR: {
         governmentType: scenario === '1920' || scenario === '1914' ? 'Constitutional Grand Assembly' : 'Executive Presidential Republic',
         rulingParty: scenario === '1950' ? 'Democrat Party (DP)' : scenario === '1936' || scenario === '1920' ? 'Republican People\'s Party (CHP)' : scenario === '1914' ? 'Committee of Union and Progress (İTC)' : 'AK Party (People\'s Alliance)',
-        ideology: countryIdeologies['TR'] || (scenario === '1920' ? 'Kemalist / Republican' : 'Conservative / Nationalist'),
+        ideology: countryIdeologies['TR'] || (scenario === '1920' ? 'Kemalist / Republican' : 'Right / Conservative-Nationalist'),
         leader: scenario === '1950' ? 'Adnan Menderes' : scenario === '1936' ? 'Mustafa Kemal Atatürk' : scenario === '1920' ? 'Mustafa Kemal Paşa' : scenario === '1914' ? 'Mehmed V / Enver Paşa' : 'Recep Tayyip Erdoğan',
         population: scenario === '1950' ? '21M' : scenario === '1936' ? '16.5M' : scenario === '1920' ? '13M' : scenario === '1914' ? '18.5M' : '85.3M',
         gdp: scenario === '1950' ? '$4.5B' : scenario === '1936' ? '$1.8B' : scenario === '1914' ? '$900M' : '$1.15 Trillion',
@@ -352,6 +404,66 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         gdp: scenario === '1950' ? '$5B' : '$415 Billion',
         militaryStrength: 'Rank #13 (Missile & Drone Arsenal)',
         baseStability: 60
+      },
+      CL: {
+        governmentType: 'Unitary Presidential Republic',
+        rulingParty: 'Frente Amplio / Social Convergence',
+        ideology: countryIdeologies['CL'] || 'Left / Democratic Socialist',
+        leader: 'Gabriel Boric',
+        population: '19.6M',
+        gdp: '$335 Billion',
+        militaryStrength: 'Rank #42 (Pacific Naval Modernization)',
+        baseStability: 82
+      },
+      IS: {
+        governmentType: 'Unitary Parliamentary Republic',
+        rulingParty: 'Social Democratic Alliance (Samfylkingin)',
+        ideology: countryIdeologies['IS'] || 'Center-Left / Social Democrat',
+        leader: 'Kristrún Frostadóttir',
+        population: '390,000',
+        gdp: '$31 Billion',
+        militaryStrength: 'NATO Strategic Host & Coast Guard',
+        baseStability: 96
+      },
+      PT: {
+        governmentType: 'Unitary Semi-Presidential Republic',
+        rulingParty: 'Democratic Alliance (AD / PSD)',
+        ideology: countryIdeologies['PT'] || 'Right / Conservative-Nationalist',
+        leader: 'Luís Montenegro',
+        population: '10.4M',
+        gdp: '$287 Billion',
+        militaryStrength: 'Rank #41 (NATO Atlantic Force)',
+        baseStability: 88
+      },
+      GR: {
+        governmentType: 'Unitary Parliamentary Republic',
+        rulingParty: 'New Democracy (ND)',
+        ideology: countryIdeologies['GR'] || 'Right / Conservative-Nationalist',
+        leader: 'Kyriakos Mitsotakis',
+        population: '10.4M',
+        gdp: '$242 Billion',
+        militaryStrength: 'Rank #29 (Aegean Navy & Modern Fighters)',
+        baseStability: 78
+      },
+      PL: {
+        governmentType: 'Unitary Parliamentary Republic',
+        rulingParty: 'Civic Coalition (KO)',
+        ideology: countryIdeologies['PL'] || 'Center / Liberal Democracy',
+        leader: 'Donald Tusk',
+        population: '37.7M',
+        gdp: '$842 Billion',
+        militaryStrength: 'Rank #20 (NATO Eastern Heavy Armor)',
+        baseStability: 85
+      },
+      AZ: {
+        governmentType: 'Unitary Semi-Presidential Republic',
+        rulingParty: 'New Azerbaijan Party (YAP)',
+        ideology: countryIdeologies['AZ'] || 'Right / Nationalist',
+        leader: 'Ilham Aliyev',
+        population: '10.3M',
+        gdp: '$78 Billion',
+        militaryStrength: 'Rank #57 (Artillery & Drone Force)',
+        baseStability: 76
       }
     };
 
@@ -359,10 +471,35 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const flag = getCountryFlag(cid);
     const name = getCountryName(cid);
     
-    // Fallbacks
+    // Determine governing party and dynamic ideology from actual governing party
+    const rivalsList = matchedCountry?.rivals || [];
+    const topParty = rivalsList.slice().sort((a, b) => (b.baseSupport || 0) - (a.baseSupport || 0))[0];
+
     const governmentType = entry?.governmentType || matchedCountry?.system || 'Representative Republic';
-    const rulingParty = isSelf ? party.name : (entry?.rulingParty || matchedCountry?.rivals?.[0]?.name || 'National Coalition');
-    const ideology = isSelf ? party.ideology : (countryIdeologies[cid] || entry?.ideology || matchedCountry?.rivals?.[0]?.ideology || 'Centrist / Moderate');
+    const rulingParty = isSelf ? party.name : (entry?.rulingParty || topParty?.name || matchedCountry?.rivals?.[0]?.name || 'National Coalition');
+
+    let derivedPartyIdeology: string | undefined = undefined;
+    if (cid === 'TR') {
+      derivedPartyIdeology = 'Right / Conservative-Nationalist';
+    } else if (topParty?.ideology) {
+      if (topParty.ideology.toLowerCase().includes('conservative')) {
+        derivedPartyIdeology = 'Right / Conservative-Nationalist';
+      } else if (topParty.ideology.toLowerCase().includes('social democrat')) {
+        derivedPartyIdeology = 'Center-Left / Social Democrat';
+      } else if (topParty.ideology.toLowerCase().includes('socialist') || topParty.ideology.toLowerCase().includes('communist')) {
+        derivedPartyIdeology = 'Left / Democratic Socialist';
+      } else if (topParty.ideology.toLowerCase().includes('nationalist')) {
+        derivedPartyIdeology = 'Right / Nationalist';
+      } else if (topParty.ideology.toLowerCase().includes('liberal')) {
+        derivedPartyIdeology = 'Center / Liberal Democracy';
+      } else {
+        derivedPartyIdeology = topParty.ideology;
+      }
+    }
+
+    const ideology = isSelf
+      ? party.ideology
+      : (countryIdeologies[cid] || derivedPartyIdeology || entry?.ideology || matchedCountry?.rivals?.[0]?.ideology || 'Centrist / Moderate');
     const leader = isSelf ? party.leader : (entry?.leader || matchedCountry?.rivals?.[0]?.leader || 'Head of State');
     const population = entry?.population || matchedCountry?.population || '25.0M';
     const gdp = entry?.gdp || '$450 Billion';
@@ -437,17 +574,81 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
   const getPlayableCountryIdFromFeature = (feature: any): string | null => {
     if (!feature) return null;
-    const id3 = String(feature.id || feature.properties?.iso_a3 || feature.properties?.ISO_A3 || feature.properties?.adm0_a3 || '').toUpperCase();
+    const id3 = String(feature.id || feature.properties?.iso_a3 || feature.properties?.ISO_A3 || feature.properties?.adm0_a3 || feature.properties?.sov_a3 || '').toUpperCase();
     const id2 = String(feature.properties?.iso_a2 || feature.properties?.ISO_A2 || feature.properties?.wb_a2 || '').toUpperCase();
-    const name = String(feature.properties?.name || feature.properties?.NAME || '').toLowerCase();
+    const name = String(feature.properties?.name || feature.properties?.NAME || feature.properties?.admin || '').toLowerCase();
 
-    // Reject incorrect territories from colliding with playable countries
+    // Reject non-playable collision territories
     if (id3 === 'CAF' || id2 === 'CF' || name.includes('central african')) return null;
     if (id3 === 'ESH' || id2 === 'EH' || name.includes('western sahara')) return null;
 
-    // French Guiana is an integral overseas department of France
+    // French Guiana is integral department of France
     if (id3 === 'GUF' || id2 === 'GF' || name.includes('french guiana') || name.includes('guyane')) return 'FR';
 
+    // Congo distinction: DRC (CD / COD) vs Republic of the Congo (CG / COG)
+    if (id3 === 'COD' || id2 === 'CD' || id3 === 'ZAR' || name.includes('democratic republic of the congo') || name.includes('drc') || name.includes('kinshasa') || name === 'congo, democratic republic of the') {
+      return 'CD';
+    }
+    if (id3 === 'COG' || id2 === 'CG' || name.includes('republic of the congo') || name.includes('brazzaville') || name === 'congo') {
+      return 'CG';
+    }
+
+    const activeScenarioId: ScenarioYear = (scenario as ScenarioYear) || '2026';
+    const activeCountries = getPlayableCountriesForScenario(activeScenarioId);
+
+    // 1. HISTORICAL SCENARIO RESOLUTION (1950, 1936, 1920, 1914) - ALWAYS checked before modern codes!
+    const isHistoricalSovietEra = activeScenarioId === '1950' || activeScenarioId === '1936' || activeScenarioId === '1920' || activeScenarioId === '1914';
+    if (isHistoricalSovietEra) {
+      const isSovietRepublic = 
+        ['RUS', 'SUN', 'BLR', 'UKR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU'].includes(id3) ||
+        name.includes('soviet') || name.includes('russia') || name.includes('belarus') || name.includes('byelorussia') ||
+        name.includes('ukraine') || name.includes('kazakhstan') || name.includes('uzbekistan') || name.includes('turkmenistan') ||
+        name.includes('tajikistan') || name.includes('kyrgyzstan') || name.includes('georgia') || name.includes('armenia') ||
+        name.includes('azerbaijan') || name.includes('moldova') || name.includes('estonia') || name.includes('latvia') || name.includes('lithuania');
+      if (isSovietRepublic && activeCountries.some(c => c.id === 'SU')) {
+        return 'SU';
+      }
+
+      const isCzechoslovakia = ['CZE', 'SVK', 'CSK'].includes(id3) || name.includes('czech') || name.includes('slovakia') || name.includes('czechoslovakia');
+      if (isCzechoslovakia && activeCountries.some(c => c.id === 'CS')) {
+        return 'CS';
+      }
+
+      const isYugoslavia = ['SRB', 'HRV', 'SVN', 'BIH', 'MKD', 'MNE', 'KOS', 'KVX', 'YUG'].includes(id3) || name.includes('serbia') || name.includes('croatia') || name.includes('slovenia') || name.includes('bosnia') || name.includes('macedonia') || name.includes('montenegro') || name.includes('kosovo') || name.includes('yugoslavia');
+      if (isYugoslavia && activeCountries.some(c => c.id === 'YU')) {
+        return 'YU';
+      }
+
+      if (id3 === 'DDR' || name.includes('east germany') || name.includes('german democratic') || name === 'gdr' || name === 'ddr') {
+        if (activeCountries.some(c => c.id === 'DDR')) return 'DDR';
+      }
+
+      if (id3 === 'DE_WEST' || name.includes('west germany') || name.includes('federal republic of germany')) {
+        if (activeCountries.some(c => c.id === 'DE')) return 'DE';
+      }
+
+      if (id3 === 'DEU' || id2 === 'DE' || name === 'germany' || name === 'deutschland') {
+        if (activeCountries.some(c => c.id === 'DE')) return 'DE';
+        if (activeCountries.some(c => c.id === 'DDR')) return 'DDR';
+      }
+
+      if (activeScenarioId === '1950') {
+        if (['KEN', 'UGA', 'NGA', 'GHA', 'MYS', 'CYP', 'TZA', 'ZMB', 'ZWE', 'SLE'].includes(id3) || name.includes('kenya') || name.includes('nigeria') || name.includes('malaya')) {
+          if (activeCountries.some(c => c.id === 'GB')) return 'GB';
+        }
+        if (['DZA', 'MDG'].includes(id3) || name.includes('algeria') || name.includes('madagascar')) {
+          if (activeCountries.some(c => c.id === 'FR')) return 'FR';
+        }
+        if (id3 === 'KOR' || id2 === 'KR' || name.includes('south korea') || name.includes('korea, rep')) {
+          if (activeCountries.some(c => c.id === 'KR')) return 'KR';
+        }
+        if (id3 === 'PRK' || id2 === 'KP' || name.includes('north korea') || name.includes('dprk')) {
+          if (activeCountries.some(c => c.id === 'KP')) return 'KP';
+        }
+      }
+    }
+
+    // 2. Standard and Modern Resolution
     const a3ToA2: Record<string, string> = {
       USA: 'US', TUR: 'TR', DEU: 'DE', GBR: 'GB', EGY: 'EG', BRA: 'BR', JPN: 'JP',
       CAN: 'CA', ARG: 'AR', ZAF: 'ZA', IND: 'IN', ITA: 'IT', IDN: 'ID', MEX: 'MX',
@@ -456,63 +657,59 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       POL: 'PL', GRC: 'GR', SWE: 'SE', NOR: 'NO', FIN: 'FI', NLD: 'NL', BEL: 'BE',
       CHE: 'CH', AUT: 'AT', PRT: 'PT', IRL: 'IE', DNK: 'DK', CZE: 'CZ', SVK: 'SK',
       BGR: 'BG', HRV: 'HR', SRB: 'RS', AZE: 'AZ', PAK: 'PK', SYR: 'SY', IRQ: 'IQ',
-      QAT: 'QA', ARE: 'AE', NZL: 'NZ'
+      QAT: 'QA', ARE: 'AE', NZL: 'NZ', COD: 'CD', COG: 'CG'
     };
 
-    if (id3 && a3ToA2[id3]) return a3ToA2[id3];
-    if (id2 && id2.length === 2 && id2 !== '-9' && Object.values(a3ToA2).includes(id2)) return id2;
+    let resolvedCode: string | null = null;
+    if (id3 && a3ToA2[id3]) resolvedCode = a3ToA2[id3];
+    else if (id2 && id2.length === 2 && id2 !== '-9' && Object.values(a3ToA2).includes(id2)) resolvedCode = id2;
 
-    const isHistoricalSovietEra = scenario === '1950' || scenario === '1936' || scenario === '1920' || scenario === '1914';
-    if (isHistoricalSovietEra) {
-      if (['RUS', 'SUN', 'BLR', 'UKR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU'].includes(id3) ||
-          name.includes('soviet') || name.includes('byelorussia')) {
-        return 'SU';
-      }
-      if (id3 === 'CZE' || id3 === 'SVK' || id3 === 'CSK' || name.includes('czech') || name.includes('slovakia')) {
-        return 'CS';
-      }
-      if (id3 === 'SRB' || id3 === 'HRV' || id3 === 'SVN' || id3 === 'BIH' || id3 === 'MKD' || id3 === 'MNE' || id3 === 'KOS' || id3 === 'KVX' || id3 === 'YUG' || name.includes('yugoslavia')) {
-        return 'YU';
-      }
-      if (id3 === 'DDR' || name.includes('german democratic')) {
-        return 'DDR';
-      }
+    if (!resolvedCode) {
+      if (name.includes('united states') || name.includes('america')) resolvedCode = 'US';
+      else if (name.includes('turkey') || name.includes('türkiye')) resolvedCode = 'TR';
+      else if (name.includes('germany') || name.includes('deutschland')) resolvedCode = 'DE';
+      else if (name.includes('united kingdom') || name.includes('britain') || name.includes('england')) resolvedCode = 'GB';
+      else if (name.includes('egypt')) resolvedCode = 'EG';
+      else if (name.includes('brazil') || name.includes('brasil')) resolvedCode = 'BR';
+      else if (name.includes('japan')) resolvedCode = 'JP';
+      else if (name.includes('canada')) resolvedCode = 'CA';
+      else if (name.includes('argentina')) resolvedCode = 'AR';
+      else if (name.includes('south africa')) resolvedCode = 'ZA';
+      else if (name.includes('india')) resolvedCode = 'IN';
+      else if (name.includes('italy')) resolvedCode = 'IT';
+      else if (name.includes('indonesia')) resolvedCode = 'ID';
+      else if (name.includes('mexico')) resolvedCode = 'MX';
+      else if (name.includes('spain')) resolvedCode = 'ES';
+      else if (name.includes('south korea') || (activeScenarioId === '1950' && name.includes('korea'))) resolvedCode = 'KR';
+      else if (name.includes('australia')) resolvedCode = 'AU';
+      else if (name.includes('russia')) resolvedCode = 'RU';
+      else if (name.includes('ukraine')) resolvedCode = 'UA';
+      else if (name.includes('israel')) resolvedCode = 'IL';
+      else if (name.includes('palestine')) resolvedCode = 'PS';
+      else if (name.includes('china')) resolvedCode = 'CN';
+      else if (name.includes('taiwan')) resolvedCode = 'TW';
+      else if (name.includes('france')) resolvedCode = 'FR';
+      else if (name.includes('saudi arabia')) resolvedCode = 'SA';
+      else if (name.includes('iran')) resolvedCode = 'IR';
+      else if (name.includes('poland')) resolvedCode = 'PL';
+      else if (name.includes('greece')) resolvedCode = 'GR';
+      else if (name.includes('sweden')) resolvedCode = 'SE';
+      else if (name.includes('norway') || name.includes('norge')) resolvedCode = 'NO';
+      else if (name.includes('finland') || name.includes('suomi')) resolvedCode = 'FI';
+      else if (name.includes('switzerland') || name.includes('suisse') || name.includes('schweiz') || name.includes('svizzera')) resolvedCode = 'CH';
+      else if (name.includes('portugal')) resolvedCode = 'PT';
+      else if (name.includes('chile')) resolvedCode = 'CL';
+      else if (name.includes('iceland')) resolvedCode = 'IS';
     }
 
-    if (name.includes('united states') || name.includes('america')) return 'US';
-    if (name.includes('turkey') || name.includes('türkiye')) return 'TR';
-    if (name.includes('germany') || name.includes('deutschland')) return 'DE';
-    if (name.includes('united kingdom') || name.includes('britain') || name.includes('england')) return 'GB';
-    if (name.includes('egypt')) return 'EG';
-    if (name.includes('brazil') || name.includes('brasil')) return 'BR';
-    if (name.includes('japan')) return 'JP';
-    if (name.includes('canada')) return 'CA';
-    if (name.includes('argentina')) return 'AR';
-    if (name.includes('south africa')) return 'ZA';
-    if (name.includes('india')) return 'IN';
-    if (name.includes('italy')) return 'IT';
-    if (name.includes('indonesia')) return 'ID';
-    if (name.includes('mexico')) return 'MX';
-    if (name.includes('spain')) return 'ES';
-    if (name.includes('korea')) return 'KR';
-    if (name.includes('australia')) return 'AU';
-    if (name.includes('russia')) return 'RU';
-    if (name.includes('ukraine')) return 'UA';
-    if (name.includes('israel')) return 'IL';
-    if (name.includes('palestine')) return 'PS';
-    if (name.includes('china')) return 'CN';
-    if (name.includes('taiwan')) return 'TW';
-    if (name.includes('france')) return 'FR';
-    if (name.includes('saudi arabia')) return 'SA';
-    if (name.includes('iran')) return 'IR';
-    if (name.includes('poland')) return 'PL';
-    if (name.includes('greece')) return 'GR';
-    if (name.includes('sweden')) return 'SE';
-    if (name.includes('portugal')) return 'PT';
-    if (name.includes('chile')) return 'CL';
-    if (name.includes('iceland')) return 'IS';
+    if (!resolvedCode) return null;
 
-    return null;
+    if (!isCountryActive(resolvedCode, activeScenarioId)) {
+      const successor = getSuccessorCountryId(resolvedCode, activeScenarioId);
+      return isCountryActive(successor, activeScenarioId) ? successor : null;
+    }
+
+    return resolvedCode;
   };
 
   const getCountryColor = (cid: string) => {
@@ -651,6 +848,14 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     loadGeo();
     return () => { isMounted = false; };
   }, []);
+
+  const [germanStatesData, setGermanStatesData] = useState<any>(null);
+  useEffect(() => {
+    fetch('https://cdn.jsdelivr.net/gh/isellsoap/deutschlandGeoJSON@master/2_bundeslaender/4_niedrig.geo.json')
+      .then(res => res.json())
+      .then(data => { if (data) setGermanStatesData(data); })
+      .catch(e => console.warn('German states load skipped', e));
+  }, []);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const terrainLayerRef = useRef<L.TileLayer | null>(null);
@@ -708,7 +913,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         return { fillColor: baseFill, color: borderColor, weight: (mapMode === 'WARS' && isAtWar) ? 1.5 : 0.8, opacity: 1.0, fillOpacity: (mapMode === 'WARS' && isAtWar) ? 0.6 : 0.5, interactive: false };
       });
     }
-  }, [mapMode, darkMode, selectedMapCountryId, diplomaticRelations]);
+  }, [mapMode, darkMode, selectedMapCountryId, diplomaticRelations, scenario]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -756,7 +961,79 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       }).addTo(map);
       terrainLayerRef.current = terrain;
       if (worldGeoJsonData) {
-        worldBgLayerRef.current = L.geoJSON(worldGeoJsonData, {
+        const activeScenarioId = (scenario as ScenarioYear) || '2026';
+        const activeCountries = getPlayableCountriesForScenario(activeScenarioId);
+        let featuresToRender = [...(worldGeoJsonData.features || [])];
+
+        // If DDR is active in scenario (e.g. 1950), split German states into DDR vs West Germany (DE)
+        if (activeCountries.some(c => c.id === 'DDR') && germanStatesData?.features) {
+          const isEastGermanState = (stId: string, stName: string): boolean => {
+            const normId = stId.toUpperCase();
+            const normName = stName.toLowerCase().trim();
+            if (['DE-BB', 'DE-MV', 'DE-SN', 'DE-ST', 'DE-TH'].includes(normId)) return true;
+            if (
+              normName.includes('brandenburg') ||
+              normName.includes('mecklenburg') ||
+              normName.includes('vorpommern') ||
+              normName.includes('sachsen-anhalt') ||
+              normName.includes('saxony-anhalt') ||
+              (normName.includes('sachsen') && !normName.includes('nieder')) ||
+              (normName.includes('saxony') && !normName.includes('lower')) ||
+              normName.includes('thüringen') ||
+              normName.includes('thueringen') ||
+              normName.includes('thuringia')
+            ) return true;
+            return false;
+          };
+
+          const formattedFeatures: any[] = [];
+          germanStatesData.features.forEach((st: any) => {
+            const stId = String(st.properties?.id || st.id || '').toUpperCase();
+            const stName = String(st.properties?.name || '').toLowerCase();
+            if (stId === 'DE-BE' || stName === 'berlin') {
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DE_WEST',
+                properties: { ISO_A3: 'DE_WEST', name: 'West Berlin (FRG)' },
+                geometry: st.geometry
+              });
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DDR',
+                properties: { ISO_A3: 'DDR', name: 'East Berlin (GDR)' },
+                geometry: st.geometry
+              });
+            } else if (isEastGermanState(stId, stName)) {
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DDR',
+                properties: { ISO_A3: 'DDR', name: 'German Democratic Republic (DDR)' },
+                geometry: st.geometry
+              });
+            } else {
+              formattedFeatures.push({
+                type: 'Feature',
+                id: 'DE_WEST',
+                properties: { ISO_A3: 'DE_WEST', name: 'Federal Republic of Germany (FRG)' },
+                geometry: st.geometry
+              });
+            }
+          });
+
+          featuresToRender = featuresToRender
+            .filter((f: any) => {
+              const code = String(f.id || f.properties?.ISO_A3 || f.properties?.adm0_a3 || '').toUpperCase();
+              return code !== 'DEU' && code !== 'DE';
+            })
+            .concat(formattedFeatures);
+        }
+
+        const geoJsonToUse = {
+          type: 'FeatureCollection',
+          features: featuresToRender
+        };
+
+        worldBgLayerRef.current = L.geoJSON(geoJsonToUse as any, {
           style: (feature) => {
             const cid = getPlayableCountryIdFromFeature(feature);
             const id3 = String(feature?.id || feature?.properties?.ISO_A3 || feature?.properties?.iso_a3 || '').toUpperCase();
@@ -794,7 +1071,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               layer.on('click', (e) => {
                 L.DomEvent.stopPropagation(e);
                 playSound('click');
-                setSelectedMapCountryId(cid);
+                const targetId = isCountryActive(cid, scenario) ? cid : getSuccessorCountryId(cid, scenario);
+                if (isCountryActive(targetId, scenario)) {
+                  setSelectedMapCountryId(targetId);
+                }
               });
             }
           }
@@ -830,7 +1110,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     }
 
     return () => cleanupMap();
-  }, [darkMode, worldGeoJsonData]);
+  }, [darkMode, worldGeoJsonData, germanStatesData, scenario]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -843,7 +1123,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const playerCoords = countryCoords[country.id] || [38.963, 35.243];
     
     Object.entries(countryCoords).forEach(([id, coords]) => {
-      if (id === country.id) return;
+      if (id === country.id || !isCountryActive(id, scenario)) return;
       
       const rel = diplomaticRelations[id];
       if (!rel) return;
@@ -865,6 +1145,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
     // 2. Add marker nodes for each playable country
     Object.entries(countryCoords).forEach(([id, coords]) => {
+      if (!isCountryActive(id, scenario)) return;
       const isSelf = id === country.id;
       const rel = diplomaticRelations[id];
       const isSelected = selectedMapCountryId === id;
@@ -931,12 +1212,14 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
         playSound('click');
-        setSelectedMapCountryId(id);
+        if (isCountryActive(id, scenario)) {
+          setSelectedMapCountryId(id);
+        }
       });
 
       marker.addTo(markersGroup);
     });
-  }, [diplomaticRelations, selectedMapCountryId, country.id, darkMode]);
+  }, [diplomaticRelations, selectedMapCountryId, country.id, darkMode, scenario]);
 
   // Current active global conflicts
   const [globalConflicts, setGlobalConflicts] = useState<Array<{
@@ -1025,8 +1308,21 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       IQ: 'Iraq',
       QA: 'Qatar',
       AE: 'United Arab Emirates',
-      NZ: 'New Zealand'
+      NZ: 'New Zealand',
+      CL: 'Chile',
+      IS: 'Iceland',
+      CD: 'Democratic Republic of the Congo',
+      COD: 'Democratic Republic of the Congo',
+      CG: 'Republic of the Congo',
+      COG: 'Republic of the Congo',
+      KP: 'North Korea',
+      SU: 'Soviet Union',
+      DDR: 'East Germany',
+      CS: 'Czechoslovakia',
+      YU: 'Yugoslavia'
     };
+    if (scenario === '2026' && id === 'RU') return 'Russian Federation';
+    if (scenario === '2026' && id === 'DE') return 'Germany';
     return list[id] || id;
   };
 
@@ -1034,18 +1330,19 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const list: Record<string, string> = {
       US: '🇺🇸', BR: '🇧🇷', GB: '🇬🇧', DE: '🇩🇪', TR: '🇹🇷', EG: '🇪🇬', JP: '🇯🇵',
       CA: '🇨🇦', AR: '🇦🇷', ZA: '🇿🇦', IN: '🇮🇳', IT: '🇮🇹', ID: '🇮🇩', MX: '🇲🇽',
-      ES: '🇪🇸', KR: '🇰🇷', AU: '🇦🇺', RU: '🇷🇺', UA: '🇺🇦', IL: '🇮🇱', PS: '🇵🇸',
+      ES: '🇪🇸', KR: '🇰🇷', KP: '🇰🇵', AU: '🇦🇺', RU: '🇷🇺', UA: '🇺🇦', IL: '🇮🇱', PS: '🇵🇸',
       CN: '🇨🇳', TW: '🇹🇼', FR: '🇫🇷', RO: '🇷🇴', HU: '🇭🇺', SA: '🇸🇦', IR: '🇮🇷',
       PL: '🇵🇱', GR: '🇬🇷', SE: '🇸🇪', NO: '🇳🇴', FI: '🇫🇮', NL: '🇳🇱', BE: '🇧🇪',
       CH: '🇨🇭', AT: '🇦🇹', PT: '🇵🇹', IE: '🇮🇪', DK: '🇩🇰', CZ: '🇨🇿', SK: '🇸🇰',
       BG: '🇧🇬', HR: '🇭🇷', RS: '🇷🇸', AZ: '🇦🇿', PK: '🇵🇰', SY: '🇸🇾', IQ: '🇮🇶',
-      QA: '🇶🇦', AE: '🇦🇪', NZ: '🇳🇿'
+      QA: '🇶🇦', AE: '🇦🇪', NZ: '🇳🇿', CL: '🇨🇱', IS: '🇮🇸',
+      CD: '🇨🇩', COD: '🇨🇩', CG: '🇨🇬', COG: '🇨🇬', SU: '🚩', DDR: '🇩🇩', CS: '🇨🇿', YU: '🇷🇸'
     };
     return list[id] || '🌐';
   };
 
   // Treaty signing mechanics
-  const handleSignTreaty = (targetId: string, type: 'Alliance' | 'Defensive Pact' | 'Non-Aggression') => {
+  const handleSignTreaty = (targetId: string, type: 'Allies' | 'Alliance' | 'Defensive Pact' | 'Non-Aggression') => {
     const currentRelation = diplomaticRelations[targetId];
     if (!currentRelation) return;
 
@@ -1058,6 +1355,10 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       requiredInfluence = 25;
       costTreasury = 15000;
     } else if (type === 'Alliance') {
+      requiredOpinion = 80;
+      requiredInfluence = 40;
+      costTreasury = 25000;
+    } else if (type === 'Allies') {
       requiredOpinion = 85;
       requiredInfluence = 50;
       costTreasury = 35000;
@@ -1086,19 +1387,179 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
     onUpdateInfluence(influence - requiredInfluence);
     onUpdateTreasury(treasury - costTreasury);
-    onUpdateReputation(Math.min(100, internationalReputation + (type === 'Alliance' ? 10 : 5)));
+    onUpdateReputation(Math.min(100, internationalReputation + (type === 'Allies' ? 15 : type === 'Alliance' ? 10 : 5)));
 
     // Boost domestic approval slightly for strong leadership abroad
-    publicApprovalImpact(type === 'Alliance' ? 4 : 2);
+    publicApprovalImpact(type === 'Allies' ? 6 : type === 'Alliance' ? 4 : 2);
 
     const updated = {
       ...diplomaticRelations,
       [targetId]: { ...currentRelation, status: type, opinion: Math.min(100, currentRelation.opinion + 15) }
     };
     onUpdateRelations(updated);
+
+    // Allies and Alliance automatically provide per-turn recurring support!
+    if ((type === 'Allies' || type === 'Alliance') && onUpdateForeignAid) {
+      const aidAmt = type === 'Allies' ? 45000 : 30000;
+      onUpdateForeignAid((prev: any) => ({
+        ...prev,
+        [targetId]: {
+          id: targetId,
+          countryName: getCountryName(targetId),
+          status: 'ACCEPTED' as const,
+          type: 'funds' as const,
+          amountPerTurn: aidAmt,
+          description: `Allied military & financial support from ${getCountryName(targetId)}`
+        }
+      }));
+    }
+
     playSound('success');
     setSuccessMessage(`Bilateral treaty successfully signed! ${getCountryName(targetId)} is now in a state of ${type} with your government.`);
     setErrorMessage(null);
+  };
+
+  // Break Alliance / Dissolve Treaty
+  const handleBreakAlliance = (targetId: string) => {
+    const currentRelation = diplomaticRelations[targetId];
+    if (!currentRelation) return;
+
+    const updated = {
+      ...diplomaticRelations,
+      [targetId]: {
+        ...currentRelation,
+        status: 'Neutral' as const,
+        opinion: Math.max(10, currentRelation.opinion - 35)
+      }
+    };
+    onUpdateRelations(updated);
+
+    if (onUpdateForeignAid) {
+      onUpdateForeignAid((prev: any) => {
+        const copy = { ...prev };
+        delete copy[targetId];
+        return copy;
+      });
+    }
+
+    playSound('error');
+    setSuccessMessage(`Alliance with ${getCountryName(targetId)} has been dissolved. Diplomatic ties severed to Neutral.`);
+    setErrorMessage(null);
+  };
+
+  // English "Request Support" action with specialized support types
+  const handleRequestSupport = (targetId: string, supportType: 'funds' | 'equipment' | 'humanitarian' | 'intel' = 'funds') => {
+    const rel = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
+    const targetDetails = getCountryDetails(targetId);
+
+    if (foreignAidPackages && foreignAidPackages[targetId]?.status === 'ACCEPTED') {
+      playSound('click');
+      setSuccessMessage(`${targetDetails.name} is already providing active recurring support (${foreignAidPackages[targetId].description}).`);
+      return;
+    }
+
+    // Roll acceptance based on relations, ideology alignment, and existing alliances
+    let rollChance = Math.round(rel.opinion * 0.6); // 50 op -> 30%, 80 op -> 48%
+    if (rel.status === 'Allies') {
+      rollChance += 45; // 90%+ chance
+    } else if (rel.status === 'Alliance') {
+      rollChance += 35;
+    } else if (rel.status === 'Defensive Pact') {
+      rollChance += 20;
+    } else if (rel.status === 'Sanctioned') {
+      rollChance -= 40;
+    } else if (rel.status === 'At War') {
+      rollChance -= 100;
+    }
+
+    // Type specific modifiers
+    if (supportType === 'humanitarian') {
+      // Humanitarian aid is widely supported internationally even from non-allies
+      rollChance += 25;
+    } else if (supportType === 'equipment') {
+      // Heavy military hardware requires closer ties
+      if (rel.status !== 'Allies' && rel.status !== 'Alliance') {
+        rollChance -= 15;
+      }
+    }
+
+    // Ideology alignment bonus
+    const playerIdeology = (party.ideology || '').toLowerCase();
+    const targetIdeology = (targetDetails.ideology || '').toLowerCase();
+    const isAligned =
+      (playerIdeology.includes('conservative') && targetIdeology.includes('conservative')) ||
+      (playerIdeology.includes('socialist') && targetIdeology.includes('socialist')) ||
+      (playerIdeology.includes('social democrat') && targetIdeology.includes('social democrat')) ||
+      (playerIdeology.includes('liberal') && targetIdeology.includes('liberal')) ||
+      (playerIdeology.includes('nationalist') && targetIdeology.includes('nationalist'));
+
+    if (isAligned) {
+      rollChance += 20;
+    }
+
+    rollChance = Math.max(5, Math.min(95, rollChance));
+    const dice = Math.floor(Math.random() * 100) + 1;
+    const accepted = dice <= rollChance;
+
+    if (accepted) {
+      let aidAmount = 0;
+      let description = '';
+
+      if (supportType === 'funds') {
+        aidAmount = rel.status === 'Allies' ? 45000 : (targetDetails.gdp.includes('Trillion') ? 35000 : 25000);
+        description = `+$${aidAmount.toLocaleString()}/turn in budgetary foreign aid from ${targetDetails.name}`;
+      } else if (supportType === 'equipment') {
+        aidAmount = 15000;
+        description = `Strategic munitions & military supply shipments from ${targetDetails.name}`;
+      } else if (supportType === 'humanitarian') {
+        aidAmount = 20000;
+        description = `UN & multilateral humanitarian relief convoys from ${targetDetails.name}`;
+        if (publicApprovalImpact) publicApprovalImpact(6);
+      } else if (supportType === 'intel') {
+        aidAmount = 10000;
+        description = `Strategic intelligence sharing & diplomatic endorsement from ${targetDetails.name}`;
+        if (onUpdateInfluence) onUpdateInfluence(party.influence + 15);
+        if (onUpdateReputation) onUpdateReputation(prev => Math.min(100, prev + 12));
+      }
+
+      const newPackage = {
+        id: targetId,
+        countryName: targetDetails.name,
+        status: 'ACCEPTED' as const,
+        type: supportType,
+        amountPerTurn: aidAmount,
+        description
+      };
+
+      if (onUpdateForeignAid) {
+        onUpdateForeignAid((prev: any) => ({
+          ...prev,
+          [targetId]: newPackage
+        }));
+      }
+
+      playSound('success');
+      setSuccessMessage(`DIPLOMATIC SUCCESS! ${targetDetails.name} approved our Request for ${supportType.toUpperCase()} support: ${description}`);
+      setErrorMessage(null);
+    } else {
+      playSound('error');
+      setErrorMessage(`Request for ${supportType} support was declined by ${targetDetails.name} (Acceptance chance was ${rollChance}%). Strengthen bilateral relations or sign a treaty.`);
+      setSuccessMessage(null);
+
+      if (onUpdateForeignAid) {
+        onUpdateForeignAid((prev: any) => ({
+          ...prev,
+          [targetId]: {
+            id: targetId,
+            countryName: targetDetails.name,
+            status: 'REJECTED' as const,
+            type: supportType,
+            amountPerTurn: 0,
+            description: `Declined by ${targetDetails.name}`
+          }
+        }));
+      }
+    }
   };
 
   const handleSendGift = (targetId: string) => {
@@ -1221,6 +1682,12 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const currentRelation = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
 
     if (action === 'Declare War') {
+      if (currentRelation.status === 'Allies' || currentRelation.status === 'Alliance') {
+        playSound('error');
+        setErrorMessage(`CANNOT ATTACK AN ALLY! You must break the Alliance with ${getCountryName(targetId)} before declaring war.`);
+        return;
+      }
+
       const hasCB = casusBelli[targetId];
       if (!hasCB) {
         // Allow declare war but with severe penalty
@@ -1578,7 +2045,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               </div>
 
               {/* Floating Country Info Panel */}
-              {selectedMapCountryId && (() => {
+              {selectedMapCountryId && isCountryActive(selectedMapCountryId, scenario) && (() => {
                 const details = getCountryDetails(selectedMapCountryId);
                 const isSelf = selectedMapCountryId === country.id;
                 const rel = diplomaticRelations[selectedMapCountryId] || { status: 'Neutral', opinion: 50 };
@@ -1753,7 +2220,85 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
 
                     {/* Action Buttons: Improve Relations, Trade Deal, Alliance, Declare War */}
                     {!isSelf ? (
-                      <div className="flex flex-col gap-2 pt-1 border-t border-slate-500/15">
+                      <div className="flex flex-col gap-2.5 pt-1 border-t border-slate-500/15">
+                        
+                        {/* 1. Request Support English Action Section */}
+                        <div className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                              International Support
+                            </span>
+                            {foreignAidPackages && foreignAidPackages[selectedMapCountryId]?.status === 'ACCEPTED' && (
+                              <span className="text-[9px] font-mono font-black text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Active (+${foreignAidPackages[selectedMapCountryId].amountPerTurn.toLocaleString()}/turn)
+                              </span>
+                            )}
+                            {foreignAidPackages && foreignAidPackages[selectedMapCountryId]?.status === 'PENDING' && (
+                              <span className="text-[9px] font-mono font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                                Pending Review
+                              </span>
+                            )}
+                            {foreignAidPackages && foreignAidPackages[selectedMapCountryId]?.status === 'REJECTED' && (
+                              <span className="text-[9px] font-mono font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full">
+                                Declined
+                              </span>
+                            )}
+                          </div>
+
+                          {foreignAidPackages && foreignAidPackages[selectedMapCountryId]?.status === 'ACCEPTED' ? (
+                            <div className="w-full py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shadow-xs">
+                              <ShieldCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+                              <span>Active Support: {foreignAidPackages[selectedMapCountryId].type.toUpperCase()}</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  id="btn-request-funds"
+                                  onClick={() => handleRequestSupport(selectedMapCountryId, 'funds')}
+                                  disabled={rel.status === 'At War' || rel.status === 'Sanctioned'}
+                                  title="Request recurring financial grant for national budget"
+                                  className="py-1.5 px-2 rounded-lg text-[10.5px] font-bold bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-200 border border-indigo-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <span>💵 Financial Grant</span>
+                                </button>
+                                <button
+                                  id="btn-request-arms"
+                                  onClick={() => handleRequestSupport(selectedMapCountryId, 'equipment')}
+                                  disabled={rel.status === 'At War' || rel.status === 'Sanctioned'}
+                                  title="Request precision munitions and military hardware"
+                                  className="py-1.5 px-2 rounded-lg text-[10.5px] font-bold bg-rose-600/20 hover:bg-rose-600/35 text-rose-200 border border-rose-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <span>🛡️ Military Arms</span>
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  id="btn-request-humanitarian"
+                                  onClick={() => handleRequestSupport(selectedMapCountryId, 'humanitarian')}
+                                  disabled={rel.status === 'At War'}
+                                  title="Request UN and international humanitarian relief (+public approval)"
+                                  className="py-1.5 px-2 rounded-lg text-[10.5px] font-bold bg-teal-600/20 hover:bg-teal-600/35 text-teal-200 border border-teal-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <span>🕊️ UN Relief</span>
+                                </button>
+                                <button
+                                  id="btn-request-intel"
+                                  onClick={() => handleRequestSupport(selectedMapCountryId, 'intel')}
+                                  disabled={rel.status === 'At War' || rel.status === 'Sanctioned'}
+                                  title="Request diplomatic endorsement and intelligence sharing (+influence & reputation)"
+                                  className="py-1.5 px-2 rounded-lg text-[10.5px] font-bold bg-purple-600/20 hover:bg-purple-600/35 text-purple-200 border border-purple-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <span>🌐 Diplomatic Intel</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Standard Bilateral Actions */}
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => handleSendGift(selectedMapCountryId)}
@@ -1784,35 +2329,86 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                           </button>
                         </div>
 
+                        {/* 3. Treaty / Allies / Break Alliance / Declare War Grid */}
                         <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => handleSignTreaty(selectedMapCountryId, rel.opinion >= 85 ? 'Alliance' : 'Defensive Pact')}
-                            disabled={!isRuling || rel.status === 'Alliance' || rel.status === 'At War'}
-                            title={!isRuling ? 'Unlocked after you win the election' : 'Form defense pact or full alliance treaty'}
-                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                              !isRuling || rel.status === 'Alliance' || rel.status === 'At War'
-                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
-                                : 'bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 border-cyan-500/30 cursor-pointer'
-                            }`}
-                          >
-                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
-                            <span>{rel.status === 'Alliance' ? 'Allied' : rel.opinion >= 85 ? 'Form Alliance' : 'Defense Pact'}</span>
-                          </button>
+                          {rel.status === 'Allies' ? (
+                            <button
+                              disabled
+                              className="py-2 px-2.5 rounded-xl text-[10.5px] font-black flex items-center justify-center gap-1.5 transition-all border bg-emerald-500/25 text-emerald-300 border-emerald-500/50 cursor-default shadow-xs"
+                            >
+                              <Handshake className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>🤝 Permanent Allies</span>
+                            </button>
+                          ) : rel.status === 'Alliance' ? (
+                            <button
+                              onClick={() => handleSignTreaty(selectedMapCountryId, 'Allies')}
+                              disabled={!isRuling || rel.opinion < 85}
+                              title={rel.opinion < 85 ? 'Requires 85+ opinion to elevate to full Allies status' : 'Elevate Alliance to permanent Allies!'}
+                              className={`py-2 px-2.5 rounded-xl text-[10.5px] font-black flex items-center justify-center gap-1.5 transition-all border ${
+                                !isRuling || rel.opinion < 85
+                                  ? 'opacity-60 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                  : 'bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border-emerald-500/40 cursor-pointer'
+                              }`}
+                            >
+                              <span>Elevate to Allies</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSignTreaty(selectedMapCountryId, rel.opinion >= 85 ? 'Allies' : rel.opinion >= 80 ? 'Alliance' : 'Defensive Pact')}
+                              disabled={!isRuling || rel.status === 'At War'}
+                              title={!isRuling ? 'Unlocked after you win the election' : 'Sign defensive pact, alliance, or full allies'}
+                              className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                                !isRuling || rel.status === 'At War'
+                                  ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                  : 'bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 border-cyan-500/30 cursor-pointer'
+                              }`}
+                            >
+                              {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                              <span>{rel.opinion >= 85 ? 'Form Allies' : rel.opinion >= 80 ? 'Form Alliance' : 'Defense Pact'}</span>
+                            </button>
+                          )}
 
-                          <button
-                            onClick={() => handleHostileAction(selectedMapCountryId, 'Declare War')}
-                            disabled={!isRuling || rel.status === 'At War'}
-                            title={!isRuling ? 'Unlocked after you win the election' : 'Declare armed conflict & mobilize frontlines'}
-                            className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                              !isRuling || rel.status === 'At War'
-                                ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
-                                : 'bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border-rose-500/40 cursor-pointer'
-                            }`}
-                          >
-                            {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
-                            <span>{rel.status === 'At War' ? 'At War' : 'Declare War'}</span>
-                          </button>
+                          {/* Attack Protection: Allies cannot be attacked without breaking alliance first */}
+                          {rel.status === 'Allies' || rel.status === 'Alliance' ? (
+                            <button
+                              onClick={() => handleBreakAlliance(selectedMapCountryId)}
+                              disabled={!isRuling}
+                              title="Dissolve alliance treaty to permit hostile actions"
+                              className="py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border-amber-500/40 cursor-pointer"
+                            >
+                              <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span>Break Alliance</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleHostileAction(selectedMapCountryId, 'Declare War')}
+                              disabled={!isRuling || rel.status === 'At War'}
+                              title={!isRuling ? 'Unlocked after you win the election' : 'Declare armed conflict & mobilize frontlines'}
+                              className={`py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                                !isRuling || rel.status === 'At War'
+                                  ? 'opacity-50 cursor-not-allowed bg-slate-800/60 text-slate-400 border-slate-700/50'
+                                  : 'bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border-rose-500/40 cursor-pointer'
+                              }`}
+                            >
+                              {!isRuling && <Lock className="w-3 h-3 text-slate-400 shrink-0" />}
+                              <span>{rel.status === 'At War' ? 'At War' : 'Declare War'}</span>
+                            </button>
+                          )}
                         </div>
+
+                        {/* Direct Deployment to War Front Map */}
+                        {rel.status === 'At War' && onNavigateToWar && (
+                          <button
+                            onClick={() => {
+                              playSound('click');
+                              onNavigateToWar();
+                            }}
+                            className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-lg shadow-rose-950/40 cursor-pointer animate-pulse"
+                          >
+                            <Swords className="w-4 h-4 text-rose-200" />
+                            <span>⚔️ Open War Frontline Map</span>
+                          </button>
+                        )}
 
                         {!isRuling && (
                           <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-[9.5px] text-amber-300/90 leading-tight">

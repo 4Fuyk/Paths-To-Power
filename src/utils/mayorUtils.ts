@@ -74,6 +74,15 @@ export function getDeterministicName(seedString: string, countryId: string): str
   const isFirst = ['Bjarni', 'Katrín', 'Kristrún', 'Sigurður', 'Þorgerður', 'Dagur', 'Einar', 'Ásmundur', 'Halla', 'Gunnar'];
   const isLast = ['Benediktsson', 'Jakobsdóttir', 'Frostadóttir', 'Ingi', 'Katrínarson', 'Eggertsson', 'Þorsteinsson', 'Einarsson', 'Jónsdóttir', 'Sigurðsson'];
 
+  const noFirst = ['Jonas', 'Erna', 'Sylvi', 'Trygve', 'Kirsti', 'Raymond', 'Eirik', 'Anne', 'Kari', 'Espen', 'Marit', 'Torbjørn', 'Jan', 'Ida'];
+  const noLast = ['Gahr Støre', 'Solberg', 'Listhaug', 'Vedum', 'Bergstø', 'Johansen', 'Lae Solberg', 'Lindboe', 'Nessa Nordtun', 'Barth Eide', 'Aasheim', 'Røe Isaksen', 'Bøhler'];
+
+  const fiFirst = ['Petteri', 'Sanna', 'Riikka', 'Antti', 'Elina', 'Jussi', 'Li', 'Pekka', 'Juhana', 'Minna', 'Jan', 'Lauri', 'Anna-Kaisa', 'Sofia'];
+  const fiLast = ['Orpo', 'Marin', 'Purra', 'Lindtman', 'Valtonen', 'Halla-aho', 'Andersson', 'Haavisto', 'Vartiainen', 'Arve', 'Vapaavuori', 'Lyly', 'Ikonen', 'Virta'];
+
+  const chFirst = ['Beat', 'Corine', 'Grégoire', 'Alec', 'Markus', 'Maria', 'Alfonso', 'Michele', 'Philippe', 'Monica', 'Thierry', 'Stefanie', 'Walter', 'Urs', 'Violaine', 'Petra', 'André', 'Peter', 'Jacques'];
+  const chLast = ['Jans', 'Mauch', 'Junod', 'von Graffenried', 'Dieth', 'Pappa', 'Gomez', 'Foletti', 'Varone', 'Gschwind', 'Steiert', 'Ingold', 'Schönholzer', 'Marti', 'Blétry-de Montmollin', 'Steimen-Rickenbacher', 'Wicki', 'Neukomm', 'Gerber'];
+
   const cnFirst = ['Xi', 'Li', 'Wang', 'Zhang', 'Chen', 'Liu', 'Yang', 'Huang', 'Zhao', 'Wu', 'Zhou', 'Xu'];
   const cnLast = ['Jinping', 'Qiang', 'Huning', 'Zhaolei', 'Keqiang', 'Yangjie', 'Ming', 'Wei', 'Jun', 'Feng', 'Yong'];
 
@@ -121,6 +130,9 @@ export function getDeterministicName(seedString: string, countryId: string): str
   if (countryId === 'UA') return `${sample(uaFirst)} ${sample(uaLast)}`;
   if (countryId === 'PL' || countryId === 'CS') return `${sample(plFirst)} ${sample(plLast)}`;
   if (countryId === 'SE') return `${sample(seFirst)} ${sample(seLast)}`;
+  if (countryId === 'NO') return `${sample(noFirst)} ${sample(noLast)}`;
+  if (countryId === 'FI') return `${sample(fiFirst)} ${sample(fiLast)}`;
+  if (countryId === 'CH') return `${sample(chFirst)} ${sample(chLast)}`;
   if (countryId === 'PT') return `${sample(ptFirst)} ${sample(ptLast)}`;
   if (countryId === 'GR') return `${sample(grFirst)} ${sample(grLast)}`;
   if (countryId === 'IS') return `${sample(isFirst)} ${sample(isLast)}`;
@@ -862,6 +874,132 @@ export const SPECIFIC_PARTY_MAYORS: Record<string, Record<string, Record<string,
       'Northeast': 'Ásthildur Sturludóttir',
       'Northwest': 'Sigurður Enoksson',
       'South': 'Fannar Jónasson'
+    }
+  },
+  CH: {
+    SVP: {
+      'Zürich': 'Gregor Rutz',
+      'Bern': 'Albert Rösti',
+      'Aargau': 'Markus Dieth',
+      'Sankt Gallen': 'Michael Götte',
+      'Thurgau': 'Walter Schönholzer',
+      'Schwyz': 'Petra Steimen-Rickenbacher',
+      'Schaffhausen': 'Peter Neukomm',
+      'Glarus': 'Peter Aebli',
+      'Vaud': 'Michaël Buffat',
+      'Valais': 'Franz Ruppen'
+    },
+    SP: {
+      'Zürich': 'Corine Mauch',
+      'Bern': 'Alec von Graffenried',
+      'Vaud': 'Grégoire Junod',
+      'Genève': 'Alfonso Gomez',
+      'Basel-Stadt': 'Beat Jans',
+      'Basel-Landschaft': 'Monica Gschwind',
+      'Fribourg': 'Thierry Steiert',
+      'Neuchâtel': 'Violaine Blétry-de Montmollin',
+      'Jura': 'Jacques Gerber'
+    },
+    FDP: {
+      'Ticino': 'Michele Foletti',
+      'Solothurn': 'Stefanie Ingold',
+      'Appenzell Ausserrhoden': 'Duri Pally',
+      'Zürich': 'Filippo Leutenegger',
+      'Vaud': 'Christelle Luisier Brodard',
+      'Genève': 'Nathalie Fontanet'
+    },
+    MITTE: {
+      'Luzern': 'Beat Züsli',
+      'Valais': 'Philippe Varone',
+      'Graubünden': 'Urs Marti',
+      'Zug': 'André Wicki',
+      'Nidwalden': 'Karin Kayser-Frutschi',
+      'Obwalden': 'Christian Schäli',
+      'Uri': 'Urban Camenzind',
+      'Appenzell Innerrhoden': 'Roland Inauen'
+    },
+    GRÜNE: {
+      'Genève': 'Antonio Hodgers',
+      'Vaud': 'Vassilis Venizelos',
+      'Bern': 'Christine Häsler',
+      'Zürich': 'Martin Neukom'
+    }
+  },
+  NO: {
+    AP: {
+      'Oslo': 'Raymond Johansen',
+      'Akershus': 'Tonje Brenna',
+      'Vestland': 'Jon Askeland',
+      'Rogaland': 'Kari Nessa Nordtun',
+      'Trøndelag': 'Tore O. Sandvik',
+      'Innlandet': 'Thomas Breen',
+      'Agder': 'Arne Thomassen',
+      'Vestfold': 'Anne Strømøy',
+      'Telemark': 'Sven Tore Løkslid',
+      'Troms': 'Kristina Torbergsen',
+      'Finnmark': 'Hans-Jacob Bønå',
+      'Nordland': 'Eivind Holst',
+      'Møre og Romsdal': 'Anders Riise',
+      'Østfold': 'Sindre Martinsen-Evje',
+      'Buskerud': 'Tore Opdal Hansen'
+    },
+    H: {
+      'Oslo': 'Eirik Lae Solberg',
+      'Akershus': 'Anette Solli',
+      'Vestland': 'Silja Ekeland Bjørkly',
+      'Rogaland': 'Ole Ueland',
+      'Trøndelag': 'Christian Haugen',
+      'Innlandet': 'Hanne Alstrup Velure',
+      'Vestfold': 'Ellen Eriksen',
+      'Nordland': 'Marianne Dobak Kvensjø'
+    },
+    FRP: {
+      'Oslo': 'Magnus Birkelund',
+      'Rogaland': 'Pål Morten Borgli',
+      'Vestfold': 'Frode G. Hestnes',
+      'Møre og Romsdal': 'Frank Sve'
+    },
+    SP: {
+      'Innlandet': 'Even Aleksander Hagen',
+      'Trøndelag': 'Tomas Iver Hallem',
+      'Vestland': 'Sigurd Reksnes',
+      'Nordland': 'Svein Eggesvik'
+    }
+  },
+  FI: {
+    KOK: {
+      'Uusimaa': 'Juhana Vartiainen',
+      'Varsinais-Suomi': 'Minna Arve',
+      'Pirkanmaa': 'Kalervo Kummola',
+      'Pohjois-Pohjanmaa': 'Pekka Rajala',
+      'Keski-Suomi': 'Timo Koivisto',
+      'Satakunta': 'Lauri Inna',
+      'Lappi': 'Jari Jokela',
+      'Etelä-Pohjanmaa': 'Jaakko Kiiskilä'
+    },
+    SDP: {
+      'Uusimaa': 'Nasima Razmyar',
+      'Pirkanmaa': 'Lauri Lyly',
+      'Varsinais-Suomi': 'Niina Pautola-Mol',
+      'Pohjois-Karjala': 'Markus Hirvonen',
+      'Kymenlaakso': 'Marika Kirjavainen'
+    },
+    PS: {
+      'Uusimaa': 'Teemu Keskisarja',
+      'Pirkanmaa': 'Veikko Vallin',
+      'Satakunta': 'Petri Huru',
+      'Pohjois-Pohjanmaa': 'Sebastian Tynkkynen'
+    },
+    KESK: {
+      'Pohjois-Pohjanmaa': 'Jussi Ylitalo',
+      'Etelä-Pohjanmaa': 'Asko Peltola',
+      'Lappi': 'Mika Riipi',
+      'Kainuu': 'Pentti Malinen'
+    },
+    VHR: {
+      'Uusimaa': 'Anni Sinnemäki',
+      'Varsinais-Suomi': 'Elina Rantanen',
+      'Pirkanmaa': 'Jaakko Stenhäll'
     }
   }
 };

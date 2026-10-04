@@ -14,6 +14,8 @@ import {
   ZoomIn, ZoomOut
 } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
+import { loadCountryMapData, getCountryMapConfig, getFeatureRegionName } from '../data/mapRegistry';
+import { AlertCircle } from 'lucide-react';
 
 interface CampaignViewProps {
   country: Country;
@@ -154,6 +156,7 @@ export const CampaignView: React.FC<CampaignViewProps> = ({
       .catch(err => console.error("Failed to load world geojson", err));
   }, []);
   const [districtGeoJsonData, setDistrictGeoJsonData] = useState<any>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   // Check for missing regions in geojson and add them dynamically
   useEffect(() => {
     if (!geoJsonData || !geoJsonData.features) return;
@@ -1423,136 +1426,29 @@ const getPolygonCenter = (feat: any) => {
     return subFeatures;
   };
 
-  // Fetch online Turkey GeoJSON on component load
+  // Fetch online GeoJSON map data automatically from central map registry
   useEffect(() => {
-    if (country.id !== 'TR') return;
-    
-    const provinceUrls = [
-      'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json',
-      'https://raw.githubusercontent.com/alpers/Turkey-Maps-GeoJSON/master/tr-cities.json'
-    ];
+    let isMounted = true;
+    setMapError(null);
 
-    const tryFetchProvinces = async () => {
-      for (const url of provinceUrls) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            setGeoJsonData(data);
-            return;
-          }
-        } catch (err) {
-          console.warn(`Fetch province map from ${url} failed:`, err);
-        }
+    // If historical 1950 scenario custom nations, let the dedicated builder handle it
+    if (['SU', 'YU', 'CS', 'DDR'].includes(country.id)) {
+      return;
+    }
+
+    loadCountryMapData(country.id, country.name).then((res) => {
+      if (!isMounted) return;
+      if (res.data) {
+        setGeoJsonData(res.data);
+        setMapError(null);
+      } else {
+        setGeoJsonData(null);
+        setMapError(res.error || `Map data unavailable for ${country.name}`);
       }
-      console.warn('All province GeoJSON fetch attempts failed. Falling back to point-markers.');
-    };
+    });
 
-    tryFetchProvinces();
-  }, [country.id]);
-
-  // Fetch online Germany GeoJSON on component load
-  useEffect(() => {
-    if (country.id !== 'DE') return;
-    
-    const germanyUrl = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/2_bundeslaender/2_hoch.geo.json';
-
-    const tryFetchGermany = async () => {
-      try {
-        const res = await fetch(germanyUrl);
-        if (res.ok) {
-          const data = await res.json();
-          setGeoJsonData(data);
-          return;
-        }
-      } catch (err) {
-        console.warn(`Fetch Germany map from ${germanyUrl} failed:`, err);
-      }
-      console.warn('Germany GeoJSON fetch failed. Falling back to point-markers.');
-    };
-
-    tryFetchGermany();
-  }, [country.id]);
-
-  // Fetch online USA GeoJSON on component load
-  useEffect(() => {
-    if (country.id !== 'US') return;
-    
-    const usUrl = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
-
-    const tryFetchUS = async () => {
-      try {
-        const res = await fetch(usUrl);
-        if (res.ok) {
-          const data = await res.json();
-          setGeoJsonData(data);
-          return;
-        }
-      } catch (err) {
-        console.warn(`Fetch USA map from ${usUrl} failed:`, err);
-      }
-      console.warn('USA GeoJSON fetch failed. Falling back to point-markers.');
-    };
-
-    tryFetchUS();
-  }, [country.id]);
-
-  // Fetch online GeoJSON for various countries on component load
-  useEffect(() => {
-    const geojsonMapUrls: Record<string, string> = {
-      RU: '/russia.geojson',
-      UA: '/ukraine.geojson',
-      SE: '/sweden.geojson',
-      PT: '/portugal.geojson',
-      GR: '/greece.geojson',
-      IS: '/iceland.geojson',
-      CL: '/chile.geojson',
-      TW: '/taiwan.geojson',
-      SA: '/saudi-arabia.geojson',
-      IR: '/iran.geojson',
-      IL: '/israel.geojson',
-      PS: '/palestine.geojson',
-      EG: '/egypt-provinces.geojson',
-      BR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/brazil-states.geojson',
-      JP: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/japan.geojson',
-      GB: 'https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/electoral/gb/eer.json',
-      CA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson',
-      ZA: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/south-africa.geojson',
-      IN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/india.geojson',
-      MX: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/mexico.geojson',
-      ES: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-communities.geojson',
-      AU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/australia.geojson',
-      IT: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/italy-regions.geojson',
-      ID: 'https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia.geojson',
-      KR: 'https://cdn.jsdelivr.net/gh/southkorea/southkorea-maps@master/kostat/2013/json/skorea_provinces_geo_simple.json',
-      AR: 'https://raw.githubusercontent.com/Rodri1791/Regions_Argentina/main/Regiones_ArgentinasGJSON/provinciasargentina.geojson',
-      FR: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/france-regions.geojson',
-      RO: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson',
-      HU: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/hungary.geojson',
-      PL: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/poland.geojson',
-      CN: 'https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/china.geojson'
-    };
-
-    if (!geojsonMapUrls[country.id]) return;
-    
-    const url = geojsonMapUrls[country.id];
-
-    const tryFetch = async () => {
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          setGeoJsonData(data);
-          return;
-        }
-      } catch (err) {
-        console.warn(`Fetch ${country.id} map from ${url} failed:`, err);
-      }
-      console.warn(`${country.id} GeoJSON fetch failed. Falling back to point-markers.`);
-    };
-
-    tryFetch();
-  }, [country.id]);
+    return () => { isMounted = false; };
+  }, [country.id, country.name]);
 
   // Dedicated GeoJSON builder for historical 1950 nations (Soviet Union, Yugoslavia, Czechoslovakia, DDR)
   useEffect(() => {
@@ -1852,53 +1748,34 @@ const getPolygonCenter = (feat: any) => {
     }
   }, [darkMode]);
 
+  // ResizeObserver to re-fit country map on container resize
+  useEffect(() => {
+    if (!turkeyMapRef.current) return;
+    const observer = new ResizeObserver(() => {
+      const map = turkeyMapInstanceRef.current;
+      const geoLayer = turkeyGeoJsonLayerRef.current as any;
+      if (map) {
+        try {
+          map.invalidateSize();
+          if (geoLayer && typeof geoLayer.getBounds === 'function') {
+            const bounds = geoLayer.getBounds();
+            if (bounds && bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [20, 20], animate: false });
+            }
+          }
+        } catch (e) {}
+      }
+    });
+    observer.observe(turkeyMapRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Main Turkey/Germany/Soviet/Yugoslavia/World Leaflet map builder and sync
   useEffect(() => {
     if (!country.regions || country.regions.length === 0 || !turkeyMapRef.current) {
       cleanupTurkeyMap();
       return;
     }
-
-    const defaultCoordsMap: Record<string, [number, number, number]> = {
-      TR: [38.9637, 35.2433, 6],
-      DE: [51.1657, 10.4515, 6],
-      DDR: [52.3, 12.6, 6.8],
-      SU: [56.0, 52.0, 3.5],
-      YU: [44.0, 18.5, 6.2],
-      CS: [49.8, 15.5, 6.8],
-      PL: [52.0, 19.5, 6.0],
-      CN: [35.8, 104.2, 4.0],
-      US: [37.0902, -95.7129, 4],
-      BR: [-14.235, -51.9253, 4],
-      JP: [36.2048, 138.2529, 5],
-      EG: [26.8206, 30.8025, 5],
-      GB: [54.3781, -3.4360, 5],
-      FR: [46.2276, 2.2137, 5.5],
-      RO: [45.9432, 24.9668, 6.2],
-      HU: [47.1625, 19.5033, 6.8],
-      IT: [41.8719, 12.5674, 5.5],
-      ES: [40.4637, -3.7492, 5.5],
-      IN: [20.5937, 78.9629, 4.5],
-      CA: [56.1304, -106.3468, 3.5],
-      AU: [-25.2744, 133.7751, 4.0],
-      MX: [23.6345, -102.5528, 5.0],
-      ID: [-0.7893, 113.9213, 4.5],
-      KR: [35.9078, 127.7669, 6.5],
-      AR: [-38.4161, -63.6167, 4.0],
-      ZA: [-30.5595, 22.9375, 5.0],
-      RU: [61.5240, 95.3188, 3.2],
-      IS: [64.9631, -18.6000, 6.2],
-      PT: [39.3999, -8.2245, 6.5],
-      CL: [-35.6751, -71.5430, 4.5],
-      UA: [48.3794, 31.1656, 5.8],
-      SE: [60.1282, 16.6435, 5.0],
-      GR: [39.0742, 22.5000, 6.2],
-      TW: [23.6978, 120.9605, 7.2],
-      SA: [23.8859, 45.0792, 5.2],
-      IR: [32.4279, 53.6880, 5.2],
-      IL: [31.0461, 34.8516, 7.0],
-      PS: [31.9522, 35.2332, 8.0]
-    };
 
     if (!turkeyMapRef.current) return;
 
@@ -1909,14 +1786,10 @@ const getPolygonCenter = (feat: any) => {
     }
 
     if (!turkeyMapInstanceRef.current) {
-      const coordEntry = defaultCoordsMap[country.id] || [38.9637, 35.2433, 5];
-      let initialCenter: [number, number] = [coordEntry[0], coordEntry[1]];
-      let initialZoom = coordEntry[2];
-      
       let mapOptions: any = {
-        center: initialCenter,
-        zoom: initialZoom,
-        minZoom: 2.0,
+        center: [20, 0],
+        zoom: 2,
+        minZoom: 1.5,
         maxZoom: 18,
         zoomSnap: 0.1,
         zoomDelta: 0.5,
@@ -1976,11 +1849,10 @@ const getPolygonCenter = (feat: any) => {
 
     const map = turkeyMapInstanceRef.current;
 
-    // Pan and zoom to correct country coordinates on switch
+    // Track country changes
     if (lastCountryIdRef.current !== country.id) {
       lastCountryIdRef.current = country.id;
-      const targetCoords = defaultCoordsMap[country.id] || [38.9637, 35.2433, 6];
-      map.setView([targetCoords[0], targetCoords[1]], targetCoords[2]);
+      hasFitBoundsForCountryRef.current = null;
     }
     
     // Clear old layers/markers robustly
@@ -2119,8 +1991,8 @@ const getPolygonCenter = (feat: any) => {
 
       if (worldGeoJsonData && worldGeoJsonData.features) {
         const filteredFeatures = worldGeoJsonData.features.filter((f: any) => {
-          const fName = String(f?.properties?.name || f?.properties?.NAME || f?.id || '').toLowerCase();
-          const fId = String(f?.id || f?.properties?.ISO_A3 || '').toUpperCase();
+          const fName = String(f?.properties?.name || f?.properties?.NAME || f?.properties?.admin || f?.properties?.ADMIN || f?.id || '').toLowerCase();
+          const fId = String(f?.id || f?.properties?.ISO_A3 || f?.properties?.adm0_a3 || f?.properties?.ADM0_A3 || '').toUpperCase();
           if (country.id === 'TR' && (fName.includes('turkey') || fName.includes('turkiye') || fId === 'TUR')) return false;
           if ((country.id === 'DE' || country.id === 'DDR') && (fName.includes('germany') || fId === 'DEU' || fId === 'DDR')) return false;
           if (country.id === 'US' && (fName.includes('united states') || fName.includes('usa') || fId === 'USA')) return false;
@@ -2138,6 +2010,9 @@ const getPolygonCenter = (feat: any) => {
           if (country.id === 'RU' && (fId === 'RUS' || fName.includes('russia'))) return false;
           if (country.id === 'UA' && (fId === 'UKR' || fName.includes('ukraine'))) return false;
           if (country.id === 'SE' && (fId === 'SWE' || fName.includes('sweden'))) return false;
+          if (country.id === 'FI' && (fId === 'FIN' || fName.includes('finland') || fName.includes('suomi'))) return false;
+          if (country.id === 'NO' && (fId === 'NOR' || fName.includes('norway') || fName.includes('norge'))) return false;
+          if (country.id === 'CH' && (fId === 'CHE' || fName.includes('switzerland') || fName.includes('suisse') || fName.includes('schweiz') || fName.includes('svizzera'))) return false;
           if (country.id === 'PT' && (fId === 'PRT' || fName.includes('portugal'))) return false;
           if (country.id === 'GR' && (fId === 'GRC' || fName.includes('greece'))) return false;
           if (country.id === 'IS' && (fId === 'ISL' || fName.includes('iceland'))) return false;
@@ -2166,8 +2041,8 @@ const getPolygonCenter = (feat: any) => {
 
         worldBgLayerRef.current = L.geoJSON({ type: 'FeatureCollection', features: filteredFeatures } as any, {
           style: (feature: any) => {
-            const fId = String(feature?.id || feature?.properties?.ISO_A3 || '').toUpperCase();
-            const fName = String(feature?.properties?.name || feature?.properties?.NAME || '').toLowerCase();
+            const fId = String(feature?.id || feature?.properties?.ISO_A3 || feature?.properties?.adm0_a3 || feature?.properties?.ADM0_A3 || '').toUpperCase();
+            const fName = String(feature?.properties?.name || feature?.properties?.NAME || feature?.properties?.admin || feature?.properties?.ADMIN || '').toLowerCase();
             const isHistoricalScenario = scenario === '1950' || scenario === '1936' || scenario === '1920' || scenario === '1914';
             const isSovietUnion = ['RUS', 'UKR', 'BLR', 'KAZ', 'UZB', 'TKM', 'TJK', 'KGZ', 'GEO', 'ARM', 'AZE', 'MDA', 'EST', 'LVA', 'LTU', 'SUN'].includes(fId) || fName.includes('russia') || fName.includes('soviet');
             const isYugo = ['SRB', 'HRV', 'SVN', 'BIH', 'MKD', 'MNE', 'KOS', 'KVX', 'YUG'].includes(fId) || fName.includes('serbia') || fName.includes('croatia') || fName.includes('bosnia') || fName.includes('slovenia') || fName.includes('macedonia') || fName.includes('montenegro');
@@ -2223,10 +2098,16 @@ const getPolygonCenter = (feat: any) => {
 
           const normName = normalizeName(getFeatureName(feature));
           let regionId = getRegionIdFromNormalizedName(normName, country.id);
-          let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
-          if (!reg) {
-            reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-          }
+          let reg = country.regions.find(r => 
+            r.id === regionId || 
+            normalizeName(r.id) === regionId ||
+            normalizeName(r.id) === normalizeName(regionId) ||
+            r.id === `${country.id}_${normName}` ||
+            normalizeName(r.id) === normName || 
+            normalizeName(r.name) === normName ||
+            normalizeName(r.name).includes(normName) ||
+            normName.includes(normalizeName(r.name))
+          );
           if (reg) {
             regionId = reg.id;
           }
@@ -2393,10 +2274,16 @@ const getPolygonCenter = (feat: any) => {
           const normName = normalizeName(getFeatureName(feature));
           let regionId = getRegionIdFromNormalizedName(normName, country.id);
 
-          let reg = country.regions.find(r => r.id === regionId || normalizeName(r.id) === regionId);
-          if (!reg) {
-            reg = country.regions.find(r => normalizeName(r.id) === normName || normalizeName(r.name) === normName);
-          }
+          let reg = country.regions.find(r => 
+            r.id === regionId || 
+            normalizeName(r.id) === regionId ||
+            normalizeName(r.id) === normalizeName(regionId) ||
+            r.id === `${country.id}_${normName}` ||
+            normalizeName(r.id) === normName || 
+            normalizeName(r.name) === normName ||
+            normalizeName(r.name).includes(normName) ||
+            normName.includes(normalizeName(r.name))
+          );
           if (reg) {
             regionId = reg.id;
           }
@@ -2499,103 +2386,32 @@ const getPolygonCenter = (feat: any) => {
 
       turkeyGeoJsonLayerRef.current = geoLayer;
       
-      if (hasFitBoundsForCountryRef.current !== country.id) {
-        try {
-          map.fitBounds(geoLayer.getBounds(), { padding: [20, 20], animate: false });
+      try {
+        const bounds = geoLayer.getBounds();
+        if (bounds && bounds.isValid()) {
+          map.invalidateSize();
+          map.fitBounds(bounds, { padding: [20, 20], animate: false });
           hasFitBoundsForCountryRef.current = country.id;
-        } catch(e) {}
-      }
+        }
+      } catch(e) {}
 
       // In DISTRICTS mode we hide the province outlines layer entirely — only the district layer is drawn
       provinceOverlayLayerRef.current = null;
-    worldBgLayerRef.current = null;
+      worldBgLayerRef.current = null;
     } else {
-      // Fallback: Render point check markers if geoJsonData hasn't finished loading over network yet
-      const coordEntry = defaultCoordsMap[country.id] || [38.9637, 35.2433, 5];
-      country.regions.forEach((reg, idx) => {
-        let lat = 0;
-        let lng = 0;
-        const centerCoord = provinceCentersRef.current[reg.id];
-        const geoProv = TURKEY_MAP_MUNICIPALITIES_GEOGRAPHIC.find(p => p.id === reg.id);
-
-        if (centerCoord) {
-          lat = centerCoord.lat;
-          lng = centerCoord.lng;
-        } else if (geoProv) {
-          lat = geoProv.lat;
-          lng = geoProv.lng;
-        } else {
-          const total = Math.max(1, country.regions.length);
-          const angle = (idx / total) * 2 * Math.PI;
-          const radius = 1.2 + (idx % 3) * 0.7;
-          lat = coordEntry[0] + Math.sin(angle) * radius;
-          lng = coordEntry[1] + Math.cos(angle) * radius * 1.35;
-        }
-
-        // Save center coordinates dynamically
-        provinceCentersRef.current[reg.id] = { lat, lng };
-
-        const isSelected = selectedRegion && selectedRegion.id === reg.id;
-        
-        let maxSupport = 0;
-        let leadingPartyId = reg.ownerPartyId;
-        Object.entries(reg.supports).forEach(([pid, val]) => {
-          const numVal = val as number;
-          if (numVal > maxSupport) {
-            maxSupport = numVal;
-            leadingPartyId = pid;
-          }
-        });
-
-        let color = '#64748b';
-        if (leadingPartyId === party.id) {
-          color = party.color;
-        } else {
-          color = getRivalColor(leadingPartyId);
-        }
-
-        const marker = L.circleMarker([lat, lng], {
-          radius: isSelected ? 14 : 9,
-          fillColor: color,
-          fillOpacity: isSelected ? 0.95 : 0.75,
-          color: isSelected ? color : (darkMode ? '#1e293b' : '#cbd5e1'),
-          weight: isSelected ? 3.0 : 1.2,
-        });
-
-        marker.on('click', () => {
-          setSelectedRegion(reg);
-        });
-
-        const rivalHtmlList = Object.entries(reg.supports)
-          .sort(([, a], [, b]) => (b as number) - (a as number))
-          .map(([pid, val]) => {
-            const isMe = pid === party.id;
-            const pName = isMe ? party.name : getRivalName(pid);
-            const pColor = isMe ? party.color : getRivalColor(pid);
-            const valNum = val as number;
-            return `<div class="flex items-center justify-between gap-3 text-[10px] font-mono leading-tight mt-0.5" style="color: ${pColor}; font-weight: ${isMe ? 'bold' : 'normal'}">
-              <span>${pName}:</span>
-              <span>%${valNum.toFixed(1)}</span>
-            </div>`;
-          }).join('');
-
-        marker.bindTooltip(`
-          <div class="p-1 px-1.5 text-xs font-sans text-slate-100 flex flex-col gap-1">
-            <strong class="block text-sm border-b border-slate-700/50 pb-1 text-white">${reg.name}</strong>
-            <div class="text-[10px] text-slate-400">${country.id === 'US' ? 'Governor' : country.id === 'DE' ? 'Minister-President' : 'Mayor'}: <strong class="text-slate-200">${reg.mayorName || getPartyGovernorForRegion(reg.name, reg.ownerPartyId, country.id, party, country.rivals)}</strong></div>
-            <div class="mt-1 pt-1 border-t border-slate-800/40">
-              ${rivalHtmlList}
-            </div>
-          </div>
-        `, {
-          direction: 'top',
-          opacity: 0.98,
-          className: 'custom-map-tooltip'
-        });
-
-        marker.addTo(map);
-        turkeyMarkersRef.current.push(marker);
-      });
+      // Map data unavailable or loading - clean up existing layers without rendering fake placeholder circles
+      if (turkeyGeoJsonLayerRef.current) {
+        map.removeLayer(turkeyGeoJsonLayerRef.current);
+        turkeyGeoJsonLayerRef.current = null;
+      }
+      if (provinceOverlayLayerRef.current) {
+        map.removeLayer(provinceOverlayLayerRef.current);
+        provinceOverlayLayerRef.current = null;
+      }
+      if (worldBgLayerRef.current) {
+        map.removeLayer(worldBgLayerRef.current);
+        worldBgLayerRef.current = null;
+      }
     }
 
     // DISTRICT OVERLAY VIEW COGNITIVE FOCUS (Sets map viewport view in Turkish selected provinces)
@@ -2706,7 +2522,8 @@ const getPolygonCenter = (feat: any) => {
         return boostRegionPlayerSupport(r, spillover);
       }
     });
-    const updatedCountry = { ...country, regions: updatedRegions };
+    const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, country.id, party, country.parties);
+    const updatedCountry = { ...country, regions: syncedRegions };
     onUpdateCountry(updatedCountry);
 
     const updatedParty = {
@@ -2719,7 +2536,8 @@ const getPolygonCenter = (feat: any) => {
     
 
     // Sync selectedRegion & selectedDistrict
-    setSelectedRegion(updatedRegion);
+    const newlySyncedSelectedRegion = syncedRegions.find(r => r.id === selectedRegion.id) || updatedRegion;
+    setSelectedRegion(newlySyncedSelectedRegion);
     setSelectedDistrict({
       ...selectedDistrict,
       supports: updatedDistrictSupports,
@@ -2777,7 +2595,8 @@ const getPolygonCenter = (feat: any) => {
         return boostRegionPlayerSupport(r, spillover);
       }
     });
-    const updatedCountry = { ...country, regions: updatedRegions };
+    const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, country.id, party, country.parties);
+    const updatedCountry = { ...country, regions: syncedRegions };
     onUpdateCountry(updatedCountry);
 
     const updatedParty = { 
@@ -2787,7 +2606,7 @@ const getPolygonCenter = (feat: any) => {
     };
     onUpdateParty(updatedParty);
     
-    setSelectedRegion(updatedRegion);
+    setSelectedRegion(syncedRegions.find(r => r.id === region.id) || updatedRegion);
   };
 
   // Build a physical party headquarters (-$110k, permanent infrastructure upgrade)
@@ -2828,7 +2647,8 @@ const getPolygonCenter = (feat: any) => {
         return boostRegionPlayerSupport(r, 0.5);
       }
     });
-    const updatedCountry = { ...country, regions: updatedRegions };
+    const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, country.id, party, country.parties);
+    const updatedCountry = { ...country, regions: syncedRegions };
     onUpdateCountry(updatedCountry);
 
     const updatedParty = {
@@ -2839,7 +2659,7 @@ const getPolygonCenter = (feat: any) => {
     };
     onUpdateParty(updatedParty);
     
-    setSelectedRegion(finalRegion);
+    setSelectedRegion(syncedRegions.find(r => r.id === region.id) || finalRegion);
   };
 
   // Helper logic to shift supports from rivals to player
@@ -2909,7 +2729,8 @@ const getPolygonCenter = (feat: any) => {
         return boostRegionPlayerSupport(r, spillover);
       }
     });
-    const updatedCountry = { ...country, regions: updatedRegions };
+    const syncedRegions = syncRegionOwnersAndMayors(updatedRegions, country.id, party, country.parties);
+    const updatedCountry = { ...country, regions: syncedRegions };
     onUpdateCountry(updatedCountry);
 
     const finalBudget = Math.max(0, party.budget - choice.budgetCost);
@@ -2927,7 +2748,7 @@ const getPolygonCenter = (feat: any) => {
 
     finalFeedback += ` Your regional support changed by %${finalChange >= 0 ? '+' : ''}${finalChange.toFixed(1)} under this demographic wave.`;
     setSpeechFeedback(finalFeedback);
-    setSelectedRegion(updatedRegion);
+    setSelectedRegion(syncedRegions.find(r => r.id === selectedRegion.id) || updatedRegion);
   };
 
   const handleCloseSpeech = () => {
@@ -3063,6 +2884,13 @@ const getPolygonCenter = (feat: any) => {
                 ref={turkeyMapRef} 
                 className="absolute inset-0 w-full h-full z-10" 
               />
+              {mapError && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm p-6 text-center">
+                  <AlertCircle className="w-10 h-10 text-rose-500 mb-2" />
+                  <h3 className="text-base font-bold text-slate-100 mb-1">{mapError}</h3>
+                  <p className="text-xs text-slate-400 max-w-sm">No map boundary file could be loaded for this country.</p>
+                </div>
+              )}
               {/* Custom Map Control Panel: Zoom and View Modes */}
               <div id="custom-map-controls" className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur border border-slate-700/50 p-1.5 rounded-xl shadow-2xl">
                 {/* Zoom In */}

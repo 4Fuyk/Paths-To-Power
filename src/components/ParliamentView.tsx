@@ -1095,13 +1095,16 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                     const partnerSeats = rivalsSeatsData.find(r => r.id === partner.id)?.seats || 0;
                     const leverage = partnerSeats / (playerSeatsCount || 1);
 
-                    const isSameIdeologyGroup = 
-                      (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
-                      (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
-                      (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
-                      (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
-                      (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
-                      (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"));
+                    const isSameIdeologyGroup = Boolean(
+                      party?.ideology && partner?.ideology && (
+                        (party.ideology.includes("Social") && partner.ideology.includes("Social")) ||
+                        (party.ideology.includes("Left") && partner.ideology.includes("Left")) ||
+                        (party.ideology.includes("Conservative") && partner.ideology.includes("Conservative")) ||
+                        (party.ideology.includes("Right") && partner.ideology.includes("Right")) ||
+                        (party.ideology.includes("Liberal") && partner.ideology.includes("Liberal")) ||
+                        (party.ideology.includes("Centrist") && partner.ideology.includes("Centrist"))
+                      )
+                    );
 
                     const partnerBaseChance = 30 + (isSameIdeologyGroup ? 30 : 10);
                     baseChanceSum += partnerBaseChance;

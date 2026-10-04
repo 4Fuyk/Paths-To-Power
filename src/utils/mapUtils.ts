@@ -249,6 +249,147 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
     return `IT_${mapped}`;
   }
 
+  if (countryId === 'CH') {
+    const chMap: Record<string, string> = {
+      'vaud': 'vaud',
+      'vaudlausanne': 'vaud',
+      'lucerne': 'luzern',
+      'luzern': 'luzern',
+      'geneve': 'geneve',
+      'geneva': 'geneve',
+      'genf': 'geneve',
+      'zurich': 'zurich',
+      'zuerich': 'zurich',
+      'bern': 'bern',
+      'berne': 'bern',
+      'aargau': 'aargau',
+      'argovie': 'aargau',
+      'sanktgallen': 'sanktgallen',
+      'stgallen': 'sanktgallen',
+      'ticino': 'ticino',
+      'tessin': 'ticino',
+      'valais': 'valais',
+      'wallis': 'valais',
+      'basellandschaft': 'basellandschaft',
+      'baselcountry': 'basellandschaft',
+      'fribourg': 'fribourg',
+      'freiburg': 'fribourg',
+      'solothurn': 'solothurn',
+      'soleure': 'solothurn',
+      'thurgau': 'thurgau',
+      'thurgovie': 'thurgau',
+      'baselstadt': 'baselstadt',
+      'baselcity': 'baselstadt',
+      'graubunden': 'graubunden',
+      'grisons': 'graubunden',
+      'grigioni': 'graubunden',
+      'neuchatel': 'neuchatel',
+      'neuenburg': 'neuchatel',
+      'schwyz': 'schwyz',
+      'zug': 'zug',
+      'schaffhausen': 'schaffhausen',
+      'schaffhouse': 'schaffhausen',
+      'jura': 'jura',
+      'appenzellausserrhoden': 'appenzellausserrhoden',
+      'appenzellauserrhoden': 'appenzellausserrhoden',
+      'nidwalden': 'nidwalden',
+      'nidwald': 'nidwalden',
+      'glarus': 'glarus',
+      'glaris': 'glarus',
+      'obwalden': 'obwalden',
+      'obwald': 'obwalden',
+      'uri': 'uri',
+      'appenzellinnerrhoden': 'appenzellinnerrhoden'
+    };
+    const mapped = chMap[normName] || normName;
+    return `CH_${mapped}`;
+  }
+
+  if (countryId === 'SE') {
+    const seMap: Record<string, string> = {
+      'stockholm': 'stockholm',
+      'vastragotaland': 'vastragotaland',
+      'skane': 'skane',
+      'ostergotland': 'ostergotland',
+      'uppsala': 'uppsala',
+      'jonkoping': 'jonkoping',
+      'halland': 'halland',
+      'orebro': 'orebro',
+      'dalarna': 'dalarna',
+      'gavleborg': 'gavleborg',
+      'varmland': 'varmland',
+      'vasterbotten': 'vasterbotten',
+      'norrbotten': 'norrbotten',
+      'vastmanland': 'vastmanland',
+      'vasternorrland': 'vasternorrland',
+      'sodermanland': 'sodermanland',
+      'kronoberg': 'kronoberg',
+      'kalmar': 'kalmar',
+      'blekinge': 'blekinge',
+      'jamtland': 'jamtland',
+      'gotland': 'gotland'
+    };
+    const mapped = seMap[normName] || normName;
+    return `SE_${mapped}`;
+  }
+
+  if (countryId === 'NO') {
+    const noMap: Record<string, string> = {
+      'oslo': 'oslo',
+      'viken': 'akershus',
+      'akershus': 'akershus',
+      'vestland': 'vestland',
+      'rogaland': 'rogaland',
+      'trondelag': 'trondelag',
+      'innlandet': 'innlandet',
+      'agder': 'agder',
+      'vestfoldogtelemark': 'vestfold',
+      'vestfold': 'vestfold',
+      'telemark': 'telemark',
+      'tromsogfinnmark': 'troms',
+      'troms': 'troms',
+      'finnmark': 'finnmark',
+      'nordland': 'nordland',
+      'moreogromsdal': 'moreogromsdal',
+      'ostfold': 'ostfold',
+      'buskerud': 'buskerud'
+    };
+    const mapped = noMap[normName] || normName;
+    return `NO_${mapped}`;
+  }
+
+  if (countryId === 'FI') {
+    const fiMap: Record<string, string> = {
+      'uusimaa': 'uusimaa',
+      'pirkanmaa': 'pirkanmaa',
+      'varsinaissuomi': 'varsinaissuomi',
+      'pohjoispohjanmaa': 'pohjoispohjanmaa',
+      'keskisuomi': 'keskisuomi',
+      'satakunta': 'satakunta',
+      'kuopio': 'pohjoissavo',
+      'pohjoissavo': 'pohjoissavo',
+      'paijathame': 'paijathame',
+      'etelasavo': 'etelasavo',
+      'pohjoiskarjala': 'pohjoiskarjala',
+      'etelasavoetela': 'etelasavo',
+      'etelapohjanmaa': 'etelapohjanmaa',
+      'kantaheme': 'kantahame',
+      'kantahame': 'kantahame',
+      'pohjanmaa': 'pohjanmaa',
+      'lappi': 'lappi',
+      'lapland': 'lappi',
+      'kymenlaakso': 'kymenlaakso',
+      'etela-karjala': 'etelakarjala',
+      'etelakarjala': 'etelakarjala',
+      'kainuu': 'kainuu',
+      'keskipohjanmaa': 'keskipohjanmaa',
+      'ahvenanmaa': 'ahvenanmaa',
+      'aland': 'ahvenanmaa'
+    };
+    const mapped = fiMap[normName] || normName;
+    return `FI_${mapped}`;
+  }
+
   if (countryId === 'ID') {
     const idMap: Record<string, string> = {
       'jawabarat': 'westjava',
@@ -378,6 +519,71 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
 
   if (countryId === 'HU') {
     return `HU_${normName}`;
+  }
+
+  if (countryId === 'FI') {
+    if (normName.includes('eastern')) return 'FI_easternfinland';
+    if (normName.includes('lapland') || normName.includes('lappi')) return 'FI_lapland';
+    if (normName.includes('oulu')) return 'FI_oulu';
+    if (normName.includes('southern') || normName.includes('etela') || normName.includes('helsinki')) return 'FI_southernfinland';
+    if (normName.includes('western') || normName.includes('lansi') || normName.includes('tampere')) return 'FI_westernfinland';
+    return `FI_${normName}`;
+  }
+
+  if (countryId === 'NO') {
+    if (normName.includes('akershus')) return 'NO_akershus';
+    if (normName.includes('stfold') || normName.includes('ostfold') || normName.includes('astfold')) return 'NO_ostfold';
+    if (normName.includes('austagder')) return 'NO_austagder';
+    if (normName.includes('buskerud')) return 'NO_buskerud';
+    if (normName.includes('finnmark')) return 'NO_finnmark';
+    if (normName.includes('hedmark')) return 'NO_hedmark';
+    if (normName.includes('hordaland') || normName.includes('bergen')) return 'NO_hordaland';
+    if (normName.includes('mre') || normName.includes('more') || normName.includes('romsdal')) return 'NO_moreogromsdal';
+    if (normName.includes('nordtr')) return 'NO_nordtrondelag';
+    if (normName.includes('srtr') || normName.includes('sortr') || normName.includes('trondelag') || normName.includes('trondheim')) return 'NO_sortrondelag';
+    if (normName.includes('nordland')) return 'NO_nordland';
+    if (normName.includes('oppland')) return 'NO_oppland';
+    if (normName.includes('oslo')) return 'NO_oslo';
+    if (normName.includes('rogaland') || normName.includes('stavanger')) return 'NO_rogaland';
+    if (normName.includes('sogn') || normName.includes('fjordane')) return 'NO_sognogfjordane';
+    if (normName.includes('telemark')) return 'NO_telemark';
+    if (normName.includes('troms')) return 'NO_troms';
+    if (normName.includes('vestagder')) return 'NO_vestagder';
+    if (normName.includes('vestfold')) return 'NO_vestfold';
+    return `NO_${normName}`;
+  }
+
+  if (countryId === 'SE') {
+    if (normName.includes('blekinge')) return 'SE_blekinge';
+    if (normName.includes('dalarna')) return 'SE_dalarna';
+    if (normName.includes('gavleborg')) return 'SE_gavleborg';
+    if (normName.includes('gotland')) return 'SE_gotland';
+    if (normName.includes('halland')) return 'SE_halland';
+    if (normName.includes('jamtland')) return 'SE_jamtland';
+    if (normName.includes('jonkoping')) return 'SE_jonkoping';
+    if (normName.includes('kalmar')) return 'SE_kalmar';
+    if (normName.includes('kronoberg')) return 'SE_kronoberg';
+    if (normName.includes('norrbotten')) return 'SE_norrbotten';
+    if (normName.includes('orebro')) return 'SE_orebro';
+    if (normName.includes('ostergotland')) return 'SE_ostergotland';
+    if (normName.includes('skane')) return 'SE_skane';
+    if (normName.includes('sodermanland')) return 'SE_sodermanland';
+    if (normName.includes('stockholm')) return 'SE_stockholm';
+    if (normName.includes('uppsala')) return 'SE_uppsala';
+    if (normName.includes('varmland')) return 'SE_varmland';
+    if (normName.includes('vasterbotten')) return 'SE_vasterbotten';
+    if (normName.includes('vasternorrland')) return 'SE_vasternorrland';
+    if (normName.includes('vastmanland')) return 'SE_vastmanland';
+    if (normName.includes('vastragotaland') || normName.includes('goteborg')) return 'SE_vastragotaland';
+    return `SE_${normName}`;
+  }
+
+  if (countryId === 'CH') {
+    if (normName.includes('lucerne') || normName.includes('luzern')) return 'CH_luzern';
+    if (normName.includes('geneve') || normName.includes('geneva') || normName.includes('genf')) return 'CH_geneve';
+    if (normName.includes('graubunden') || normName.includes('grisons')) return 'CH_graubunden';
+    if (normName.includes('zurich') || normName.includes('zuerich')) return 'CH_zurich';
+    return `CH_${normName}`;
   }
 
   if (countryId === 'SU') {
@@ -522,6 +728,69 @@ export const getRegionIdFromNormalizedName = (normName: string, countryId?: stri
     if (normName.includes('hebron') || normName.includes('khalil')) return 'PS_southernwestbankhebron';
     if (normName.includes('nablus') || normName.includes('jenin') || normName.includes('tulkarm') || normName.includes('qalqilya') || normName.includes('salfit') || normName.includes('tubas') || normName.includes('jericho')) return 'PS_northernwestbanknablusjenin';
     return `PS_${normName}`;
+  }
+
+  if (countryId === 'LY') {
+    if (normName.includes('tripoli') || normName.includes('tarabulus')) return 'LY_tripoli';
+    if (normName.includes('misrata')) return 'LY_misrata';
+    if (normName.includes('zawiy') || normName.includes('zawiah')) return 'LY_zawiya';
+    if (normName.includes('gharyan') || normName.includes('jabalalgharbi')) return 'LY_gharyan';
+    if (normName.includes('sirte') || normName.includes('surt')) return 'LY_sirte';
+    if (normName.includes('benghazi') || normName.includes('banghazi')) return 'LY_benghazi';
+    if (normName.includes('tobruk') || normName.includes('butnan')) return 'LY_tobruk';
+    if (normName.includes('sabha') || normName.includes('sebha')) return 'LY_sabha';
+    if (normName.includes('kufra')) return 'LY_kufra';
+    return `LY_${normName}`;
+  }
+
+  if (countryId === 'SY') {
+    if (normName.includes('damascus') || normName.includes('dimashq')) return 'SY_damascus';
+    if (normName.includes('aleppo') || normName.includes('halab')) return 'SY_aleppo';
+    if (normName.includes('latakia') || normName.includes('ladhiqiyah')) return 'SY_latakia';
+    if (normName.includes('homs') || normName.includes('hims')) return 'SY_homs';
+    if (normName.includes('idlib') || normName.includes('idleb')) return 'SY_idlib';
+    if (normName.includes('hasakah') || normName.includes('qamishli')) return 'SY_hasakah';
+    if (normName.includes('raqqa')) return 'SY_raqqa';
+    if (normName.includes('deirez') || normName.includes('dayrazzawr')) return 'SY_deirez';
+    return `SY_${normName}`;
+  }
+
+  if (countryId === 'SD') {
+    if (normName.includes('khartoum')) return 'SD_khartoum';
+    if (normName.includes('portsudan') || normName.includes('redsea')) return 'SD_portsudan';
+    if (normName.includes('rivernile')) return 'SD_rivernile';
+    if (normName.includes('darfur')) return 'SD_darfur';
+    if (normName.includes('kordofan')) return 'SD_kordofan';
+    if (normName.includes('kassala')) return 'SD_kassala';
+    if (normName.includes('gedarif') || normName.includes('qadarif')) return 'SD_gedarif';
+    if (normName.includes('jazirah') || normName.includes('wadmadani')) return 'SD_wadmadani';
+    return `SD_${normName}`;
+  }
+
+  if (countryId === 'MM') {
+    if (normName.includes('naypyidaw')) return 'MM_naypyidaw';
+    if (normName.includes('yangon') || normName.includes('rangoon')) return 'MM_yangon';
+    if (normName.includes('mandalay')) return 'MM_mandalay';
+    if (normName.includes('bago') || normName.includes('pegu')) return 'MM_bago';
+    if (normName.includes('shan')) return 'MM_shan';
+    if (normName.includes('kachin')) return 'MM_kachin';
+    if (normName.includes('rakhine') || normName.includes('arakan')) return 'MM_rakhine';
+    if (normName.includes('kayin') || normName.includes('karen') || normName.includes('kayah')) return 'MM_kayah';
+    return `MM_${normName}`;
+  }
+
+  if (countryId === 'YE') {
+    if (normName.includes('sanaa') || normName.includes('asimah')) return 'YE_sanaa';
+    if (normName.includes('hodeidah') || normName.includes('hudaydah')) return 'YE_hodeidah';
+    if (normName.includes('saada') || normName.includes('sadah')) return 'YE_saada';
+    if (normName.includes('dhamar')) return 'YE_dhamar';
+    if (normName.includes('ibb')) return 'YE_ibb';
+    if (normName.includes('aden')) return 'YE_aden';
+    if (normName.includes('marib')) return 'YE_marib';
+    if (normName.includes('hadramawt')) return 'YE_hadramawt';
+    if (normName.includes('shabwah')) return 'YE_shabwah';
+    if (normName.includes('socotra')) return 'YE_socotra';
+    return `YE_${normName}`;
   }
 
   if (countryId === 'CN') {

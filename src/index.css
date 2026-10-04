@@ -39,3 +39,30 @@ path:focus {
   filter: grayscale(1) contrast(1.4) brightness(1.1) !important;
   opacity: 0.16 !important;
 }
+
+/* Demilitarized Buffer Zone (DMZ) Hatched Neutral Style (Requirement 2) */
+.buffer-zone-hatched {
+  fill: url(#buffer-hatch-pattern) !important;
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: 4, 3 !important;
+  fill-opacity: 0.85 !important;
+}
+
+.buffer-zone-hatched:hover {
+  stroke: #e2e8f0 !important;
+  stroke-width: 3px !important;
+}
+
+/* Neutral hatched background fallback for HTML/SVG elements */
+.bg-hatched-neutral {
+  background-color: #334155;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    rgba(203, 213, 225, 0.35) 5px,
+    rgba(203, 213, 225, 0.35) 9px
+  );
+}
+

@@ -39,11 +39,11 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   const historicalCandidates = getCandidatesForEraAndCountry(countryCode, safeScenario);
   
   // Coalition active partner names
-  const playerCoalition = coalitions.find(c => c.parties.includes(party.name));
-  const coalitionPartyNames = playerCoalition ? playerCoalition.parties : [];
+  const playerCoalition = coalitions?.find(c => c.parties?.includes(party?.name));
+  const coalitionPartyNames = playerCoalition ? (playerCoalition.parties || []) : [];
 
   const isTechnocratOrNonPartisan = (candParty: string) => {
-    const cp = candParty.toLowerCase();
+    const cp = (candParty || '').toLowerCase();
     return cp.includes('independent') || cp.includes('bağımsız') || cp.includes('technocrat') ||
            cp.includes('military') || cp.includes('command') || cp.includes('central bank') ||
            cp.includes('civil service') || cp.includes('judiciary') || cp.includes('nato') ||
@@ -51,12 +51,13 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
   };
 
   const isPlayerOrCoalitionParty = (candParty: string) => {
-    const cp = candParty.toLowerCase();
-    const pName = (party.name || '').toLowerCase();
-    const pId = (party.id || '').toLowerCase();
+    const cp = (candParty || '').toLowerCase();
+    const pName = (party?.name || '').toLowerCase();
+    const pId = (party?.id || '').toLowerCase();
 
     // Player party match
-    if (cp.includes(pName) || pName.includes(cp) || cp.includes(pId) || pId.includes(cp)) return true;
+    if (pName && (cp.includes(pName) || pName.includes(cp))) return true;
+    if (pId && (cp.includes(pId) || pId.includes(cp))) return true;
 
     // Check acronym / first token
     const pTokens = pName.split(/[\s(/)]+/).filter(t => t.length >= 2);
@@ -64,8 +65,8 @@ export const CabinetView: React.FC<CabinetViewProps> = ({
 
     // Coalition partner match
     return coalitionPartyNames.some(cpName => {
-      const low = cpName.toLowerCase();
-      return cp.includes(low) || low.includes(cp);
+      const low = (cpName || '').toLowerCase();
+      return low && (cp.includes(low) || low.includes(cp));
     });
   };
 

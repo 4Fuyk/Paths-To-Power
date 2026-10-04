@@ -5,6 +5,7 @@
 
 import { Country, VoterGroup, Bill, RivalParty, Region, SpeechCard } from '../types';
 import { getPartyGovernorForRegion } from '../utils/mayorUtils';
+import { CIVIL_WAR_PLAYABLE_COUNTRIES, HYBRID_PLAYABLE_COUNTRIES, REPUBLIC_OF_CONGO } from '../data/civilWarCountries';
 
 const TURKEY_PROVINCES_SPEC = [
   { name: 'Adana', seats: 15, winner: 'CHP', mayorName: 'Zeydan Karalar' },
@@ -943,92 +944,92 @@ export const getJapanRegions = () => generateRegionsFromSpec('JP', JAPAN_SPEC, [
 export const getEgyptRegions = () => generateRegionsFromSpec('EG', EGYPT_SPEC, ['NFP', 'RPP', 'WAFD', 'HDP', 'MEP', 'ESDP'], { NFP: 55, RPP: 12, WAFD: 8, HDP: 8, MEP: 5, ESDP: 3 });
 
 const RUSSIA_SPEC = [
-  { name: 'Altai Krai', seats: 4, winner: 'LDPR', mayorName: 'Governor of Altai Krai' },
-  { name: 'Republic of Mordovia', seats: 4, winner: 'UR', mayorName: 'Governor of Mordovia' },
-  { name: 'Tula Oblast', seats: 4, winner: 'UR', mayorName: 'Governor of Tula Oblast' },
-  { name: 'Kurgan Oblast', seats: 4, winner: 'LDPR', mayorName: 'Governor of Kurgan Oblast' },
-  { name: 'Ingushetia', seats: 4, winner: 'UR', mayorName: 'Governor of Ingushetia' },
-  { name: 'Khanty-Mansiysk Autonomous Okrug – Ugra', seats: 4, winner: 'UR', mayorName: 'Governor of Ugra' },
-  { name: 'Kirov Oblast', seats: 4, winner: 'CPRF', mayorName: 'Governor of Kirov Oblast' },
-  { name: 'Komi Republic', seats: 4, winner: 'UR', mayorName: 'Governor of Komi Republic' },
-  { name: 'Kostroma Oblast', seats: 4, winner: 'CPRF', mayorName: 'Governor of Kostroma Oblast' },
+  { name: 'Altai Krai', seats: 4, winner: 'CPRF', mayorName: 'Viktor Tomenko' },
+  { name: 'Republic of Mordovia', seats: 4, winner: 'UR', mayorName: 'Artyom Zdunov' },
+  { name: 'Tula Oblast', seats: 4, winner: 'UR', mayorName: 'Dmitry Milyaev' },
+  { name: 'Kurgan Oblast', seats: 4, winner: 'UR', mayorName: 'Vadim Shumkov' },
+  { name: 'Ingushetia', seats: 4, winner: 'UR', mayorName: 'Makhmud-Ali Kalimatov' },
+  { name: 'Khanty-Mansiysk Autonomous Okrug – Ugra', seats: 4, winner: 'UR', mayorName: 'Ruslan Kukharuk' },
+  { name: 'Kirov Oblast', seats: 4, winner: 'UR', mayorName: 'Aleksandr Sokolov' },
+  { name: 'Komi Republic', seats: 4, winner: 'CPRF', mayorName: 'Vladimir Uyba' },
+  { name: 'Kostroma Oblast', seats: 4, winner: 'UR', mayorName: 'Sergey Sitnikov' },
   { name: 'Krasnoyarsk Krai', seats: 8, winner: 'UR', mayorName: 'Mikhail Kotyukov' },
-  { name: 'Zabaykalsky Krai', seats: 4, winner: 'LDPR', mayorName: 'Governor of Zabaykalsky Krai' },
+  { name: 'Zabaykalsky Krai', seats: 4, winner: 'LDPR', mayorName: 'Aleksandr Osipov' },
   { name: 'Sverdlovsk Oblast', seats: 11, winner: 'UR', mayorName: 'Yevgeny Kuyvashev' },
   { name: 'Volgograd Oblast', seats: 7, winner: 'UR', mayorName: 'Andrey Bocharov' },
-  { name: 'Irkutsk Oblast', seats: 6, winner: 'CPRF', mayorName: 'Igor Kobzev' },
+  { name: 'Irkutsk Oblast', seats: 6, winner: 'UR', mayorName: 'Igor Kobzev' },
   { name: 'Perm Krai', seats: 7, winner: 'UR', mayorName: 'Dmitry Makhonin' },
-  { name: 'Pskov Oblast', seats: 4, winner: 'CPRF', mayorName: 'Governor of Pskov Oblast' },
+  { name: 'Pskov Oblast', seats: 4, winner: 'UR', mayorName: 'Mikhail Vedernikov' },
   { name: 'Rostov Oblast', seats: 11, winner: 'UR', mayorName: 'Vasily Golubev' },
-  { name: 'Ryazan Oblast', seats: 4, winner: 'UR', mayorName: 'Governor of Ryazan Oblast' },
-  { name: 'Adygea', seats: 4, winner: 'UR', mayorName: 'Governor of Adygea' },
+  { name: 'Ryazan Oblast', seats: 4, winner: 'UR', mayorName: 'Pavel Malkov' },
+  { name: 'Adygea', seats: 4, winner: 'UR', mayorName: 'Murat Kumpilov' },
   { name: 'Samara Oblast', seats: 9, winner: 'UR', mayorName: 'Vyacheslav Fedorishchev' },
-  { name: 'Khakassia', seats: 4, winner: 'UR', mayorName: 'Governor of Khakassia' },
-  { name: 'Tambov Oblast', seats: 4, winner: 'LDPR', mayorName: 'Governor of Tambov Oblast' },
+  { name: 'Khakassia', seats: 4, winner: 'CPRF', mayorName: 'Valentin Konovalov' },
+  { name: 'Tambov Oblast', seats: 4, winner: 'UR', mayorName: 'Maksim Yegorov' },
   { name: 'Tatarstan', seats: 13, winner: 'UR', mayorName: 'Rustam Minnikhanov' },
-  { name: 'Tomsk Oblast', seats: 4, winner: 'LDPR', mayorName: 'Governor of Tomsk Oblast' },
+  { name: 'Tomsk Oblast', seats: 4, winner: 'NL', mayorName: 'Vladimir Mazur' },
   { name: 'Nizhny Novgorod Oblast', seats: 10, winner: 'UR', mayorName: 'Gleb Nikitin' },
-  { name: 'Republic of Karelia', seats: 4, winner: 'UR', mayorName: 'Governor of Republic of Karelia' },
-  { name: 'Arkhangelsk Oblast', seats: 4, winner: 'CPRF', mayorName: 'Governor of Arkhangelsk Oblast' },
-  { name: 'Astrakhan Oblast', seats: 4, winner: 'CPRF', mayorName: 'Governor of Astrakhan Oblast' },
-  { name: 'Belgorod Oblast', seats: 4, winner: 'UR', mayorName: 'Governor of Belgorod Oblast' },
-  { name: 'Bryansk Oblast', seats: 4, winner: 'UR', mayorName: 'Governor of Bryansk Oblast' },
-  { name: 'Buryatia', seats: 4, winner: 'UR', mayorName: 'Governor of Buryatia' },
+  { name: 'Republic of Karelia', seats: 4, winner: 'UR', mayorName: 'Artur Parfenchikov' },
+  { name: 'Arkhangelsk Oblast', seats: 4, winner: 'UR', mayorName: 'Aleksandr Tsybulsky' },
+  { name: 'Astrakhan Oblast', seats: 4, winner: 'UR', mayorName: 'Igor Babushkin' },
+  { name: 'Belgorod Oblast', seats: 4, winner: 'UR', mayorName: 'Vyacheslav Gladkov' },
+  { name: 'Bryansk Oblast', seats: 4, winner: 'UR', mayorName: 'Aleksandr Bogomaz' },
+  { name: 'Buryatia', seats: 4, winner: 'UR', mayorName: 'Aleksey Tsydenov' },
   { name: 'Chechnya', seats: 5, winner: 'UR', mayorName: 'Ramzan Kadyrov' },
   { name: 'Chelyabinsk Oblast', seats: 9, winner: 'UR', mayorName: 'Aleksey Teksler' },
-  { name: 'Chuvashia', seats: 4, winner: 'UR', mayorName: 'Governor of Chuvashia' },
-  { name: 'Tyumen Oblast', seats: 3, winner: 'LDPR', mayorName: 'Governor of Tyumen Oblast' },
-  { name: 'North Ossetia–Alania', seats: 3, winner: 'UR', mayorName: 'Governor of North Ossetia' },
-  { name: 'Penza Oblast', seats: 3, winner: 'CPRF', mayorName: 'Governor of Penza Oblast' },
-  { name: 'Amur Oblast', seats: 3, winner: 'CPRF', mayorName: 'Governor of Amur Oblast' },
-  { name: 'Kabardino-Balkaria', seats: 3, winner: 'UR', mayorName: 'Governor of Kabardino-Balkaria' },
+  { name: 'Chuvashia', seats: 4, winner: 'SRZP', mayorName: 'Oleg Nikolayev' },
+  { name: 'Tyumen Oblast', seats: 3, winner: 'UR', mayorName: 'Aleksandr Moor' },
+  { name: 'North Ossetia–Alania', seats: 3, winner: 'UR', mayorName: 'Sergey Menyailo' },
+  { name: 'Penza Oblast', seats: 3, winner: 'UR', mayorName: 'Oleg Melnichenko' },
+  { name: 'Amur Oblast', seats: 3, winner: 'UR', mayorName: 'Vasily Orlov' },
+  { name: 'Kabardino-Balkaria', seats: 3, winner: 'UR', mayorName: 'Kazbek Kokov' },
   { name: 'Krasnodar Krai', seats: 14, winner: 'UR', mayorName: 'Veniamin Kondratyev' },
-  { name: 'Kursk Oblast', seats: 3, winner: 'CPRF', mayorName: 'Governor of Kursk Oblast' },
-  { name: 'Leningrad oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Leningrad oblast' },
-  { name: 'Mari El', seats: 3, winner: 'LDPR', mayorName: 'Governor of Mari El' },
+  { name: 'Kursk Oblast', seats: 3, winner: 'UR', mayorName: 'Aleksey Smirnov' },
+  { name: 'Leningrad oblast', seats: 3, winner: 'UR', mayorName: 'Aleksandr Drozdenko' },
+  { name: 'Mari El', seats: 3, winner: 'CPRF', mayorName: 'Yury Zaytsev' },
   { name: 'Moscow', seats: 35, winner: 'UR', mayorName: 'Sergey Sobyanin' },
   { name: 'Moscow Oblast', seats: 18, winner: 'UR', mayorName: 'Andrey Vorobyov' },
-  { name: 'Murmansk Oblast', seats: 3, winner: 'LDPR', mayorName: 'Governor of Murmansk Oblast' },
-  { name: 'Nenets Autonomous Okrug', seats: 3, winner: 'UR', mayorName: 'Governor of Nenets Okrug' },
-  { name: 'Novgorod Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Novgorod Oblast' },
-  { name: 'Novosibirsk Oblast', seats: 8, winner: 'CPRF', mayorName: 'Andrey Travnikov' },
+  { name: 'Murmansk Oblast', seats: 3, winner: 'UR', mayorName: 'Andrey Chibis' },
+  { name: 'Nenets Autonomous Okrug', seats: 3, winner: 'CPRF', mayorName: 'Yury Bezdudny' },
+  { name: 'Novgorod Oblast', seats: 3, winner: 'UR', mayorName: 'Andrey Nikitin' },
+  { name: 'Novosibirsk Oblast', seats: 8, winner: 'UR', mayorName: 'Andrey Travnikov' },
   { name: 'Omsk Oblast', seats: 6, winner: 'CPRF', mayorName: 'Vitaly Khotsenko' },
-  { name: 'Oryol Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Oryol Oblast' },
+  { name: 'Oryol Oblast', seats: 3, winner: 'CPRF', mayorName: 'Andrey Klychkov' },
   { name: 'Saint Petersburg', seats: 20, winner: 'UR', mayorName: 'Alexander Beglov' },
-  { name: 'Sakhalin Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Sakhalin Oblast' },
-  { name: 'Sakha Republic', seats: 3, winner: 'UR', mayorName: 'Governor of Sakha Republic' },
+  { name: 'Sakhalin Oblast', seats: 3, winner: 'UR', mayorName: 'Valery Limarenko' },
+  { name: 'Sakha Republic', seats: 3, winner: 'CPRF', mayorName: 'Aysen Nikolayev' },
   { name: 'Saratov Oblast', seats: 7, winner: 'UR', mayorName: 'Roman Busargin' },
-  { name: 'Smolensk Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Smolensk Oblast' },
-  { name: 'Stavropol Krai', seats: 3, winner: 'LDPR', mayorName: 'Governor of Stavropol Krai' },
-  { name: 'Tuva', seats: 3, winner: 'LDPR', mayorName: 'Governor of Tuva' },
-  { name: 'Tver Oblast', seats: 3, winner: 'LDPR', mayorName: 'Governor of Tver Oblast' },
-  { name: 'Udmurtia', seats: 3, winner: 'UR', mayorName: 'Governor of Udmurtia' },
-  { name: 'Kaluga Oblast', seats: 3, winner: 'CPRF', mayorName: 'Governor of Kaluga Oblast' },
-  { name: 'Lipetsk Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Lipetsk Oblast' },
-  { name: 'Magadan Oblast', seats: 3, winner: 'LDPR', mayorName: 'Governor of Magadan Oblast' },
-  { name: 'Ulyanovsk Oblast', seats: 3, winner: 'CPRF', mayorName: 'Governor of Ulyanovsk Oblast' },
-  { name: 'Vladimir Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Vladimir Oblast' },
-  { name: 'Vologda Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Vologda Oblast' },
-  { name: 'Yaroslavl Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Yaroslavl Oblast' },
+  { name: 'Smolensk Oblast', seats: 3, winner: 'LDPR', mayorName: 'Vasily Anokhin' },
+  { name: 'Stavropol Krai', seats: 3, winner: 'UR', mayorName: 'Vladimir Vladimirov' },
+  { name: 'Tuva', seats: 3, winner: 'UR', mayorName: 'Vladislav Khovalyg' },
+  { name: 'Tver Oblast', seats: 3, winner: 'UR', mayorName: 'Igor Rudenya' },
+  { name: 'Udmurtia', seats: 3, winner: 'UR', mayorName: 'Aleksandr Brechalov' },
+  { name: 'Kaluga Oblast', seats: 3, winner: 'UR', mayorName: 'Vladislav Shapsha' },
+  { name: 'Lipetsk Oblast', seats: 3, winner: 'UR', mayorName: 'Igor Artamonov' },
+  { name: 'Magadan Oblast', seats: 3, winner: 'UR', mayorName: 'Sergey Nosov' },
+  { name: 'Ulyanovsk Oblast', seats: 3, winner: 'CPRF', mayorName: 'Aleksey Russkikh' },
+  { name: 'Vladimir Oblast', seats: 3, winner: 'UR', mayorName: 'Aleksandr Avdeyev' },
+  { name: 'Vologda Oblast', seats: 3, winner: 'UR', mayorName: 'Georgy Filimonov' },
+  { name: 'Yaroslavl Oblast', seats: 3, winner: 'SRZP', mayorName: 'Mikhail Yevrayev' },
   { name: 'Voronezh Oblast', seats: 7, winner: 'UR', mayorName: 'Aleksandr Gusev' },
-  { name: 'Yamalo-Nenets Autonomous Okrug', seats: 3, winner: 'UR', mayorName: 'Governor of Yamalo-Nenets' },
-  { name: 'Altai Republic', seats: 3, winner: 'UR', mayorName: 'Governor of Altai Republic' },
-  { name: 'Ivanovo Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Ivanovo Oblast' },
-  { name: 'Jewish Autonomous Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Jewish Okrug' },
-  { name: 'Kalmykia', seats: 3, winner: 'UR', mayorName: 'Governor of Kalmykia' },
-  { name: 'Kamchatka Krai', seats: 3, winner: 'LDPR', mayorName: 'Governor of Kamchatka Krai' },
-  { name: 'Karachay-Cherkessia', seats: 3, winner: 'UR', mayorName: 'Governor of Karachay-Cherkessia' },
+  { name: 'Yamalo-Nenets Autonomous Okrug', seats: 3, winner: 'UR', mayorName: 'Dmitry Artyukhov' },
+  { name: 'Altai Republic', seats: 3, winner: 'UR', mayorName: 'Andrey Turchak' },
+  { name: 'Ivanovo Oblast', seats: 3, winner: 'UR', mayorName: 'Stanislav Voskresensky' },
+  { name: 'Jewish Autonomous Oblast', seats: 3, winner: 'LDPR', mayorName: 'Rostislav Goldshteyn' },
+  { name: 'Kalmykia', seats: 3, winner: 'UR', mayorName: 'Batu Khasikov' },
+  { name: 'Kamchatka Krai', seats: 3, winner: 'UR', mayorName: 'Vladimir Solodov' },
+  { name: 'Karachay-Cherkessia', seats: 3, winner: 'UR', mayorName: 'Rashid Temrezov' },
   { name: 'Kemerovo Oblast', seats: 7, winner: 'UR', mayorName: 'Ilya Seredyuk' },
-  { name: 'Khabarovsk Krai', seats: 6, winner: 'LDPR', mayorName: 'Dmitry Demeshin' },
-  { name: 'Chukotka Autonomous Okrug', seats: 3, winner: 'UR', mayorName: 'Governor of Chukotka' },
+  { name: 'Khabarovsk Krai', seats: 6, winner: 'CPRF', mayorName: 'Dmitry Demeshin' },
+  { name: 'Chukotka Autonomous Okrug', seats: 3, winner: 'UR', mayorName: 'Vladislav Kuznetsov' },
   { name: 'Dagestan', seats: 8, winner: 'UR', mayorName: 'Sergey Melikov' },
-  { name: 'Kaliningrad', seats: 3, winner: 'UR', mayorName: 'Governor of Kaliningrad' },
-  { name: 'Orenburg Oblast', seats: 3, winner: 'UR', mayorName: 'Governor of Orenburg Oblast' },
+  { name: 'Kaliningrad', seats: 3, winner: 'UR', mayorName: 'Aleksey Besprozvannykh' },
+  { name: 'Orenburg Oblast', seats: 3, winner: 'UR', mayorName: 'Denis Pasler' },
   { name: 'Primorsky Krai', seats: 6, winner: 'UR', mayorName: 'Oleg Kozhemyako' },
   { name: 'Bashkortostan', seats: 12, winner: 'UR', mayorName: 'Radiy Khabirov' }
 ];
 
-export const getRussiaRegions = () => generateRegionsFromSpec('RU', RUSSIA_SPEC, ['UR', 'CPRF', 'LDPR', 'SRZP', 'NL', 'YABLOKO'], { UR: 46, CPRF: 17, LDPR: 13, SRZP: 9, NL: 9, YABLOKO: 6 });
+export const getRussiaRegions = () => generateRegionsFromSpec('RU', RUSSIA_SPEC, ['UR', 'CPRF', 'LDPR', 'SRZP', 'NL', 'YABLOKO'], { UR: 49.8, CPRF: 18.9, LDPR: 7.5, SRZP: 7.5, NL: 5.3, YABLOKO: 3.5 });
 
 const CHILE_SPEC = [
   { name: 'Metropolitana de Santiago', seats: 47, winner: 'FA', mayorName: 'Claudio Orrego' },
@@ -1113,6 +1114,93 @@ const POLAND_2026_SPEC = [
   { name: 'Podlaskie & Warmia-Mazury', seats: 30, winner: 'PIS', mayorName: 'Tadeusz Truskolaski' }
 ];
 export const getPolandRegions2026 = () => generateRegionsFromSpec('PL', POLAND_2026_SPEC, ['KO', 'PIS', 'TD', 'LEW', 'KON', 'RAZ'], { KO: 35, PIS: 32, TD: 13, LEW: 9, KON: 8, RAZ: 3 });
+
+const FINLAND_2026_SPEC = [
+  { id: 'FI_southernfinland', name: 'Southern Finland (Etelä-Suomi & Helsinki)', seats: 85, winner: 'KOK', mayorName: 'Juhana Vartiainen' },
+  { id: 'FI_westernfinland', name: 'Western Finland (Länsi-Suomi & Tampere)', seats: 55, winner: 'SDP', mayorName: 'Kalervo Kummola' },
+  { id: 'FI_easternfinland', name: 'Eastern Finland (Itä-Suomi & Kuopio)', seats: 28, winner: 'KESK', mayorName: 'Soile Lahti' },
+  { id: 'FI_oulu', name: 'Oulu Region (Pohjois-Pohjanmaa & Kainuu)', seats: 25, winner: 'KESK', mayorName: 'Ari Alatossava' },
+  { id: 'FI_lapland', name: 'Lapland (Lappi)', seats: 7, winner: 'KESK', mayorName: 'Ulla-Kirsikka Nurminen' }
+];
+export const getFinlandRegions = () => generateRegionsFromSpec('FI', FINLAND_2026_SPEC, ['KOK', 'PS', 'SDP', 'KESK', 'VIHR', 'VAS', 'RKP', 'KD'], { KOK: 21, PS: 20, SDP: 20, KESK: 12, VIHR: 9, VAS: 9, RKP: 5, KD: 4 });
+
+const NORWAY_2026_SPEC = [
+  { id: 'NO_oslo', name: 'Oslo', seats: 20, winner: 'H', mayorName: 'Anne Lindboe' },
+  { id: 'NO_akershus', name: 'Akershus', seats: 19, winner: 'H', mayorName: 'Thomas Sjøvold' },
+  { id: 'NO_ostfold', name: 'Østfold', seats: 9, winner: 'AP', mayorName: 'Sindre Martinsen-Evje' },
+  { id: 'NO_hordaland', name: 'Hordaland (Bergen)', seats: 16, winner: 'H', mayorName: 'Marit Warncke' },
+  { id: 'NO_rogaland', name: 'Rogaland (Stavanger)', seats: 14, winner: 'H', mayorName: 'Sissel Knutsen Hegdal' },
+  { id: 'NO_sortrondelag', name: 'Sør-Trøndelag (Trondheim)', seats: 10, winner: 'AP', mayorName: 'Kent Ranum' },
+  { id: 'NO_nordtrondelag', name: 'Nord-Trøndelag', seats: 5, winner: 'SP', mayorName: 'Pål Sæther Eiden' },
+  { id: 'NO_moreogromsdal', name: 'Møre og Romsdal', seats: 8, winner: 'FRP', mayorName: 'Anders Riise' },
+  { id: 'NO_nordland', name: 'Nordland', seats: 9, winner: 'AP', mayorName: 'Einar Holithe' },
+  { id: 'NO_troms', name: 'Troms', seats: 6, winner: 'AP', mayorName: 'Gunnar Wilhelmsen' },
+  { id: 'NO_finnmark', name: 'Finnmark', seats: 5, winner: 'AP', mayorName: 'Hans-Jacob Bønå' },
+  { id: 'NO_buskerud', name: 'Buskerud', seats: 8, winner: 'H', mayorName: 'Tore Opdal Hansen' },
+  { id: 'NO_vestfold', name: 'Vestfold', seats: 7, winner: 'H', mayorName: 'Anne Strømøy' },
+  { id: 'NO_telemark', name: 'Telemark', seats: 6, winner: 'AP', mayorName: 'Sven Tore Løkslid' },
+  { id: 'NO_hedmark', name: 'Hedmark', seats: 7, winner: 'AP', mayorName: 'Thomas Breen' },
+  { id: 'NO_oppland', name: 'Oppland', seats: 6, winner: 'SP', mayorName: 'Aud Hove' },
+  { id: 'NO_vestagder', name: 'Vest-Agder', seats: 6, winner: 'H', mayorName: 'Mathias Bernander' },
+  { id: 'NO_austagder', name: 'Aust-Agder', seats: 4, winner: 'H', mayorName: 'Robert Cornels Nordli' },
+  { id: 'NO_sognogfjordane', name: 'Sogn og Fjordane', seats: 4, winner: 'SP', mayorName: 'Jon Askeland' }
+];
+export const getNorwayRegions = () => generateRegionsFromSpec('NO', NORWAY_2026_SPEC, ['AP', 'H', 'FRP', 'SP', 'SV', 'V', 'MDG', 'R'], { H: 24, AP: 22, FRP: 18, SP: 11, SV: 9, V: 6, MDG: 5, R: 5 });
+
+const SWEDEN_2026_SPEC = [
+  { id: 'SE_stockholm', name: 'Stockholm', seats: 70, winner: 'S', mayorName: 'Karin Wanngård' },
+  { id: 'SE_vastragotaland', name: 'Västra Götaland (Göteborg)', seats: 55, winner: 'S', mayorName: 'Jonas Attenius' },
+  { id: 'SE_skane', name: 'Skåne (Malmö)', seats: 45, winner: 'SD', mayorName: 'Katrin Stjernfeldt Jammeh' },
+  { id: 'SE_ostergotland', name: 'Östergötland', seats: 16, winner: 'S', mayorName: 'Niklas Borg' },
+  { id: 'SE_uppsala', name: 'Uppsala', seats: 14, winner: 'S', mayorName: 'Erik Pelling' },
+  { id: 'SE_jonkoping', name: 'Jönköping', seats: 13, winner: 'M', mayorName: 'Ann-Marie Nilsson' },
+  { id: 'SE_halland', name: 'Halland', seats: 12, winner: 'M', mayorName: 'Christian Lidén' },
+  { id: 'SE_orebro', name: 'Örebro', seats: 11, winner: 'S', mayorName: 'John Johansson' },
+  { id: 'SE_sodermanland', name: 'Södermanland', seats: 11, winner: 'S', mayorName: 'Jimmy Jansson' },
+  { id: 'SE_dalarna', name: 'Dalarna', seats: 11, winner: 'S', mayorName: 'Elina Brodén' },
+  { id: 'SE_gavleborg', name: 'Gävleborg', seats: 11, winner: 'S', mayorName: 'Åsa Wiklund Lång' },
+  { id: 'SE_varmland', name: 'Värmland', seats: 11, winner: 'S', mayorName: 'Linda Larsson' },
+  { id: 'SE_vasterbotten', name: 'Västerbotten', seats: 10, winner: 'S', mayorName: 'Hans Lindberg' },
+  { id: 'SE_vastmanland', name: 'Västmanland', seats: 10, winner: 'S', mayorName: 'Staffan Jansson' },
+  { id: 'SE_norrbotten', name: 'Norrbotten', seats: 9, winner: 'S', mayorName: 'Carina Sammeli' },
+  { id: 'SE_kalmar', name: 'Kalmar', seats: 9, winner: 'S', mayorName: 'Johan Persson' },
+  { id: 'SE_vasternorrland', name: 'Västernorrland', seats: 9, winner: 'S', mayorName: 'Bodil Hansson' },
+  { id: 'SE_kronoberg', name: 'Kronoberg', seats: 7, winner: 'M', mayorName: 'Malin Lauber' },
+  { id: 'SE_blekinge', name: 'Blekinge', seats: 6, winner: 'SD', mayorName: 'Emma Swahn Nilsson' },
+  { id: 'SE_jamtland', name: 'Jämtland', seats: 5, winner: 'S', mayorName: 'Effie Kourlos' },
+  { id: 'SE_gotland', name: 'Gotland', seats: 4, winner: 'C', mayorName: 'Meit Fohlin' }
+];
+export const getSwedenRegions = () => generateRegionsFromSpec('SE', SWEDEN_2026_SPEC, ['S', 'M', 'SD', 'V', 'C', 'KD', 'MP', 'L'], { S: 31, M: 20, SD: 20, V: 8, C: 6, KD: 5, MP: 5, L: 5 });
+
+const SWITZERLAND_2026_SPEC = [
+  { id: 'CH_zurich', name: 'Zürich', seats: 36, winner: 'SVP', mayorName: 'Corine Mauch' },
+  { id: 'CH_bern', name: 'Bern', seats: 24, winner: 'SVP', mayorName: 'Alec von Graffenried' },
+  { id: 'CH_vaud', name: 'Vaud', seats: 19, winner: 'SP', mayorName: 'Grégoire Junod' },
+  { id: 'CH_aargau', name: 'Aargau', seats: 16, winner: 'SVP', mayorName: 'Markus Dieth' },
+  { id: 'CH_sanktgallen', name: 'Sankt Gallen', seats: 12, winner: 'SVP', mayorName: 'Maria Pappa' },
+  { id: 'CH_geneve', name: 'Genève', seats: 12, winner: 'SP', mayorName: 'Alfonso Gomez' },
+  { id: 'CH_luzern', name: 'Luzern', seats: 9, winner: 'MITTE', mayorName: 'Beat Züsli' },
+  { id: 'CH_ticino', name: 'Ticino', seats: 8, winner: 'FDP', mayorName: 'Michele Foletti' },
+  { id: 'CH_valais', name: 'Valais', seats: 8, winner: 'MITTE', mayorName: 'Philippe Varone' },
+  { id: 'CH_basellandschaft', name: 'Basel-Landschaft', seats: 7, winner: 'SP', mayorName: 'Monica Gschwind' },
+  { id: 'CH_fribourg', name: 'Fribourg', seats: 7, winner: 'SP', mayorName: 'Thierry Steiert' },
+  { id: 'CH_solothurn', name: 'Solothurn', seats: 6, winner: 'FDP', mayorName: 'Stefanie Ingold' },
+  { id: 'CH_thurgau', name: 'Thurgau', seats: 6, winner: 'SVP', mayorName: 'Walter Schönholzer' },
+  { id: 'CH_baselstadt', name: 'Basel-Stadt', seats: 4, winner: 'SP', mayorName: 'Beat Jans' },
+  { id: 'CH_graubunden', name: 'Graubünden', seats: 5, winner: 'MITTE', mayorName: 'Urs Marti' },
+  { id: 'CH_neuchatel', name: 'Neuchâtel', seats: 4, winner: 'SP', mayorName: 'Violaine Blétry-de Montmollin' },
+  { id: 'CH_schwyz', name: 'Schwyz', seats: 4, winner: 'SVP', mayorName: 'Petra Steimen-Rickenbacher' },
+  { id: 'CH_zug', name: 'Zug', seats: 3, winner: 'MITTE', mayorName: 'André Wicki' },
+  { id: 'CH_schaffhausen', name: 'Schaffhausen', seats: 2, winner: 'SVP', mayorName: 'Peter Neukomm' },
+  { id: 'CH_jura', name: 'Jura', seats: 2, winner: 'SP', mayorName: 'Jacques Gerber' },
+  { id: 'CH_appenzellausserrhoden', name: 'Appenzell Ausserrhoden', seats: 1, winner: 'FDP', mayorName: 'Duri Pally' },
+  { id: 'CH_nidwalden', name: 'Nidwalden', seats: 1, winner: 'MITTE', mayorName: 'Karin Kayser-Frutschi' },
+  { id: 'CH_glarus', name: 'Glarus', seats: 1, winner: 'SVP', mayorName: 'Peter Aebli' },
+  { id: 'CH_obwalden', name: 'Obwalden', seats: 1, winner: 'MITTE', mayorName: 'Christian Schäli' },
+  { id: 'CH_uri', name: 'Uri', seats: 1, winner: 'MITTE', mayorName: 'Urban Camenzind' },
+  { id: 'CH_appenzellinnerrhoden', name: 'Appenzell Innerrhoden', seats: 1, winner: 'MITTE', mayorName: 'Roland Inauen' }
+];
+export const getSwitzerlandRegions = () => generateRegionsFromSpec('CH', SWITZERLAND_2026_SPEC, ['SVP', 'SP', 'FDP', 'MITTE', 'GRÜNE', 'GLP', 'EVP'], { SVP: 29, SP: 19, FDP: 15, MITTE: 15, GRÜNE: 10, GLP: 8, EVP: 4 });
 
 // Mock Bills for countries
 const BILL_POOL = [
@@ -1266,6 +1354,10 @@ export const countryColors: Record<string, { default: string; completed: string;
   IS: { default: '#0284c7', completed: '#0ea5e9', selected: '#38bdf8' },
   PT: { default: '#15803d', completed: '#16a34a', selected: '#4ade80' },
   GR: { default: '#0369a1', completed: '#0284c7', selected: '#38bdf8' },
+  FI: { default: '#f1f5f9', completed: '#cbd5e1', selected: '#ffffff' },
+  NO: { default: '#b91c1c', completed: '#dc2626', selected: '#f87171' },
+  SE: { default: '#eab308', completed: '#ca8a04', selected: '#fde047' },
+  CH: { default: '#dc2626', completed: '#ef4444', selected: '#fca5a5' },
   // Conflict & Breakaway Entities
   SY: { default: '#15803d', completed: '#16a34a', selected: '#22c55e' },
   SY_SDF: { default: '#ca8a04', completed: '#eab308', selected: '#fde047' }, // Rojava / AANES (Yellow)
@@ -1747,6 +1839,7 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     campaignTurns: 53,
     electionCycleYears: 5,
     termLimit: 2,
+    countryMode: 'hybrid',
   },
   {
     id: 'CL',
@@ -1862,7 +1955,109 @@ export const PLAYABLE_COUNTRIES: Country[] = [
     bills: createBills('PL'),
     campaignTurns: 53,
     electionCycleYears: 4,
-  }
+  },
+  {
+    id: 'FI',
+    name: 'Finland',
+    description: 'A Nordic welfare democracy and the newest eastern frontline of NATO, featuring world-leading education, technological resilience, and social trust.',
+    flag: '🇫🇮',
+    seats: 200,
+    parliamentName: 'Parliament of Finland (Eduskunta)',
+    system: 'Parliamentary Republic',
+    population: '5.6 Million',
+    primaryColor: '#f1f5f9',
+    rivals: [
+      { id: 'KOK', name: 'National Coalition Party (Kansallinen Kokoomus)', leader: 'Petteri Orpo', ideology: 'Conservative', symbol: 'Building', color: '#006288', baseSupport: 21, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Petteri_Orpo_2023.jpg/250px-Petteri_Orpo_2023.jpg' },
+      { id: 'PS', name: 'Finns Party (Perussuomalaiset)', leader: 'Riikka Purra', ideology: 'Nationalist', symbol: 'Shield', color: '#ffd500', baseSupport: 20, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Riikka_Purra_2023.jpg/250px-Riikka_Purra_2023.jpg' },
+      { id: 'SDP', name: 'Social Democratic Party (SDP)', leader: 'Antti Lindtman', ideology: 'Social Democrat', symbol: 'Users', color: '#e11931', baseSupport: 20, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Antti_Lindtman_2023.jpg/250px-Antti_Lindtman_2023.jpg' },
+      { id: 'KESK', name: 'Centre Party (Suomen Keskusta)', leader: 'Antti Kaikkonen', ideology: 'Centrist', symbol: 'Compass', color: '#009a49', baseSupport: 12, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Antti_Kaikkonen_2022.jpg/250px-Antti_Kaikkonen_2022.jpg' },
+      { id: 'VIHR', name: 'Green League (Vihreä liitto)', leader: 'Sofia Virta', ideology: 'Liberal', symbol: 'Leaf', color: '#61bf1a', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Sofia_Virta_2023.jpg/250px-Sofia_Virta_2023.jpg' },
+      { id: 'VAS', name: 'Left Alliance (Vasemmistoliitto)', leader: 'Minja Koskela', ideology: 'Socialist', symbol: 'Flame', color: '#bf1e2e', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Minja_Koskela_2023.jpg/250px-Minja_Koskela_2023.jpg' },
+      { id: 'RKP', name: "Swedish People's Party (SFP/RKP)", leader: 'Anders Adlercreutz', ideology: 'Liberal', symbol: 'Globe', color: '#ffdd00', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Anders_Adlercreutz_2023.jpg/250px-Anders_Adlercreutz_2023.jpg' },
+      { id: 'KD', name: 'Christian Democrats (Kristillisdemokraatit)', leader: 'Sari Essayah', ideology: 'Traditionalist', symbol: 'Cross', color: '#183592', baseSupport: 4, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Sari_Essayah_2023.jpg/250px-Sari_Essayah_2023.jpg' }
+    ],
+    regions: getFinlandRegions(),
+    bills: createBills('FI'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'NO',
+    name: 'Norway',
+    description: 'A prosperous Nordic maritime constitutional monarchy, home to the worlds largest sovereign wealth fund and sustainable energy governance.',
+    flag: '🇳🇴',
+    seats: 169,
+    parliamentName: 'Storting (Stortinget)',
+    system: 'Constitutional Monarchy / Parliamentary',
+    population: '5.5 Million',
+    primaryColor: '#dc2626',
+    rivals: [
+      { id: 'H', name: 'Conservative Party (Høyre)', leader: 'Erna Solberg', ideology: 'Conservative', symbol: 'Building', color: '#0065f2', baseSupport: 24, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Erna_Solberg_2021.jpg/250px-Erna_Solberg_2021.jpg' },
+      { id: 'AP', name: 'Labour Party (Arbeiderpartiet)', leader: 'Jonas Gahr Støre', ideology: 'Social Democrat', symbol: 'Users', color: '#d91d25', baseSupport: 22, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Jonas_Gahr_St%C3%B8re_2021.jpg/250px-Jonas_Gahr_St%C3%B8re_2021.jpg' },
+      { id: 'FRP', name: 'Progress Party (Fremskrittspartiet)', leader: 'Sylvi Listhaug', ideology: 'Nationalist', symbol: 'Shield', color: '#002f6c', baseSupport: 18, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Sylvi_Listhaug_2021.jpg/250px-Sylvi_Listhaug_2021.jpg' },
+      { id: 'SP', name: 'Centre Party (Senterpartiet)', leader: 'Trygve Slagsvold Vedum', ideology: 'Centrist', symbol: 'Compass', color: '#008542', baseSupport: 11, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Trygve_Slagsvold_Vedum_2021.jpg/250px-Trygve_Slagsvold_Vedum_2021.jpg' },
+      { id: 'SV', name: 'Socialist Left Party (Sosialistisk Venstreparti)', leader: 'Kirsti Bergstø', ideology: 'Socialist', symbol: 'Flame', color: '#a81c42', baseSupport: 9, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Kirsti_Bergst%C3%B8_2023.jpg/250px-Kirsti_Bergst%C3%B8_2023.jpg' },
+      { id: 'V', name: 'Liberal Party (Venstre)', leader: 'Guri Melby', ideology: 'Liberal', symbol: 'Globe', color: '#006666', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Guri_Melby_2021.jpg/250px-Guri_Melby_2021.jpg' },
+      { id: 'MDG', name: 'Green Party (Miljøpartiet De Grønne)', leader: 'Arild Hermstad', ideology: 'Liberal', symbol: 'Leaf', color: '#5b8c3a', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Arild_Hermstad_2022.jpg/250px-Arild_Hermstad_2022.jpg' },
+      { id: 'R', name: 'Red Party (Rødt)', leader: 'Marie Sneve Martinussen', ideology: 'Socialist', symbol: 'Star', color: '#e02a28', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Marie_Sneve_Martinussen_2023.jpg/250px-Marie_Sneve_Martinussen_2023.jpg' }
+    ],
+    regions: getNorwayRegions(),
+    bills: createBills('NO'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'SE',
+    name: 'Sweden',
+    description: 'A powerhouse Scandinavian parliamentary democracy renowned for innovation, advanced industrial capacity, and recent NATO integration.',
+    flag: '🇸🇪',
+    seats: 349,
+    parliamentName: 'Riksdag (Sveriges riksdag)',
+    system: 'Constitutional Monarchy / Parliamentary',
+    population: '10.5 Million',
+    primaryColor: '#eab308',
+    rivals: [
+      { id: 'S', name: 'Social Democrats (Socialdemokraterna)', leader: 'Magdalena Andersson', ideology: 'Social Democrat', symbol: 'Users', color: '#e8112d', baseSupport: 31, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Magdalena_Andersson_2022.jpg/250px-Magdalena_Andersson_2022.jpg' },
+      { id: 'M', name: 'Moderate Party (Moderaterna)', leader: 'Ulf Kristersson', ideology: 'Conservative', symbol: 'Building', color: '#06b6d4', baseSupport: 20, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Ulf_Kristersson_2022.jpg/250px-Ulf_Kristersson_2022.jpg' },
+      { id: 'SD', name: 'Sweden Democrats (Sverigedemokraterna)', leader: 'Jimmie Åkesson', ideology: 'Nationalist', symbol: 'Shield', color: '#1e3a8a', baseSupport: 20, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Jimmie_%C3%85kesson_2022.jpg/250px-Jimmie_%C3%85kesson_2022.jpg' },
+      { id: 'V', name: 'Left Party (Vänsterpartiet)', leader: 'Nooshi Dadgostar', ideology: 'Socialist', symbol: 'Flame', color: '#da291c', baseSupport: 8, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Nooshi_Dadgostar_2022.jpg/250px-Nooshi_Dadgostar_2022.jpg' },
+      { id: 'C', name: 'Centre Party (Centerpartiet)', leader: 'Muharrem Demirok', ideology: 'Centrist', symbol: 'Compass', color: '#009933', baseSupport: 6, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Muharrem_Demirok_2023.jpg/250px-Muharrem_Demirok_2023.jpg' },
+      { id: 'KD', name: 'Christian Democrats (Kristdemokraterna)', leader: 'Ebba Busch', ideology: 'Traditionalist', symbol: 'Cross', color: '#005ea1', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Ebba_Busch_2022.jpg/250px-Ebba_Busch_2022.jpg' },
+      { id: 'MP', name: 'Green Party (Miljöpartiet)', leader: 'Amanda Lind & Daniel Helldén', ideology: 'Liberal', symbol: 'Leaf', color: '#83cf39', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Amanda_Lind_2023.jpg/250px-Amanda_Lind_2023.jpg' },
+      { id: 'L', name: 'Liberals (Liberalerna)', leader: 'Johan Pehrson', ideology: 'Liberal', symbol: 'Globe', color: '#006ab3', baseSupport: 5, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Johan_Pehrson_2022.jpg/250px-Johan_Pehrson_2022.jpg' }
+    ],
+    regions: getSwedenRegions(),
+    bills: createBills('SE'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'CH',
+    name: 'Switzerland',
+    description: 'An alpine federal directorial republic anchored by armed neutrality, direct referendums, cantonal sovereignty, and world financial stability.',
+    flag: '🇨🇭',
+    seats: 200,
+    parliamentName: 'Federal Assembly (National Council)',
+    system: 'Federal Direct Democracy',
+    population: '8.9 Million',
+    primaryColor: '#dc2626',
+    rivals: [
+      { id: 'SVP', name: "Swiss People's Party (SVP / UDC)", leader: 'Marcel Dettling', ideology: 'Nationalist', symbol: 'Shield', color: '#008000', baseSupport: 29, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Marcel_Dettling_2024.jpg/250px-Marcel_Dettling_2024.jpg' },
+      { id: 'SP', name: 'Social Democratic Party (SP / PS)', leader: 'Cédric Wermuth & Mattea Meyer', ideology: 'Social Democrat', symbol: 'Users', color: '#e40613', baseSupport: 19, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/C%C3%A9dric_Wermuth_2021.jpg/250px-C%C3%A9dric_Wermuth_2021.jpg' },
+      { id: 'FDP', name: 'FDP.The Liberals (FDP / PLR)', leader: 'Thierry Burkart', ideology: 'Liberal', symbol: 'Globe', color: '#005ea8', baseSupport: 15, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Thierry_Burkart_2021.jpg/250px-Thierry_Burkart_2021.jpg' },
+      { id: 'MITTE', name: 'The Centre (Die Mitte / Le Centre)', leader: 'Gerhard Pfister', ideology: 'Centrist', symbol: 'Compass', color: '#f58220', baseSupport: 15, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Gerhard_Pfister_2021.jpg/250px-Gerhard_Pfister_2021.jpg' },
+      { id: 'GRÜNE', name: 'Green Party (Grüne / Les Verts)', leader: 'Lisa Mazzone', ideology: 'Liberal', symbol: 'Leaf', color: '#84b414', baseSupport: 10, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Lisa_Mazzone_2023.jpg/250px-Lisa_Mazzone_2023.jpg' },
+      { id: 'GLP', name: 'Green Liberal Party (GLP / PVL)', leader: 'Jürg Grossen', ideology: 'Liberal', symbol: 'Sparkles', color: '#9ec73d', baseSupport: 8, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/J%C3%BCrg_Grossen_2021.jpg/250px-J%C3%BCrg_Grossen_2021.jpg' },
+      { id: 'EVP', name: "Evangelical People's Party (EVP / PEV)", leader: 'Lilian Studer', ideology: 'Traditionalist', symbol: 'Cross', color: '#233880', baseSupport: 4, photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Lilian_Studer_2021.jpg/250px-Lilian_Studer_2021.jpg' }
+    ],
+    regions: getSwitzerlandRegions(),
+    bills: createBills('CH'),
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  ...CIVIL_WAR_PLAYABLE_COUNTRIES,
+  ...HYBRID_PLAYABLE_COUNTRIES,
+  REPUBLIC_OF_CONGO
 ];
 
 export const SPEECH_CARDS_POOL: SpeechCard[] = [
@@ -1996,6 +2191,15 @@ export function generateName(countryId: string): string {
   const huFirst = ['Gergely', 'László', 'Péter', 'Viktor', 'Ferenc', 'Klára', 'Pál', 'János'];
   const huLast = ['Nagy', 'Kovács', 'Tóth', 'Szabó', 'Horváth', 'Varga', 'Orbán', 'Magyar'];
 
+  const fiFirst = ['Juha', 'Petteri', 'Antti', 'Riikka', 'Sanna', 'Matti', 'Jari', 'Sofia', 'Minja', 'Tapio'];
+  const fiLast = ['Korhonen', 'Virtanen', 'Mäkinen', 'Nieminen', 'Mäkelä', 'Hämäläinen', 'Laine', 'Heikkinen', 'Koskinen', 'Järvinen'];
+
+  const noFirst = ['Jonas', 'Erna', 'Sylvi', 'Trygve', 'Kirsti', 'Guri', 'Arild', 'Henrik', 'Olav', 'Astrid'];
+  const noLast = ['Hansen', 'Johansen', 'Olsen', 'Larsen', 'Andersen', 'Pedersen', 'Nilsen', 'Kristiansen', 'Jensen', 'Karlsen'];
+
+  const chFirst = ['Marcel', 'Cédric', 'Mattea', 'Thierry', 'Gerhard', 'Lisa', 'Jürg', 'Lilian', 'Beat', 'Corine'];
+  const chLast = ['Müller', 'Meier', 'Schmid', 'Keller', 'Weber', 'Schneider', 'Huber', 'Meyer', 'Steiner', 'Fischer'];
+
   const sample = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
   if (countryId === 'TR') return `${sample(trFirst)} ${sample(trLast)}`;
@@ -2019,6 +2223,9 @@ export function generateName(countryId: string): string {
   if (countryId === 'UA') return `${sample(uaFirst)} ${sample(uaLast)}`;
   if (countryId === 'PL' || countryId === 'CS') return `${sample(plFirst)} ${sample(plLast)}`;
   if (countryId === 'SE') return `${sample(seFirst)} ${sample(seLast)}`;
+  if (countryId === 'FI') return `${sample(fiFirst)} ${sample(fiLast)}`;
+  if (countryId === 'NO') return `${sample(noFirst)} ${sample(noLast)}`;
+  if (countryId === 'CH') return `${sample(chFirst)} ${sample(chLast)}`;
   if (countryId === 'PT') return `${sample(ptFirst)} ${sample(ptLast)}`;
   if (countryId === 'GR') return `${sample(grFirst)} ${sample(grLast)}`;
   if (countryId === 'IS') return `${sample(isFirst)} ${sample(isLast)}`;
@@ -2120,6 +2327,15 @@ export function getDeterministicMayorName(regionName: string, countryId: string)
   const huFirst = ['Gergely', 'László', 'Péter', 'Viktor', 'Ferenc', 'Klára', 'Pál', 'János'];
   const huLast = ['Nagy', 'Kovács', 'Tóth', 'Szabó', 'Horváth', 'Varga', 'Orbán', 'Magyar'];
 
+  const fiFirst = ['Juha', 'Petteri', 'Antti', 'Riikka', 'Sanna', 'Matti', 'Jari', 'Sofia', 'Minja', 'Tapio'];
+  const fiLast = ['Korhonen', 'Virtanen', 'Mäkinen', 'Nieminen', 'Mäkelä', 'Hämäläinen', 'Laine', 'Heikkinen', 'Koskinen', 'Järvinen'];
+
+  const noFirst = ['Jonas', 'Erna', 'Sylvi', 'Trygve', 'Kirsti', 'Guri', 'Arild', 'Henrik', 'Olav', 'Astrid'];
+  const noLast = ['Hansen', 'Johansen', 'Olsen', 'Larsen', 'Andersen', 'Pedersen', 'Nilsen', 'Kristiansen', 'Jensen', 'Karlsen'];
+
+  const chFirst = ['Marcel', 'Cédric', 'Mattea', 'Thierry', 'Gerhard', 'Lisa', 'Jürg', 'Lilian', 'Beat', 'Corine'];
+  const chLast = ['Müller', 'Meier', 'Schmid', 'Keller', 'Weber', 'Schneider', 'Huber', 'Meyer', 'Steiner', 'Fischer'];
+
   let hash = 0;
   for (let i = 0; i < regionName.length; i++) {
     hash = regionName.charCodeAt(i) + ((hash << 5) - hash);
@@ -2149,6 +2365,9 @@ export function getDeterministicMayorName(regionName: string, countryId: string)
   if (countryId === 'UA') return `${sample(uaFirst)} ${sample(uaLast)}`;
   if (countryId === 'PL' || countryId === 'CS') return `${sample(plFirst)} ${sample(plLast)}`;
   if (countryId === 'SE') return `${sample(seFirst)} ${sample(seLast)}`;
+  if (countryId === 'FI') return `${sample(fiFirst)} ${sample(fiLast)}`;
+  if (countryId === 'NO') return `${sample(noFirst)} ${sample(noLast)}`;
+  if (countryId === 'CH') return `${sample(chFirst)} ${sample(chLast)}`;
   if (countryId === 'PT') return `${sample(ptFirst)} ${sample(ptLast)}`;
   if (countryId === 'GR') return `${sample(grFirst)} ${sample(grLast)}`;
   if (countryId === 'IS') return `${sample(isFirst)} ${sample(isLast)}`;

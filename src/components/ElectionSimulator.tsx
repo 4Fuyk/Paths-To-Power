@@ -55,10 +55,10 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
 
   // Coalition Negotiation States
   const [selectedCoalitionParties, setSelectedCoalitionParties] = useState<string[]>(() => {
-    const activeCoalition = coalitions?.find(c => c.parties.includes(party.name));
-    if (activeCoalition) {
+    const activeCoalition = coalitions?.find(c => c.parties?.includes(party?.name));
+    if (activeCoalition && activeCoalition.parties) {
       return country.rivals
-        .filter(r => activeCoalition.parties.includes(r.name) && r.name !== party.name)
+        .filter(r => activeCoalition.parties?.includes(r.name) && r.name !== party?.name)
         .map(r => r.id);
     }
     return [];
@@ -356,8 +356,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
     // Find all parties the player is allied with across all their coalitions
     const playerAllies = new Set<string>();
     coalitions.forEach(coal => {
-      if (coal.parties.includes(party.name)) {
-        coal.parties.forEach(p => playerAllies.add(p));
+      if (coal.parties?.includes(party.name)) {
+        (coal.parties || []).forEach(p => playerAllies.add(p));
       }
     });
     
@@ -401,8 +401,8 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
     });
 
     coalitions.forEach(otherCoal => {
-      if (!otherCoal.parties.includes(party.name)) {
-        const otherCombined = otherCoal.parties.reduce((sum, pName) => {
+      if (!otherCoal.parties?.includes(party.name)) {
+        const otherCombined = (otherCoal.parties || []).reduce((sum, pName) => {
           if (pName === party.name) return sum + (seatsWon[party.id] || 0);
           const r = country.rivals.find(riv => riv.name === pName);
           return sum + (r ? (seatsWon[r.id] || 0) : 0);
@@ -812,7 +812,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                         const r = country.rivals.find(riv => riv.name === pName || riv.id === pName);
                         return sum + (r ? (seatsWon[r.id] || 0) : 0);
                       }, 0);
-                      const isPlayerIn = coal.parties.includes(party.name);
+                      const isPlayerIn = Boolean(coal.parties?.includes(party.name));
 
                       return (
                         <div key={cIdx} className="p-2.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 flex flex-col gap-1">
@@ -1209,7 +1209,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
                           </div>
 
                           {/* Proposal trigger */}
-                          {((seatsWon[party.id] || 0) + (coalitions?.filter(c => c.parties.includes(party.name)).flatMap(c => c.parties).filter((v, i, a) => a.indexOf(v) === i && v !== party.name).reduce((sum, p) => sum + (seatsWon[country.rivals.find(r=>r.name===p)?.id || ''] || 0), 0) || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0)) > country.seats / 2 ? (
+                          {((seatsWon[party.id] || 0) + (coalitions?.filter(c => c.parties?.includes(party.name)).flatMap(c => c.parties || []).filter((v, i, a) => a.indexOf(v) === i && v !== party.name).reduce((sum, p) => sum + (seatsWon[country.rivals.find(r=>r.name===p)?.id || ''] || 0), 0) || 0) + selectedCoalitionParties.reduce((sum, id) => sum + (seatsWon[id] || 0), 0)) > country.seats / 2 ? (
                             <button
                               type="button"
                               disabled={coalitionSuccess === true}

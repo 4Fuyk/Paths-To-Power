@@ -31,6 +31,8 @@ export interface FrontlineBattleResult {
   previousControllerId: string;
 }
 
+export const BUFFER_ZONE_ID = 'BUFFER_ZONE';
+
 /**
  * Retrieves the global persistent territorial control registry
  */
@@ -45,29 +47,72 @@ export function getTerritoryControlMap(): Record<string, string> {
 }
 
 /**
- * Saves a region's controller into the persistent registry
+ * Checks if a given region is designated as a Demilitarized Buffer Zone (Requirement 2)
+ */
+export function isBufferZone(regionIdOrName: string): boolean {
+  if (!regionIdOrName) return false;
+  const current = getTerritoryControlMap();
+  if (current[regionIdOrName] === BUFFER_ZONE_ID) return true;
+  
+  const norm = regionIdOrName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return Object.entries(current).some(([k, v]) => {
+    if (v !== BUFFER_ZONE_ID) return false;
+    const kNorm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return kNorm === norm || (kNorm.length > 3 && (kNorm.includes(norm) || norm.includes(kNorm)));
+  });
+}
+
+/**
+ * Retrieves all regions currently designated as Demilitarized Buffer Zones
+ */
+export function getBufferZones(): string[] {
+  const current = getTerritoryControlMap();
+  return Object.entries(current)
+    .filter(([_, v]) => v === BUFFER_ZONE_ID)
+    .map(([k]) => k);
+}
+
+/**
+ * Saves a region's controller into the persistent registry and broadcasts update to all maps
  */
 export function setRegionController(regionId: string, newControllerId: string): void {
   try {
     const current = getTerritoryControlMap();
     current[regionId] = newControllerId;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('territory_control_updated', {
+        detail: { regionId, controllerId: newControllerId, current }
+      }));
+    }
   } catch (e) {
     console.warn('Failed to save territory control state', e);
   }
 }
 
 /**
- * Batch updates multiple region controllers
+ * Batch updates multiple region controllers and broadcasts update to all maps
  */
 export function setBatchRegionControllers(updates: Record<string, string>): void {
   try {
     const current = getTerritoryControlMap();
     const merged = { ...current, ...updates };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('territory_control_updated', {
+        detail: { updates, current: merged }
+      }));
+    }
   } catch (e) {
     console.warn('Failed to save batch territory control state', e);
   }
+}
+
+/**
+ * Sets or removes a region's Demilitarized Buffer Zone designation
+ */
+export function setRegionBufferZone(regionId: string, isBuffer: boolean, previousControllerId?: string): void {
+  setRegionController(regionId, isBuffer ? BUFFER_ZONE_ID : (previousControllerId || 'RETAIN'));
 }
 
 /**
@@ -84,6 +129,11 @@ export function resolveRegionController(regionId: string, defaultOwnerId: string
 export function resetTerritoryControl(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('territory_control_updated', {
+        detail: { current: {} }
+      }));
+    }
   } catch (e) {
     console.warn('Failed to reset territory control state', e);
   }

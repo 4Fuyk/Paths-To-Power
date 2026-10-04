@@ -356,11 +356,11 @@ export function getInitialGlobalWars(scenario: string): GlobalWar[] {
 export function getInitialDiplomaticRelations(
   scenario: string,
   playerCountryId: string
-): Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }> {
+): Record<string, { status: 'Allies' | 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }> {
   const baseScenario = scenario || '2026';
   const cId = playerCountryId || 'TR';
 
-  const defaultRelations: Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }> = {
+  const defaultRelations: Record<string, { status: 'Allies' | 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }> = {
     TR: { status: 'Neutral', opinion: 50 },
     US: { status: 'Neutral', opinion: 55 },
     DE: { status: 'Neutral', opinion: 60 },
@@ -383,16 +383,29 @@ export function getInitialDiplomaticRelations(
     YE: { status: 'Neutral', opinion: 30 },
     ML: { status: 'Neutral', opinion: 40 },
     CD: { status: 'Neutral', opinion: 40 },
+    CG: { status: 'Neutral', opinion: 50 },
     ET: { status: 'Neutral', opinion: 45 },
     HT: { status: 'Neutral', opinion: 35 },
     GR: { status: 'Neutral', opinion: 40 },
-    PL: { status: 'Neutral', opinion: 55 }
+    PL: { status: 'Neutral', opinion: 55 },
+    FI: { status: 'Neutral', opinion: 60 },
+    NO: { status: 'Neutral', opinion: 65 },
+    SE: { status: 'Neutral', opinion: 65 },
+    CH: { status: 'Neutral', opinion: 70 }
   };
 
   // ==========================================
   // SCENARIO 2026 REAL-WORLD RELATIONS
   // ==========================================
   if (baseScenario === '2026') {
+    // Delete any historical or dissolved state keys from 2026 diplomacy
+    delete (defaultRelations as any).SU;
+    delete (defaultRelations as any).DDR;
+    delete (defaultRelations as any).CS;
+    delete (defaultRelations as any).YU;
+    delete (defaultRelations as any).DE_WEST;
+    delete (defaultRelations as any).ZAR;
+
     if (cId === 'RU') {
       defaultRelations.UA = { status: 'At War', opinion: 0 };
       defaultRelations.US = { status: 'Sanctioned', opinion: 15 };
@@ -400,6 +413,10 @@ export function getInitialDiplomaticRelations(
       defaultRelations.DE = { status: 'Sanctioned', opinion: 20 };
       defaultRelations.FR = { status: 'Sanctioned', opinion: 20 };
       defaultRelations.PL = { status: 'Sanctioned', opinion: 10 };
+      defaultRelations.FI = { status: 'Sanctioned', opinion: 10 };
+      defaultRelations.NO = { status: 'Sanctioned', opinion: 10 };
+      defaultRelations.SE = { status: 'Sanctioned', opinion: 10 };
+      defaultRelations.CH = { status: 'Neutral', opinion: 35 };
       defaultRelations.CN = { status: 'Alliance', opinion: 85 };
       defaultRelations.BY = { status: 'Alliance', opinion: 95 };
       defaultRelations.IR = { status: 'Alliance', opinion: 80 };
@@ -407,17 +424,17 @@ export function getInitialDiplomaticRelations(
       defaultRelations.IN = { status: 'Neutral', opinion: 65 };
     } else if (cId === 'UA') {
       defaultRelations.RU = { status: 'At War', opinion: 0 };
-      defaultRelations.US = { status: 'Alliance', opinion: 90 };
-      defaultRelations.GB = { status: 'Alliance', opinion: 90 };
+      defaultRelations.US = { status: 'Allies', opinion: 92 };
+      defaultRelations.GB = { status: 'Allies', opinion: 90 };
       defaultRelations.DE = { status: 'Alliance', opinion: 85 };
-      defaultRelations.PL = { status: 'Alliance', opinion: 85 };
+      defaultRelations.PL = { status: 'Allies', opinion: 88 };
       defaultRelations.FR = { status: 'Alliance', opinion: 80 };
       defaultRelations.TR = { status: 'Defensive Pact', opinion: 65 };
     } else if (cId === 'IL') {
       defaultRelations.PS = { status: 'At War', opinion: 0 };
       defaultRelations.LB = { status: 'At War', opinion: 5 };
       defaultRelations.IR = { status: 'Sanctioned', opinion: 0 };
-      defaultRelations.US = { status: 'Alliance', opinion: 95 };
+      defaultRelations.US = { status: 'Allies', opinion: 96 };
       defaultRelations.DE = { status: 'Alliance', opinion: 85 };
       defaultRelations.GB = { status: 'Alliance', opinion: 80 };
       defaultRelations.EG = { status: 'Non-Aggression', opinion: 55 };
@@ -431,15 +448,15 @@ export function getInitialDiplomaticRelations(
       defaultRelations.RU = { status: 'Sanctioned', opinion: 15 };
       defaultRelations.CN = { status: 'Sanctioned', opinion: 30 };
       defaultRelations.IR = { status: 'Sanctioned', opinion: 5 };
-      defaultRelations.GB = { status: 'Alliance', opinion: 95 };
+      defaultRelations.GB = { status: 'Allies', opinion: 96 };
       defaultRelations.DE = { status: 'Alliance', opinion: 85 };
       defaultRelations.FR = { status: 'Alliance', opinion: 85 };
-      defaultRelations.JP = { status: 'Alliance', opinion: 90 };
+      defaultRelations.JP = { status: 'Allies', opinion: 92 };
       defaultRelations.UA = { status: 'Alliance', opinion: 90 };
-      defaultRelations.IL = { status: 'Alliance', opinion: 95 };
+      defaultRelations.IL = { status: 'Allies', opinion: 95 };
       defaultRelations.TR = { status: 'Defensive Pact', opinion: 60 };
     } else if (cId === 'TR') {
-      defaultRelations.AZ = { status: 'Alliance', opinion: 98 };
+      defaultRelations.AZ = { status: 'Allies', opinion: 98 };
       defaultRelations.US = { status: 'Defensive Pact', opinion: 60 };
       defaultRelations.DE = { status: 'Neutral', opinion: 55 };
       defaultRelations.RU = { status: 'Neutral', opinion: 50 };
@@ -448,12 +465,32 @@ export function getInitialDiplomaticRelations(
       defaultRelations.EG = { status: 'Neutral', opinion: 50 };
       defaultRelations.SY = { status: 'Sanctioned', opinion: 25 };
     } else if (cId === 'DE') {
-      defaultRelations.FR = { status: 'Alliance', opinion: 95 };
+      defaultRelations.FR = { status: 'Allies', opinion: 95 };
       defaultRelations.US = { status: 'Alliance', opinion: 85 };
       defaultRelations.GB = { status: 'Alliance', opinion: 85 };
       defaultRelations.PL = { status: 'Alliance', opinion: 80 };
       defaultRelations.UA = { status: 'Alliance', opinion: 85 };
       defaultRelations.RU = { status: 'Sanctioned', opinion: 20 };
+    } else if (['FI', 'NO', 'SE'].includes(cId)) {
+      defaultRelations.US = { status: 'Allies', opinion: 90 };
+      defaultRelations.GB = { status: 'Allies', opinion: 90 };
+      defaultRelations.DE = { status: 'Allies', opinion: 88 };
+      defaultRelations.FR = { status: 'Allies', opinion: 85 };
+      defaultRelations.PL = { status: 'Alliance', opinion: 85 };
+      defaultRelations.UA = { status: 'Alliance', opinion: 80 };
+      defaultRelations.RU = { status: 'Sanctioned', opinion: 10 };
+      defaultRelations.NO = { status: 'Allies', opinion: 95 };
+      defaultRelations.SE = { status: 'Allies', opinion: 95 };
+      defaultRelations.FI = { status: 'Allies', opinion: 95 };
+      defaultRelations.CH = { status: 'Neutral', opinion: 75 };
+    } else if (cId === 'CH') {
+      defaultRelations.US = { status: 'Neutral', opinion: 70 };
+      defaultRelations.DE = { status: 'Neutral', opinion: 80 };
+      defaultRelations.FR = { status: 'Neutral', opinion: 80 };
+      defaultRelations.IT = { status: 'Neutral', opinion: 78 };
+      defaultRelations.RU = { status: 'Neutral', opinion: 40 };
+      defaultRelations.UA = { status: 'Neutral', opinion: 60 };
+      defaultRelations.GB = { status: 'Neutral', opinion: 75 };
     }
   }
 

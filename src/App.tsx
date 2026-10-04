@@ -4,13 +4,15 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Country, Party, MinisterCandidate, Coalition, GameDifficulty, ScenarioYear } from './types';
+import { Country, Party, MinisterCandidate, Coalition, GameDifficulty, ScenarioYear, CivilWarFaction, getCountryMode } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
+import { getRealPartiesForCountry } from './data/civilWarCountries';
 import { ALL_PRESS_QUESTIONS } from './constants/pressQuestions';
 import { ThemeToggle } from './components/ThemeToggle';
 import { StartScreen } from './components/StartScreen';
 import { WorldMap } from './components/WorldMap';
 import { PartyCreator } from './components/PartyCreator';
+import { FactionSelectView } from './components/FactionSelectView';
 import { CampaignView } from './components/CampaignView';
 import { ParliamentView } from './components/ParliamentView';
 import { CongressView } from './components/CongressView';
@@ -19,6 +21,7 @@ import { ElectionSimulator } from './components/ElectionSimulator';
 import { PartyCongressView } from './components/PartyCongressView';
 import { TacticalBattleView } from './components/TacticalBattleView';
 import { TacticalOperationsMap } from './components/TacticalOperationsMap';
+import { CivilWarBattleMap } from './components/CivilWarBattleMap';
 import { CabinetView } from './components/CabinetView';
 import { DiplomacyView } from './components/DiplomacyView';
 import { GovernanceView } from './components/GovernanceView';
@@ -39,6 +42,9 @@ import {
 } from 'lucide-react';
 import { isMuted, setMuted, playSound } from './lib/sounds';
 import { syncRegionOwnersAndMayors } from './utils/mayorUtils';
+import { validatePlayableCountriesMaps } from './data/mapRegistry';
+import { setRegionController } from './utils/territorialControl';
+import { getAuthorityPermissions, AuthorityPermissions } from './utils/authorityPermissions';
 
 const getDynamicIRLNews = (countryId: string | undefined, isRuling: boolean, playerPartyName?: string) => {
   const globalNews = [
@@ -175,16 +181,25 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS'>('START_SCREEN');
+  const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS' | 'FACTION_SELECT'>('START_SCREEN');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'settings' | 'languages'>('settings');
   const [gameDifficulty, setGameDifficulty] = useState<GameDifficulty>('NORMAL');
   const [selectedScenario, setSelectedScenario] = useState<ScenarioYear>('2026');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [playerParty, setPlayerParty] = useState<Party | null>(null);
+  const isCivilWarMode = getCountryMode(selectedCountry) === 'civilwar';
+  const isHybridMode = getCountryMode(selectedCountry) === 'hybrid';
   const [campaignTurn, setCampaignTurn] = useState<number>(1); // 1 to country.campaignTurns
-
   const [dashboardTab, setDashboardTab] = useState<string>('CAMPAIGN');
+
+  // Guard: Civil wars must never start in Provinces Campaign. For civilwar mode, never mount, initialize, or redirect to Provinces Campaign.
+  useEffect(() => {
+    if (isCivilWarMode && (dashboardTab === 'CAMPAIGN' || !['TACTICAL_BATTLE', 'FINANCE', 'DIPLOMACY'].includes(dashboardTab))) {
+      setDashboardTab('TACTICAL_BATTLE');
+    }
+  }, [isCivilWarMode, dashboardTab]);
+
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [warningAlert, setWarningAlert] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
@@ -205,6 +220,36 @@ export default function App() {
 
   // Sovereign Government and Diplomacy States
   const [isRuling, setIsRuling] = useState<boolean>(false);
+  const [civilWarPlayerPercent, setCivilWarPlayerPercent] = useState<number>(0);
+
+  const handleCivilWarTerritoryChange = React.useCallback((
+    updatedRegions: { name: string; controlledBy: string }[],
+    pct: number
+  ) => {
+    setCivilWarPlayerPercent(prev => (prev !== pct ? pct : prev));
+    if (!updatedRegions || updatedRegions.length === 0) return;
+
+    setSelectedCountry(prevCountry => {
+      if (!prevCountry || !prevCountry.regions) return prevCountry;
+      let hasChanges = false;
+      const newRegions = prevCountry.regions.map(r => {
+        const match = updatedRegions.find(u => 
+          Boolean(r.name && u.name && (
+            r.name.toLowerCase().includes(u.name.toLowerCase()) || 
+            u.name.toLowerCase().includes(r.name.toLowerCase())
+          ))
+        );
+        if (match && (r.controlledBy !== match.controlledBy || r.ownerPartyId !== match.controlledBy)) {
+          hasChanges = true;
+          return { ...r, controlledBy: match.controlledBy, ownerPartyId: match.controlledBy };
+        }
+        return r;
+      });
+
+      if (!hasChanges) return prevCountry;
+      return { ...prevCountry, regions: newRegions };
+    });
+  }, []);
 
   const newsTickerItems = React.useMemo(() => {
     return getDynamicIRLNews(selectedCountry?.id, isRuling, playerParty?.name);
@@ -256,6 +301,11 @@ export default function App() {
     }
   }, [eventHistory]);
 
+  // Dev-time map verification for playable countries
+  useEffect(() => {
+    validatePlayableCountriesMaps(PLAYABLE_COUNTRIES);
+  }, []);
+
   const [cabinet, setCabinet] = useState<Record<string, MinisterCandidate | null>>({});
 
   const [taxRates, setTaxRates] = useState({
@@ -282,15 +332,58 @@ export default function App() {
   const hasTriggeredColonialEvent = useRef<Record<number, boolean>>({});
 
   // Dynamic country ideologies and freedom indexes reflecting election & policy shifts
-  const [customCountryIdeologies, setCustomCountryIdeologies] = useState<Record<string, string>>({});
+  const [customCountryIdeologies, setCustomCountryIdeologies] = useState<Record<string, string>>({
+    TR: 'Right / Conservative-Nationalist'
+  });
   const [customCountryFreedomScores, setCustomCountryFreedomScores] = useState<Record<string, number>>({});
 
   // Global Wars State seeded with real conflicts per era
   const [globalWars, setGlobalWars] = useState<GlobalWar[]>(() => getInitialGlobalWars(selectedScenario));
 
-  const [diplomaticRelations, setDiplomaticRelations] = useState<Record<string, { status: 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>>(() => {
+  const [diplomaticRelations, setDiplomaticRelations] = useState<Record<string, { status: 'Allies' | 'Alliance' | 'Defensive Pact' | 'Non-Aggression' | 'Neutral' | 'At War' | 'Sanctioned'; opinion: number }>>(() => {
     return getInitialDiplomaticRelations('2026', 'TR');
   });
+
+  // Foreign Aid Packages for international per-turn support
+  const [foreignAidPackages, setForeignAidPackages] = useState<Record<string, {
+    id: string;
+    countryName: string;
+    status: 'ACCEPTED' | 'PENDING' | 'REJECTED';
+    type: 'funds' | 'equipment' | 'divisions';
+    amountPerTurn: number;
+    description: string;
+  }>>(() => {
+    return {
+      AZ: {
+        id: 'AZ',
+        countryName: 'Azerbaijan',
+        status: 'ACCEPTED',
+        type: 'funds',
+        amountPerTurn: 40000,
+        description: 'Allied economic and defense partnership aid'
+      }
+    };
+  });
+
+  const activeForeignAidTotal: number = (Object.values(foreignAidPackages) as Array<{ status: string; amountPerTurn: number }>).reduce((sum: number, pkg) => {
+    return pkg.status === 'ACCEPTED' ? sum + (pkg.amountPerTurn || 0) : sum;
+  }, 0);
+
+  // Resolved Fronts & Wars state to permanently remove resolved conflicts
+  const [resolvedWarIds, setResolvedWarIds] = useState<string[]>(() => {
+    try {
+      const s = localStorage.getItem('paths_to_power_resolved_wars');
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('paths_to_power_resolved_wars', JSON.stringify(resolvedWarIds));
+    } catch {}
+  }, [resolvedWarIds]);
 
   // Helper to synchronize diplomatic updates with global war state
   const handleUpdateRelations = (newRelations: Record<string, any>) => {
@@ -302,8 +395,8 @@ export default function App() {
         if (rel?.status === 'At War' && selectedCountry && targetId !== selectedCountry.id) {
           const exists = updated.find(w => 
             w.status === 'ACTIVE' && (
-              (w.belligerentsA.includes(selectedCountry.id) && w.belligerentsB.includes(targetId)) ||
-              (w.belligerentsB.includes(selectedCountry.id) && w.belligerentsA.includes(targetId))
+              (w.belligerentsA?.includes(selectedCountry.id) && w.belligerentsB?.includes(targetId)) ||
+              (w.belligerentsB?.includes(selectedCountry.id) && w.belligerentsA?.includes(targetId))
             )
           );
           if (!exists) {
@@ -327,8 +420,8 @@ export default function App() {
           // If peace is made, mark corresponding interstate wars as resolved
           updated = updated.map(w => {
             if (
-              (w.belligerentsA.includes(selectedCountry.id) && w.belligerentsB.includes(targetId)) ||
-              (w.belligerentsB.includes(selectedCountry.id) && w.belligerentsA.includes(targetId))
+              (w.belligerentsA?.includes(selectedCountry.id) && w.belligerentsB?.includes(targetId)) ||
+              (w.belligerentsB?.includes(selectedCountry.id) && w.belligerentsA?.includes(targetId))
             ) {
               return { ...w, status: 'RESOLVED' as const };
             }
@@ -480,11 +573,20 @@ export default function App() {
       const syncedRegions = syncRegionOwnersAndMayors(preppedRegions, targetCountry.id, undefined, targetCountry.rivals);
       const initCountry = { ...targetCountry, regions: syncedRegions };
       setSelectedCountry(initCountry);
+      setResolvedWarIds([]);
       setGlobalWars(getInitialGlobalWars(selectedScenario));
       setDiplomaticRelations(getInitialDiplomaticRelations(selectedScenario, targetCountry.id));
       setTurnsSinceLastEvent(3);
       setLastEventCategory(null);
-      setActiveScreen('PARTY_CREATOR');
+
+      const mode = getCountryMode(initCountry);
+      if (mode === 'civilwar') {
+        setDashboardTab('TACTICAL_BATTLE');
+        setActiveScreen('FACTION_SELECT');
+      } else {
+        setDashboardTab('CAMPAIGN');
+        setActiveScreen('PARTY_CREATOR');
+      }
     };
 
     startCampaignFlow(country);
@@ -571,6 +673,7 @@ export default function App() {
       }
     }
 
+    setIsRuling(false);
     setPlayerParty(party);
     setCampaignTurn(1);
 
@@ -584,6 +687,69 @@ export default function App() {
         setHasPromptedTimeMode(true);
       }
     }
+  };
+
+  const handleSelectCivilWarFaction = (faction: CivilWarFaction) => {
+    if (!selectedCountry) return;
+
+    const factionParty: Party = {
+      id: faction.id,
+      name: faction.name,
+      leader: faction.leader,
+      ideology: (faction.ideology as any) || 'Centrist',
+      symbol: faction.isGovernment ? 'Building' : 'Shield',
+      color: faction.color,
+      influence: faction.strength,
+      budget: 650000,
+      members: Math.round((faction.strength / 100) * 120000),
+      traits: {
+        charisma: 75,
+        eloquence: 70,
+        organization: 80,
+        strategy: 85
+      }
+    };
+
+    // Territorial warfare is isolated to War Frontline; do not overwrite electoral ownerPartyId with military factions
+    const updatedRegions = selectedCountry.regions.map(r => {
+      const isControlled = (faction.controlledRegions || []).some(cr => 
+        Boolean(cr && r.name && (
+          r.name.toLowerCase().includes(cr.toLowerCase()) || cr.toLowerCase().includes(r.name.toLowerCase())
+        ))
+      );
+      return {
+        ...r,
+        controlledBy: isControlled ? faction.id : undefined,
+      };
+    });
+
+    const updatedCountry = { ...selectedCountry, regions: updatedRegions };
+    setSelectedCountry(updatedCountry);
+    setPlayerParty(factionParty);
+    setIsRuling(Boolean(faction.isGovernment));
+    setIsJuniorMember(false);
+    setDashboardTab('TACTICAL_BATTLE');
+    setActiveScreen('MAIN_DASHBOARD');
+  };
+
+  const handleTransitionCivilWarToElectoral = () => {
+    if (!selectedCountry || !playerParty) return;
+    playSound('win');
+    const updatedCountry: Country = {
+      ...selectedCountry,
+      countryMode: 'electoral'
+    };
+    setSelectedCountry(updatedCountry);
+    setIsRuling(true);
+    setConfirmModal({
+      title: 'CONSTITUTIONAL SOVEREIGNTY RESTORED',
+      message: `Strategic victory! By securing overwhelming territorial control over ${selectedCountry.name}, your faction "${playerParty.name}" has officially reconstituted the state. Constitutional governance is restored, your faction is registered as the governing political party, and nationwide democratic parliamentary elections are now unlocked!`,
+      confirmText: 'Enter Constitutional Era',
+      onConfirm: () => {
+        setConfirmModal(null);
+        setDashboardTab('CAMPAIGN');
+      }
+    });
   };
 
   const handleWinCongress = (leaderChoice: 'own' | 'figurehead', newLeaderName: string, pollingShift: number) => {
@@ -801,7 +967,12 @@ export default function App() {
     const ministerSalariesSum = Object.values(cabinet).reduce((sum: number, c) => sum + (c ? 15000 : 0), 0) as number;
     const totalExpenses = baseGovExpenses + inflationImpact + ministerSalariesSum;
     
-    const netMonthlyChange = finalTaxRevenue - totalExpenses;
+    // Foreign aid revenues from supportive nations / allies
+    const foreignAidYield: number = (Object.values(foreignAidPackages) as Array<{ status: string; amountPerTurn: number }>).reduce((sum: number, pkg) => {
+      return pkg.status === 'ACCEPTED' ? sum + (pkg.amountPerTurn || 0) : sum;
+    }, 0);
+
+    const netMonthlyChange = finalTaxRevenue - totalExpenses + foreignAidYield;
     const nextTreasury = Math.max(0, treasury + netMonthlyChange);
     setTreasury(nextTreasury);
 
@@ -926,15 +1097,17 @@ export default function App() {
       }
     }
 
-    // 5. National election countdown check
-    const totalCycleMonths = selectedCountry.electionCycleYears * 12;
-    if (nextMonths >= totalCycleMonths) {
-      setWarningAlert(`Your ruling term is complete! It is time for the next General Elections in ${selectedCountry.name}!`);
-      setIsRuling(false);
-      setCampaignTurn(1);
-      setRulingMonthsCount(0);
-      setActiveScreen('ELECTION_SIMULATOR');
-      return;
+    // 5. National election countdown check (Bypassed during active civil war)
+    if (!isCivilWarMode) {
+      const totalCycleMonths = selectedCountry.electionCycleYears * 12;
+      if (nextMonths >= totalCycleMonths) {
+        setWarningAlert(`Your ruling term is complete! It is time for the next General Elections in ${selectedCountry.name}!`);
+        setIsRuling(false);
+        setCampaignTurn(1);
+        setRulingMonthsCount(0);
+        setActiveScreen('ELECTION_SIMULATOR');
+        return;
+      }
     }
   };
 
@@ -1070,6 +1243,82 @@ export default function App() {
       adjustPublicApproval(2);
       setWarningAlert("⚖️ CONSTRUCTIVE SCRUTINY: Your party urged transparent oversight and responsible defense spending.");
     }
+  };
+
+  const handleWarTurnAdvance = () => {
+    playSound('click');
+    if (isRuling) {
+      handleNextMonth();
+    } else {
+      // In civil war / campaign mode, advance 1 calendar week (7 days)
+      setCampaignTurn(prev => prev + 1);
+    }
+  };
+
+  const handleAnnexProvinces = (annexedProvinces: string[], defeatedCountryId: string, warReparations: number) => {
+    if (!selectedCountry || !playerParty) return;
+
+    // 1. Mark persistent territorial control map
+    annexedProvinces.forEach(pName => {
+      setRegionController(pName, selectedCountry.id);
+    });
+
+    // 2. Update selectedCountry regions so annexed provinces become part of the country's playable territory
+    const updatedRegions = [...selectedCountry.regions];
+    annexedProvinces.forEach(pName => {
+      const existingIdx = updatedRegions.findIndex(r => 
+        r.name.toLowerCase() === pName.toLowerCase() ||
+        r.name.replace(/\s+/g, '').toLowerCase() === pName.replace(/\s+/g, '').toLowerCase()
+      );
+      if (existingIdx >= 0) {
+        const targetRegion = { ...updatedRegions[existingIdx] };
+        targetRegion.supports = {
+          ...targetRegion.supports,
+          [playerParty.id]: 85
+        };
+        targetRegion.leadingParty = playerParty.name;
+        targetRegion.color = playerParty.color;
+        targetRegion.controlledBy = selectedCountry.id;
+        targetRegion.ownerPartyId = playerParty.id;
+        updatedRegions[existingIdx] = targetRegion;
+      } else {
+        updatedRegions.push({
+          name: pName,
+          population: 450000,
+          supports: {
+            [playerParty.id]: 80,
+            ...(selectedCountry.rivals[0] ? { [selectedCountry.rivals[0].id]: 20 } : {})
+          },
+          leadingParty: playerParty.name,
+          color: playerParty.color,
+          issues: ['Sovereignty & Reconstruction', 'Economic Integration'],
+          controlledBy: selectedCountry.id,
+          ownerPartyId: playerParty.id
+        });
+      }
+    });
+
+    // 3. Add war reparations to treasury
+    if (warReparations > 0) {
+      setTreasury(prev => prev + warReparations);
+    }
+
+    // 4. Update country state
+    handleUpdateCountry({
+      ...selectedCountry,
+      regions: updatedRegions
+    });
+
+    // 5. Update global wars list - remove the active war with defeated country
+    if (defeatedCountryId) {
+      setGlobalWars(prev => prev.filter(w => 
+        !( (w.attackerCountryId === selectedCountry.id && w.defenderCountryId === defeatedCountryId) ||
+           (w.defenderCountryId === selectedCountry.id && w.attackerCountryId === defeatedCountryId) )
+      ));
+    }
+
+    // 6. Alert user
+    setWarningAlert(`🕊️ BARIŞ ANTLAŞMASI ONAYLANDI: ${annexedProvinces.length} eyalet ${selectedCountry.name} egemenliğine dahil edildi ve $${warReparations.toLocaleString()} savaş tazminatı hazineye aktarıldı!`);
   };
 
   // Resolve dynamic game event choice
@@ -1813,9 +2062,43 @@ export default function App() {
           />
         )}
 
+        {activeScreen === 'FACTION_SELECT' && selectedCountry && (
+          <FactionSelectView
+            country={selectedCountry}
+            darkMode={darkMode}
+            onBack={() => setActiveScreen('MAP')}
+            onSelectFaction={handleSelectCivilWarFaction}
+          />
+        )}
+
         {/* OPERATIONS HUD GENERAL DASHBOARD */}
-        {activeScreen === 'MAIN_DASHBOARD' && selectedCountry && playerParty && (
-          <div className="w-full max-w-7xl mx-auto p-4 lg:p-6 flex flex-col gap-6">
+        {activeScreen === 'MAIN_DASHBOARD' && selectedCountry && playerParty && (() => {
+          const currentCountryMode = getCountryMode(selectedCountry);
+          const isCivilWarMode = currentCountryMode === 'civilwar';
+          const isHybridMode = currentCountryMode === 'hybrid';
+          const totalCountryRegions = selectedCountry.regions?.length || 1;
+          const playerHeldRegions = selectedCountry.regions?.filter(r => 
+            r.controlledBy === playerParty.id || r.ownerPartyId === playerParty.id
+          ).length || 0;
+          const playerTerritoryPercent = Math.max(
+            civilWarPlayerPercent,
+            Math.round((playerHeldRegions / totalCountryRegions) * 100)
+          );
+
+          const canRestoreElections = isCivilWarMode && (playerTerritoryPercent >= 90);
+
+          const permissions: AuthorityPermissions = getAuthorityPermissions({
+            isRuling,
+            countryMode: currentCountryMode,
+            isJuniorMember,
+            playerPartyId: playerParty.id,
+            countryId: selectedCountry.id
+          });
+
+          const activeDashboardTab = isCivilWarMode && (dashboardTab === 'CAMPAIGN' || !dashboardTab) ? 'TACTICAL_BATTLE' : dashboardTab;
+
+          return (
+            <div className="w-full max-w-7xl mx-auto p-4 lg:p-6 flex flex-col gap-6">
             
             {/* COUNTRY DASHBOARD COCKPIT HEADER ACTIONS */}
             <div 
@@ -1860,24 +2143,55 @@ export default function App() {
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <h2 className="text-lg font-bold tracking-tight">
-                        {isRuling ? `${selectedCountry.name} Government Executive Office` : `${selectedCountry.name} Campaign HQ`}
+                        {isCivilWarMode
+                          ? `${selectedCountry.name} War Theater Command`
+                          : isRuling 
+                            ? `${selectedCountry.name} Government Executive Office` 
+                            : `${selectedCountry.name} Campaign HQ`}
                       </h2>
                       <span 
                         className="text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wide flex items-center gap-1 text-white shadow-sm"
                         style={{ backgroundColor: playerParty.color }}
                       >
-                        {isRuling ? 'RULING GOVERNMENT' : playerParty.name}
+                        {isCivilWarMode ? `BELLIGERENT FACTION: ${playerParty.name}` : isRuling ? 'RULING GOVERNMENT' : playerParty.name}
+                      </span>
+                      <span 
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-wide border shadow-xs ${
+                          permissions.authorityRole === 'RULING_EXECUTIVE'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : permissions.authorityRole === 'FACTION_COMMANDER'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : permissions.authorityRole === 'OPPOSITION_CANDIDATE'
+                                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                                : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+                        }`}
+                        title={permissions.authorityDescription}
+                      >
+                        Authority: {permissions.authorityTitle}
                       </span>
                     </div>
                     <div className="text-xs text-slate-400 mt-1">
                       <div>
-                        {selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
+                        {isCivilWarMode
+                          ? 'Faction Commander: '
+                          : selectedCountry.id === 'US' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'TR' ? (isRuling ? 'President:' : 'Presidential Candidate:') : selectedCountry.id === 'DE' ? (isRuling ? 'Chancellor:' : 'Chancellor Candidate:') : (isRuling ? 'Head of State:' : 'Leader:')} <strong className={darkMode ? 'text-slate-200' : 'text-slate-800'}>{playerParty.leader}</strong>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span>Ideology: <strong className={darkMode ? 'text-slate-250' : 'text-slate-750'}>{playerParty.ideology}</strong></span>
-                        {isRuling && (
+                        <span>{isCivilWarMode ? 'War State:' : 'Ideology:'} <strong className={darkMode ? 'text-slate-250' : 'text-slate-750'}>{isCivilWarMode ? 'Sovereign Territorial Conflict' : playerParty.ideology}</strong></span>
+                        {isRuling && !isCivilWarMode && (
                           <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
                             Regime: {getRegimeType(playerParty.ideology)}
+                          </span>
+                        )}
+                        {activeForeignAidTotal > 0 && (
+                          <span className="text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] uppercase font-mono flex items-center gap-1" title="Active recurring foreign aid">
+                            <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                            Foreign Aid: +${activeForeignAidTotal.toLocaleString()}/mo
+                          </span>
+                        )}
+                        {isCivilWarMode && (
+                          <span className="text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded text-[10px] uppercase font-mono">
+                            Status: Armed Belligerent
                           </span>
                         )}
                       </div>
@@ -1892,10 +2206,10 @@ export default function App() {
                     <Calendar className="w-5 h-5 text-indigo-400 shrink-0 animate-pulse" />
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono font-bold uppercase">
-                        {isRuling ? 'NEXT ELECTION' : (selectedCountry.id === 'US' ? 'PRESIDENTIAL CAMPAIGN' : selectedCountry.id === 'TR' ? 'GENERAL ELECTION' : selectedCountry.id === 'DE' ? 'GENERAL ELECTION' : 'CAMPAIGN WEEK')}
+                        {isCivilWarMode ? 'TERRITORY HELD' : isRuling ? 'NEXT ELECTION' : (selectedCountry.id === 'US' ? 'PRESIDENTIAL CAMPAIGN' : selectedCountry.id === 'TR' ? 'GENERAL ELECTION' : selectedCountry.id === 'DE' ? 'GENERAL ELECTION' : 'CAMPAIGN WEEK')}
                       </span>
                       <div className="text-xs font-black font-mono text-indigo-400">
-                        {isRuling ? getNextElectionCountdown() : `${campaignTurn} / ${selectedCountry.campaignTurns} Wk`}
+                        {isCivilWarMode ? `${playerHeldRegions}/${totalCountryRegions} (${playerTerritoryPercent}%)` : isRuling ? getNextElectionCountdown() : `${campaignTurn} / ${selectedCountry.campaignTurns} Wk`}
                       </div>
                     </div>
                   </div>
@@ -1904,12 +2218,18 @@ export default function App() {
                   <div className="flex items-center gap-2.5">
                     <Coins className="w-5 h-5 text-amber-400 shrink-0" />
                     <div>
-                      <span className="text-[9px] text-slate-400 font-mono font-semibold uppercase">
-                        {isRuling ? 'STATE TREASURY' : 'PARTY BUDGET'}
+                      <span className="text-[9px] text-slate-400 font-mono font-semibold uppercase flex items-center justify-between">
+                        <span>{isCivilWarMode ? 'FACTION WAR CHEST' : isRuling ? 'STATE TREASURY' : 'PARTY BUDGET'}</span>
                       </span>
                       <div className="text-sm font-black font-mono text-emerald-400">
                         {currency}{isRuling ? (treasury ?? 0).toLocaleString() : (playerParty?.budget ?? 0).toLocaleString()}
                       </div>
+                      {activeForeignAidTotal > 0 && (
+                        <div className="text-[9px] font-mono font-bold text-emerald-300/90 flex items-center gap-0.5 mt-0.5" title="Recurring per-turn foreign aid received">
+                          <ShieldCheck className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          <span>+${activeForeignAidTotal.toLocaleString()}/mo aid</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1918,7 +2238,7 @@ export default function App() {
                     <Award className="w-5 h-5 text-cyan-400 shrink-0" />
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono font-semibold uppercase">
-                        {isRuling ? 'INTL REPUTATION' : 'POLITICAL INFLUENCE'}
+                        {isCivilWarMode ? 'WAR INFLUENCE' : isRuling ? 'INTL REPUTATION' : 'POLITICAL INFLUENCE'}
                       </span>
                       <div className="text-sm font-black font-mono text-cyan-400">
                         {isRuling ? `${internationalReputation}/100` : `${playerParty.influence} Influence`}
@@ -1931,10 +2251,10 @@ export default function App() {
                     <Users className="w-5 h-5 text-rose-400 shrink-0" />
                     <div>
                       <span className="text-[9px] text-slate-400 font-mono font-semibold uppercase">
-                        {isRuling ? 'FREEDOM INDEX' : 'EST. VOTE SHARE'}
+                        {isCivilWarMode ? 'TERRITORY CONTROL' : isRuling ? 'FREEDOM INDEX' : 'EST. VOTE SHARE'}
                       </span>
                       <div className="text-sm font-black font-mono text-rose-500">
-                        {isRuling ? `${freedomIndex}/100` : `% ${getGlobalAvgSupport()}`}
+                        {isCivilWarMode ? `% ${playerTerritoryPercent}` : isRuling ? `${freedomIndex}/100` : `% ${getGlobalAvgSupport()}`}
                       </div>
                     </div>
                   </div>
@@ -2018,7 +2338,15 @@ export default function App() {
                       </div>
                     ) : (
                       <div>
-                        {isRuling ? (
+                        {isCivilWarMode ? (
+                          <button
+                            id="next-war-month-btn"
+                            onClick={handleNextMonth}
+                            className="w-full py-1.5 px-3 rounded-lg text-xs font-black bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer shadow-md shadow-rose-500/10 border border-rose-500/50"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" /> Advance War Month
+                          </button>
+                        ) : isRuling ? (
                           <button
                             id="next-month-btn"
                             onClick={handleNextMonth}
@@ -2125,288 +2453,412 @@ export default function App() {
               </div>
             )}
 
+            {/* CIVIL WAR RESTORE NATIONAL CONTROL / STATUS BANNER */}
+            {isCivilWarMode && (
+              <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-md ${
+                canRestoreElections
+                  ? 'bg-gradient-to-r from-emerald-600/30 via-teal-600/20 to-indigo-600/30 border-emerald-500/50 text-emerald-200 shadow-emerald-500/10 animate-pulse'
+                  : darkMode 
+                    ? 'bg-amber-950/25 border-amber-500/40 text-amber-200' 
+                    : 'bg-amber-50 border-amber-300 text-amber-900'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 text-xl ${
+                    canRestoreElections 
+                      ? 'bg-emerald-500/20 text-emerald-400' 
+                      : 'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {canRestoreElections ? '🕊️' : '⚔️'}
+                  </div>
+                  <div>
+                    <h3 className={`text-sm font-black uppercase tracking-wider ${
+                      canRestoreElections ? 'text-emerald-300' : 'text-amber-300'
+                    }`}>
+                      {canRestoreElections 
+                        ? `Constitutional Victory Condition Achieved (${playerTerritoryPercent}% Hegemony)!`
+                        : 'Civil war in progress — restore national control to unlock civilian government.'}
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-0.5 max-w-3xl leading-relaxed">
+                      {canRestoreElections
+                        ? `You have secured ${playerTerritoryPercent}% of national territory (Requirement: 90% Superiority achieved)! You can now reconstitute sovereign civilian order and unlock democratic constitutional elections.`
+                        : `Martial law active. Parliaments, civilian ministries, and electoral campaigns are frozen. Direct faction command is restricted to War Frontline, Wartime Finance, and World Diplomacy until national control is secured (${playerHeldRegions}/${totalCountryRegions} regions held, ${playerTerritoryPercent}% / 90% needed).`}
+                    </p>
+                  </div>
+                </div>
+
+                {canRestoreElections ? (
+                  <button
+                    id="btn-restore-elections"
+                    onClick={handleTransitionCivilWarToElectoral}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <Sparkles className="w-4 h-4 text-slate-950" />
+                    Restore Civilian Government
+                  </button>
+                ) : (
+                  <div className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-xl bg-black/40 border border-amber-500/30 text-amber-300 shrink-0">
+                    Control: {playerTerritoryPercent}% / 90% Target
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* UNIFIED SYSTEM NAVIGATION BAR (Strict Ordering & Phase Lock State) */}
             <div className="flex flex-col gap-2.5">
               <div className={`p-2 rounded-2xl border flex items-center justify-between gap-2 flex-wrap ${
                 darkMode ? 'bg-slate-900/90 border-slate-800 shadow-md' : 'bg-white border-slate-200 shadow-sm'
               }`}>
                 <div className="flex items-center gap-1.5 flex-wrap flex-1 overflow-x-auto py-0.5">
-                  {/* 1. PROVINCES & CAMPAIGN */}
-                  <button
-                    id="tab-provinces-campaign"
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 You must win the party congress first before launching national campaign rallies!");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('CAMPAIGN');
-                    }}
-                    title={isJuniorMember ? "Available after winning party leadership" : "Provinces and electoral campaign"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                      isJuniorMember 
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20' 
-                        : dashboardTab === 'CAMPAIGN'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Megaphone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Provinces & Campaign</span>
-                    {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                  {isCivilWarMode ? (
+                    <>
+                      {/* 1. WAR FRONTLINE (Primary Active Theater) */}
+                      <button
+                        id="tab-war-frontline"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('TACTICAL_BATTLE');
+                        }}
+                        title="Frontline military sectors, theaters, and tactical combat"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                          activeDashboardTab === 'TACTICAL_BATTLE'
+                            ? 'bg-rose-600 text-white shadow-sm font-black'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                        <span>War Frontline</span>
+                      </button>
 
-                  {/* 2. PARTY CONGRESS */}
-                  <button
-                    id="tab-party-congress"
-                    onClick={() => {
-                      playSound('click');
-                      setDashboardTab('CONGRESS');
-                    }}
-                    title="Party leadership convention, delegates, and faction loyalty"
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                      dashboardTab === 'CONGRESS'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Party Congress</span>
-                  </button>
+                      {/* 2. WARTIME FINANCE */}
+                      <button
+                        id="tab-treasury-finance"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('FINANCE');
+                        }}
+                        title="Wartime finance, military spending, manpower, supplies, and external aid"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                          activeDashboardTab === 'FINANCE'
+                            ? 'bg-amber-600 text-white shadow-sm font-black'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Finance</span>
+                      </button>
 
-                  {/* 3. EVENTS & SITUATIONS */}
-                  <button
-                    id="tab-events-situations"
-                    onClick={() => {
-                      playSound('click');
-                      setDashboardTab('EVENTS_SITUATIONS');
-                    }}
-                    title="Active crises, ongoing national situations, and state decrees"
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                      dashboardTab === 'EVENTS_SITUATIONS'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
-                        : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Zap className={`w-3.5 h-3.5 shrink-0 ${dashboardTab === 'EVENTS_SITUATIONS' ? 'text-slate-950' : 'text-amber-400'}`} />
-                    <span>Events & Situations</span>
-                    {situations.length > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
-                        dashboardTab === 'EVENTS_SITUATIONS' ? 'bg-slate-900 text-amber-300' : 'bg-amber-500/20 text-amber-300'
-                      }`}>
-                        {situations.length}
-                      </span>
-                    )}
-                  </button>
+                      {/* 3. WORLD DIPLOMACY */}
+                      <button
+                        id="tab-world-diplomacy"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('DIPLOMACY');
+                        }}
+                        title="Global diplomacy, military alliances, foreign aid, and international relations"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                          activeDashboardTab === 'DIPLOMACY' || activeDashboardTab === 'TACTICAL_MAP'
+                            ? 'bg-cyan-600 text-white shadow-sm font-black'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>World Diplomacy</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* 1. PROVINCES & CAMPAIGN */}
+                      <button
+                        id="tab-provinces-campaign"
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 You must win the party congress first before launching national campaign rallies!");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('CAMPAIGN');
+                        }}
+                        disabled={isJuniorMember}
+                        title={isJuniorMember ? "Available after winning party leadership" : "Provinces and electoral campaign"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          isJuniorMember 
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20' 
+                            : dashboardTab === 'CAMPAIGN'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Megaphone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Provinces & Campaign</span>
+                        {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
 
-                  {/* 4. PARLIAMENT & BILLS */}
-                  <button
-                    id="tab-parliament-bills"
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 Available after winning party leadership");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('PARLIAMENT');
-                    }}
-                    title={isJuniorMember ? "Available after winning party leadership" : "Parliamentary seats, coalitions and legislation"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      isJuniorMember
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20'
-                        : dashboardTab === 'PARLIAMENT'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Landmark className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Parliament & Bills</span>
-                    {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 2. PARTY CONGRESS */}
+                      <button
+                        id="tab-party-congress"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('CONGRESS');
+                        }}
+                        title="Party leadership convention, delegates, and faction loyalty"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          dashboardTab === 'CONGRESS'
+                            ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Party Congress</span>
+                      </button>
 
-                  {/* 5. TREASURY & FINANCE */}
-                  <button
-                    id="tab-treasury-finance"
-                    onClick={() => {
-                      if (isJuniorMember) {
-                        playSound('error');
-                        setWarningAlert("🔒 Junior members do not have access to the official party treasury.");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('FINANCE');
-                    }}
-                    title={isJuniorMember ? "Available after winning party leadership" : "Treasury reserves, campaign funds, and investments"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      isJuniorMember
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20'
-                        : dashboardTab === 'FINANCE'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Coins className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Treasury & Finance</span>
-                    {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 3. EVENTS & SITUATIONS */}
+                      <button
+                        id="tab-events-situations"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('EVENTS_SITUATIONS');
+                        }}
+                        title="Active crises, ongoing national situations, and state decrees"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                          dashboardTab === 'EVENTS_SITUATIONS'
+                            ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Zap className={`w-3.5 h-3.5 shrink-0 ${dashboardTab === 'EVENTS_SITUATIONS' ? 'text-slate-950' : 'text-amber-400'}`} />
+                        <span>Events & Situations</span>
+                        {situations.length > 0 && (
+                          <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                            dashboardTab === 'EVENTS_SITUATIONS' ? 'bg-slate-900 text-amber-300' : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {situations.length}
+                          </span>
+                        )}
+                      </button>
 
-                  {/* 6. WORLD DIPLOMACY (Locked during election phase) */}
-                  <button
-                    id="tab-world-diplomacy"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('DIPLOMACY');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Global diplomacy, treaties, trade, and international relations"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP'
-                          ? 'bg-cyan-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span>World Diplomacy</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 4. PARLIAMENT & BILLS */}
+                      <button
+                        id="tab-parliament-bills"
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 Available after winning party leadership");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('PARLIAMENT');
+                        }}
+                        title={isJuniorMember ? "Available after winning party leadership" : "Parliamentary seats, coalitions and legislation"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          isJuniorMember
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20'
+                            : dashboardTab === 'PARLIAMENT'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Landmark className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Parliament & Bills</span>
+                        {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
 
-                  {/* 7. WAR FRONTLINE (Locked during election phase) */}
-                  <button
-                    id="tab-war-frontline"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('TACTICAL_BATTLE');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Frontline military sectors, theaters, and tactical combat"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'TACTICAL_BATTLE'
-                          ? 'bg-rose-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>War Frontline</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 5. TREASURY & FINANCE */}
+                      <button
+                        id="tab-treasury-finance"
+                        onClick={() => {
+                          if (isJuniorMember) {
+                            playSound('error');
+                            setWarningAlert("🔒 Junior members do not have access to the official party treasury.");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('FINANCE');
+                        }}
+                        title={isJuniorMember ? "Available after winning party leadership" : "Treasury reserves, campaign funds, and investments"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          isJuniorMember
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20'
+                            : dashboardTab === 'FINANCE'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Treasury & Finance</span>
+                        {isJuniorMember && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
 
-                  {/* 8. MINISTRIES (Locked during election phase) */}
-                  <button
-                    id="tab-ministries"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('CABINET');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Executive ministries and ministerial appointments"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'CABINET'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Ministries</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 6. WORLD DIPLOMACY */}
+                      <button
+                        id="tab-world-diplomacy"
+                        onClick={() => {
+                          playSound('click');
+                          setDashboardTab('DIPLOMACY');
+                        }}
+                        title="Global diplomacy, treaties, trade, and international relations"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                          dashboardTab === 'DIPLOMACY' || dashboardTab === 'TACTICAL_MAP'
+                            ? 'bg-cyan-600 text-white shadow-sm'
+                            : darkMode ? 'text-slate-300 hover:bg-slate-800/60' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>World Diplomacy</span>
+                      </button>
 
-                  {/* 9. TAXES & ECONOMY (Locked during election phase) */}
-                  <button
-                    id="tab-taxes-economy"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('TAXATION');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Sovereign fiscal policy, VAT, corporate and income taxes"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'TAXATION'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Taxes & Economy</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 7. WAR FRONTLINE (Active in Civil War, War Theater or when Sovereign Ruler) */}
+                      {(() => {
+                        const isAtWar = globalWars.some(w => !w.resolved && (w.attackerCountryId === selectedCountry.id || w.defenderCountryId === selectedCountry.id));
+                        const hasMilitaryAccess = isCivilWarMode || isAtWar || permissions.canCommandMilitary;
 
-                  {/* 10. MILITARY READINESS (Locked during election phase) */}
-                  <button
-                    id="tab-military-readiness"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('MILITARY');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Armed forces readiness, mobilization decrees and civil defense"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'MILITARY'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Military Readiness</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                        return (
+                          <button
+                            id="tab-war-frontline"
+                            onClick={() => {
+                              if (!hasMilitaryAccess) {
+                                playSound('error');
+                                setWarningAlert("🕊️ Barış Dönemi & Seçim Kampanyası: Bu ülke şu anda barış dönemindedir ve aktif bir savaş bulunmamaktadır. Askeri komuta ve cephe yetkileri yalnızca iç savaş veya aktif savaş durumunda geçerlidir. Seçim kampanyanıza odaklanın!");
+                                return;
+                              }
+                              playSound('click');
+                              setDashboardTab('TACTICAL_BATTLE');
+                            }}
+                            title={
+                              !hasMilitaryAccess
+                                ? "Ülke barış döneminde — Askeri cephe ve seferberlik yalnızca iç savaş veya savaş durumunda aktiftir"
+                                : permissions.canCommandMilitary
+                                  ? "Askeri cepheler ve taktik komuta"
+                                  : "Askeri cephe gözetleme (Genelkurmay komutasında)"
+                            }
+                            className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                              !hasMilitaryAccess
+                                ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
+                                : dashboardTab === 'TACTICAL_BATTLE'
+                                  ? 'bg-rose-600 text-white shadow-sm cursor-pointer'
+                                  : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                            }`}
+                          >
+                            <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <span>War Frontline</span>
+                            {!hasMilitaryAccess ? (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                PEACE
+                              </span>
+                            ) : !permissions.canCommandMilitary ? (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                OBSERVER
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })()}
 
-                  {/* 11. WATCHDOGS (Locked during election phase) */}
-                  <button
-                    id="tab-watchdogs"
-                    onClick={() => {
-                      if (!isRuling) {
-                        playSound('error');
-                        setWarningAlert("🔒 Unlocked after you win the election");
-                        return;
-                      }
-                      playSound('click');
-                      setDashboardTab('WATCHDOG');
-                    }}
-                    title={!isRuling ? "Unlocked after you win the election" : "Constitutional courts, state auditors and media oversight"}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                      !isRuling
-                        ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
-                        : dashboardTab === 'WATCHDOG'
-                          ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
-                          : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                    }`}
-                  >
-                    <Scale className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span>Watchdogs</span>
-                    {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
-                  </button>
+                      {/* 8. MINISTRIES */}
+                      <button
+                        id="tab-ministries"
+                        onClick={() => {
+                          if (!permissions.canAppointMinisters) {
+                            playSound('error');
+                            setWarningAlert("🔒 Executive ministerial appointments require sovereign governing authority. Opposition candidates cannot appoint state ministers.");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('CABINET');
+                        }}
+                        title={!permissions.canAppointMinisters ? "Executive governing authority required to appoint ministers" : "Executive ministries and ministerial appointments"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          !permissions.canAppointMinisters
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
+                            : dashboardTab === 'CABINET'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Ministries</span>
+                        {!permissions.canAppointMinisters && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
+
+                      {/* 9. TAXES & ECONOMY */}
+                      <button
+                        id="tab-taxes-economy"
+                        onClick={() => {
+                          if (!permissions.canControlStateFinance) {
+                            playSound('error');
+                            setWarningAlert("🔒 Sovereign fiscal policy and taxation are directed by the sovereign government. Opposition parties manage campaign funds only.");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('TAXATION');
+                        }}
+                        title={!permissions.canControlStateFinance ? "Sovereign governing authority required to set national tax policy" : "Sovereign fiscal policy, VAT, corporate and income taxes"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          !permissions.canControlStateFinance
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
+                            : dashboardTab === 'TAXATION'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <TrendingUp className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Taxes & Economy</span>
+                        {!permissions.canControlStateFinance && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
+
+                      {/* 10. MILITARY READINESS */}
+                      <button
+                        id="tab-military-readiness"
+                        onClick={() => {
+                          if (!permissions.canCommandMilitary) {
+                            playSound('error');
+                            setWarningAlert("🔒 National military mobilization and defense readiness are commanded by the General Staff / Commander-in-Chief. Win the general election to command national defense.");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('MILITARY');
+                        }}
+                        title={!permissions.canCommandMilitary ? "Sovereign military command authority required" : "Armed forces readiness, mobilization decrees and civil defense"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          !permissions.canCommandMilitary
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
+                            : dashboardTab === 'MILITARY'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Military Readiness</span>
+                        {!permissions.canCommandMilitary && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
+
+                      {/* 11. WATCHDOGS */}
+                      <button
+                        id="tab-watchdogs"
+                        onClick={() => {
+                          if (!isRuling) {
+                            playSound('error');
+                            setWarningAlert("🔒 Unlocked after you win the election");
+                            return;
+                          }
+                          playSound('click');
+                          setDashboardTab('WATCHDOG');
+                        }}
+                        title={!isRuling ? "Unlocked after you win the election" : "Constitutional courts, state auditors and media oversight"}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                          !isRuling
+                            ? 'opacity-40 text-slate-500 cursor-not-allowed bg-slate-900/20 border border-slate-800/40'
+                            : dashboardTab === 'WATCHDOG'
+                              ? 'bg-indigo-600 text-white shadow-sm cursor-pointer'
+                              : darkMode ? 'text-slate-300 hover:bg-slate-800/60 cursor-pointer' : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                        }`}
+                      >
+                        <Scale className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Watchdogs</span>
+                        {!isRuling && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Persistent Chronicle Log Button */}
@@ -2428,7 +2880,7 @@ export default function App() {
             </div>
 
             {/* TAB WORKSPACE */}
-            {dashboardTab === 'CAMPAIGN' && (
+            {activeDashboardTab === 'CAMPAIGN' && !isCivilWarMode && (
               <CampaignView
                 country={selectedCountry}
                 party={playerParty}
@@ -2440,7 +2892,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'PARLIAMENT' && (
+            {activeDashboardTab === 'PARLIAMENT' && !isCivilWarMode && (
               <ParliamentView
                 country={selectedCountry}
                 party={playerParty}
@@ -2454,7 +2906,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'EVENTS_SITUATIONS' && selectedCountry && playerParty && (
+            {activeDashboardTab === 'EVENTS_SITUATIONS' && !isCivilWarMode && selectedCountry && playerParty && (
               <StateEventsView
                 country={selectedCountry}
                 party={playerParty}
@@ -2472,13 +2924,13 @@ export default function App() {
                 onNavigateToMap={(mapType) => {
                   if (mapType === 'DIPLOMACY') setDashboardTab('DIPLOMACY');
                   else if (mapType === 'WAR_FRONT') setDashboardTab('TACTICAL_BATTLE');
-                  else setDashboardTab('CAMPAIGN');
+                  else setDashboardTab(isCivilWarMode ? 'TACTICAL_BATTLE' : 'CAMPAIGN');
                   playSound('click');
                 }}
               />
             )}
 
-            {dashboardTab === 'CONGRESS' && (
+            {activeDashboardTab === 'CONGRESS' && !isCivilWarMode && (
               <CongressView
                 country={selectedCountry}
                 party={playerParty}
@@ -2490,7 +2942,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'FINANCE' && selectedCountry && playerParty && (
+            {activeDashboardTab === 'FINANCE' && selectedCountry && playerParty && (
               <FinanceView
                 country={selectedCountry}
                 party={playerParty}
@@ -2500,10 +2952,12 @@ export default function App() {
                 isRuling={isRuling}
                 treasury={treasury}
                 onUpdateTreasury={setTreasury}
+                isCivilWarMode={isCivilWarMode}
+                canControlStateFinance={permissions.canControlStateFinance}
               />
             )}
 
-            {dashboardTab === 'CABINET' && (
+            {activeDashboardTab === 'CABINET' && !isCivilWarMode && (
               <CabinetView
                 country={selectedCountry}
                 party={playerParty}
@@ -2517,7 +2971,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'DIPLOMACY' && (
+            {activeDashboardTab === 'DIPLOMACY' && (
               <DiplomacyView
                 country={selectedCountry}
                 party={playerParty}
@@ -2536,10 +2990,16 @@ export default function App() {
                 freedomIndex={freedomIndex}
                 countryIdeologies={customCountryIdeologies}
                 countryFreedomScores={customCountryFreedomScores}
+                foreignAidPackages={foreignAidPackages}
+                onUpdateForeignAid={setForeignAidPackages}
+                onNavigateToWar={() => {
+                  setDashboardTab('TACTICAL_BATTLE');
+                  playSound('click');
+                }}
               />
             )}
 
-            {dashboardTab === 'TAXATION' && (
+            {activeDashboardTab === 'TAXATION' && !isCivilWarMode && (
               <GovernanceView
                 country={selectedCountry}
                 party={playerParty}
@@ -2564,7 +3024,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'MILITARY' && (
+            {activeDashboardTab === 'MILITARY' && !isCivilWarMode && (
               <MilitaryView
                 country={selectedCountry}
                 party={playerParty}
@@ -2580,7 +3040,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'WATCHDOG' && (
+            {activeDashboardTab === 'WATCHDOG' && !isCivilWarMode && (
               <CivicWatchdogView
                 country={selectedCountry}
                 party={playerParty}
@@ -2593,7 +3053,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'TACTICAL_MAP' && selectedCountry && playerParty && (
+            {activeDashboardTab === 'TACTICAL_MAP' && selectedCountry && playerParty && (
               <TacticalOperationsMap
                 country={selectedCountry}
                 party={playerParty}
@@ -2608,7 +3068,7 @@ export default function App() {
               />
             )}
 
-            {dashboardTab === 'TACTICAL_BATTLE' && (
+            {activeDashboardTab === 'TACTICAL_BATTLE' && (
               <TacticalBattleView
                 country={selectedCountry}
                 party={playerParty}
@@ -2621,7 +3081,13 @@ export default function App() {
                 scenario={selectedScenario}
                 darkMode={darkMode}
                 isRuling={isRuling}
+                canCommandMilitary={permissions.canCommandMilitary}
                 onPoliticalStance={handleWarPoliticalStance}
+                onAnnexProvinces={handleAnnexProvinces}
+                onTurnAdvance={handleWarTurnAdvance}
+                foreignAidPackages={foreignAidPackages}
+                resolvedWarIds={resolvedWarIds}
+                countryMode={currentCountryMode}
                 onBattleFinished={(success: boolean) => {
                   if (success) {
                     setCivilWarRisk(5);
@@ -2630,13 +3096,60 @@ export default function App() {
                     setCivilWarRisk(prev => Math.min(100, prev + 15));
                     setWarningAlert("⚠️ DEFENSE ALERT: Hostile pressure detected. Fortify remaining national sectors!");
                   }
-                  setDashboardTab('CAMPAIGN');
+                  if (isCivilWarMode) {
+                    if (success) {
+                      // Post-war mode transition: transition country to electoral democracy and transfer territory & resources
+                      const unifiedRegions = (selectedCountry.regions || []).map(r => ({
+                        ...r,
+                        controlledBy: playerParty.id,
+                        ownerPartyId: playerParty.id,
+                      }));
+                      const postWarCountry = {
+                        ...selectedCountry,
+                        countryMode: 'electoral' as const,
+                        regions: unifiedRegions,
+                      };
+                      setSelectedCountry(postWarCountry);
+                      setIsRuling(true);
+                      setTreasury(prev => prev + 150000000);
+                      setInternationalReputation(prev => Math.min(100, prev + 25));
+                      setFreedomIndex(prev => Math.min(100, prev + 20));
+                      setResolvedWarIds(prev => Array.from(new Set([...prev, 'CIVIL_WAR', `CIVIL_WAR_${selectedCountry.id}`, selectedCountry.id])));
+                      setGlobalWars(prev => prev.map(w => {
+                        const matchesId = Boolean(w.id && w.id.includes(selectedCountry.id));
+                        const matchesName = Boolean(w.name && selectedCountry.name && w.name.toLowerCase().includes(selectedCountry.name.toLowerCase()));
+                        const matchesTheater = Boolean(w.theaterLocation && selectedCountry.name && w.theaterLocation.toLowerCase().includes(selectedCountry.name.toLowerCase()));
+                        const matchesBelligerentA = Boolean(w.belligerentsA && w.belligerentsA.includes(selectedCountry.id));
+                        const matchesBelligerentB = Boolean(w.belligerentsB && w.belligerentsB.includes(selectedCountry.id));
+                        if (matchesId || matchesName || matchesTheater || matchesBelligerentA || matchesBelligerentB) {
+                          return { ...w, status: 'RESOLVED' as const };
+                        }
+                        return w;
+                      }));
+                      setEventHistory(prev => [
+                        {
+                          id: `civil_war_resolved_${Date.now()}`,
+                          title: "National Constitutional Unification & Civil War Resolution",
+                          date: `Turn ${campaignTurn} · 2026`,
+                          description: `The armed conflict in ${selectedCountry.name} has concluded with full constitutional pacification. Civilian democratic governance, state ministries, and parliamentary elections are now fully restored.`,
+                          category: "PEACE_ACCORD"
+                        },
+                        ...prev
+                      ]);
+                      setDashboardTab('PARLIAMENT');
+                      setWarningAlert("🕊️ POST-WAR TRANSITION: Constitutional democracy restored! Civil war concluded and state governance unlocked.");
+                    } else {
+                      setDashboardTab('TACTICAL_BATTLE');
+                    }
+                  } else {
+                    setDashboardTab('CAMPAIGN');
+                  }
                 }}
               />
             )}
 
           </div>
-        )}
+        ); })()}
 
         {/* PHASE 4: GENERAL RUN OF ELECTION DAY RESULTS */}
         {activeScreen === 'ELECTION_SIMULATOR' && selectedCountry && playerParty && (
@@ -2671,6 +3184,8 @@ export default function App() {
             country={selectedCountry}
             party={playerParty}
             civilWarRisk={civilWarRisk}
+            treasury={treasury}
+            onUpdateTreasury={setTreasury}
             darkMode={darkMode}
             isRuling={isRuling}
             diplomaticRelations={diplomaticRelations}
@@ -2678,11 +3193,31 @@ export default function App() {
             globalWars={globalWars}
             scenario={selectedScenario}
             onPoliticalStance={handleWarPoliticalStance}
+            onAnnexProvinces={handleAnnexProvinces}
+            onTurnAdvance={handleWarTurnAdvance}
             onBattleFinished={(success: boolean) => {
               if (success) {
                 setCivilWarRisk(10);
-                setWarningAlert("💥 GLORIOUS VICTORY: Our military forces have cleared all rebel cells in the capital. The indivisible integrity of the state has been successfully protected!");
+                
+                // Requirement 3: After a civil-war victory, the election roster comes from that country's real party list.
+                // War factions are never converted into parties.
+                const realParties = getRealPartiesForCountry(selectedCountry.id);
+                if (realParties && realParties.length > 0) {
+                  const updatedCountry: Country = {
+                    ...selectedCountry,
+                    countryMode: 'electoral',
+                    system: 'Constitutional Parliamentary Democracy',
+                    rivals: realParties
+                  };
+                  setSelectedCountry(updatedCountry);
+                  // Transform player's party to the leading authentic political party
+                  setPlayerParty(realParties[0]);
+                  setIsRuling(true);
+                }
+
+                setWarningAlert("💥 CONSTITUTIONAL VICTORY: Civil war hostilities have concluded. Sovereign democracy restored! Election roster loaded from the authentic national party list.");
                 setActiveScreen('MAIN_DASHBOARD');
+                setDashboardTab('CAMPAIGN');
               } else {
                 setWarningAlert("💀 DEFEAT: After our military units were defeated, the rebels stormed the presidential palace and overthrew the government. You have lost control of the administration.");
                 setActiveScreen('MAP');

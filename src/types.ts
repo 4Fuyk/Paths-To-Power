@@ -114,6 +114,8 @@ export interface Delegate {
   demands: string;
 }
 
+export type CountryMode = 'electoral' | 'civilwar' | 'hybrid';
+
 export interface Country {
   id: string; // e.g. TR, US, DE, GB, BR, JP
   name: string;
@@ -134,6 +136,46 @@ export interface Country {
   isBreakaway?: boolean; // True if state is a de facto separatist/breakaway state from civil conflict
   parentCountryId?: string; // e.g. 'SY', 'LY', 'SD', 'MM', 'YE', 'CD'
   activeConflictId?: string; // Associated ongoing conflict ID
+  countryMode?: CountryMode; // 'electoral' | 'civilwar' | 'hybrid'
+  capitalRegionId?: string; // e.g. 'Tripoli', 'Damascus', 'Khartoum'
+  validFrom?: number; // Earliest historical year country existed
+  validUntil?: number; // Latest historical year country existed before dissolution/succession
+}
+
+/**
+ * Centrally resolve country mode ('electoral' | 'civilwar' | 'hybrid')
+ */
+export function getCountryMode(country: Country | null | undefined): CountryMode {
+  if (!country) return 'electoral';
+  if (country.countryMode) return country.countryMode;
+  const id = (country.id || '').toUpperCase();
+  // Civil war countries: Libya, Syria, Sudan, Myanmar, Yemen, Somalia, Afghanistan, Mali, DR Congo (CD/COD), Ethiopia, Haiti
+  if (['LY', 'SY', 'SD', 'MM', 'YE', 'SO', 'AF', 'ML', 'CD', 'COD', 'ET', 'HT'].includes(id)) {
+    return 'civilwar';
+  }
+  // Hybrid countries: Russia, Ukraine
+  if (['RU', 'UA'].includes(id)) {
+    return 'hybrid';
+  }
+  return 'electoral';
+}
+
+export interface PeaceTreatyTerms {
+  targetCountryId: string;
+  targetCountryName: string;
+  isUNCompliant: boolean;
+  annexedProvinces: string[];
+  demilitarizedProvinces: string[];
+  newGovernmentType?: string;
+  newIdeology?: string;
+  newReligion?: string;
+  confiscateFleet: boolean;
+  confiscateTanks: boolean;
+  confiscateAircraft: boolean;
+  fullDisarmament: boolean;
+  warReparationsAmount: number;
+  monthlyReparations: number;
+  unSecurityCouncilApproval?: boolean;
 }
 
 export interface Coalition {
@@ -250,6 +292,14 @@ export interface CivilWarFaction {
   description: string;
 }
 
+export type ConflictSide = {
+  id: string;
+  leader: string;
+  members: string[];
+  color: string;
+  name?: string;
+};
+
 export interface CivilWarState {
   countryId: string;
   countryName: string;
@@ -258,6 +308,7 @@ export interface CivilWarState {
   yearStarted: number;
   stability: number; // strictly < 30
   factions: CivilWarFaction[];
+  sides?: ConflictSide[];
   status: 'ACTIVE' | 'GOV_VICTORY' | 'REBEL_VICTORY' | 'PARTITION' | 'FROZEN_CONFLICT';
   playerStance?: 'NEUTRAL' | 'RECOGNIZED_GOV' | 'RECOGNIZED_REBEL' | 'PEACEKEEPER';
   playerAidRecipient?: string;

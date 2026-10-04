@@ -26,14 +26,18 @@ import {
   resolveDeterministicFrontlineBattle,
   setRegionController,
   getTerritoryControlMap,
+  isBufferZone,
   CombatBelligerentForces,
   FrontlineBattleResult
 } from '../utils/territorialControl';
-import { Country, ScenarioYear } from '../types';
+import { Country, ScenarioYear, Party } from '../types';
 import { playSound } from '../lib/sounds';
+import { INITIAL_CIVIL_WARS } from '../constants/civilWarData';
+import { CivilWarBattleMap } from './CivilWarBattleMap';
 
 interface WarFrontlineMapProps {
   country: Country;
+  playerParty?: Party;
   enemyCountryId?: string;
   theaterKey: string; // 'CIVIL_WAR' or enemyCountryId like 'RU', 'GR', etc.
   conflictName?: string;
@@ -43,10 +47,13 @@ interface WarFrontlineMapProps {
   onCeasefireOrVictory?: (won: boolean) => void;
   airSuperiority?: number;
   availableTransports?: number;
+  onTurnAdvance?: () => void;
+  canCommandMilitary?: boolean;
 }
 
 export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
   country,
+  playerParty,
   enemyCountryId,
   theaterKey,
   conflictName,
@@ -55,8 +62,31 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
   onTerritoryChanged,
   onCeasefireOrVictory,
   airSuperiority = 65,
-  availableTransports = 8
+  availableTransports = 8,
+  onTurnAdvance,
+  canCommandMilitary = true
 }) => {
+  // Check if this is a civil-war country or civil-war theater
+  const isCivilWarCountry = country.countryMode === 'civilwar' || theaterKey === 'CIVIL_WAR' || Boolean(INITIAL_CIVIL_WARS[country.id]);
+
+  if (isCivilWarCountry) {
+    return (
+      <CivilWarBattleMap
+        country={country}
+        playerParty={playerParty}
+        scenario={scenario}
+        darkMode={darkMode}
+        onTerritoryChange={onTerritoryChanged}
+        onTurnAdvance={onTurnAdvance}
+        onVictory={(winnerId) => {
+          if (onCeasefireOrVictory) {
+            onCeasefireOrVictory(winnerId.includes('GOV') || winnerId.includes('GNU') || winnerId.includes('SAF') || winnerId.includes('SAC') || winnerId.includes('PLC') || winnerId.includes('FARDC'));
+          }
+        }}
+      />
+    );
+  }
+
   // 1. Theater Setup & Data
   const theaterData = useMemo(() => {
     return getTheaterRegions(country.id, enemyCountryId, country);
@@ -67,6 +97,14 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [draggedDivisionId, setDraggedDivisionId] = useState<string | null>(null);
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+  const [territoryVersion, setTerritoryVersion] = useState<number>(0);
+
+  // Listen for real-time territory/border updates from peace deals
+  useEffect(() => {
+    const handleUpdate = () => setTerritoryVersion(v => v + 1);
+    window.addEventListener('territory_control_updated', handleUpdate);
+    return () => window.removeEventListener('territory_control_updated', handleUpdate);
+  }, []);
 
   // 2. NATO Divisions State
   const [divisions, setDivisions] = useState<NATODivision[]>(() => {
@@ -84,10 +122,27 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
     );
   });
 
-  // Re-sync regions when theater changes
+  // Re-sync regions and reinitialize divisions when theater or country changes
   useEffect(() => {
     setRegions(theaterData.regions);
-  }, [theaterData]);
+    setSelectedDivisionId(null);
+    setSelectedRegionId(null);
+    setDraggedDivisionId(null);
+    setHoveredRegionId(null);
+
+    const friendlySide = theaterData.factions.find(f => f.isGovernment) || theaterData.factions[0];
+    const enemySide = theaterData.factions.find(f => !f.isGovernment) || theaterData.factions[1] || { id: 'ENEMY', name: 'Hostile Forces' };
+    
+    setDivisions(initializeTheaterDivisions(
+      theaterData.regions,
+      friendlySide.id,
+      friendlySide.name,
+      enemySide.id,
+      enemySide.name,
+      Math.max(120000, (country.population || 50000000) * 0.005),
+      Math.max(100000, (country.population || 50000000) * 0.0045)
+    ));
+  }, [theaterData, country.id, enemyCountryId]);
 
   // 3. Persistent Casualty and Loss Statistics (Top-Right HUD)
   const [casualtyStats, setCasualtyStats] = useState<PersistentCasualtyStats>({
@@ -146,9 +201,25 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const regionLayersRef = useRef<Record<string, L.Polygon>>({});
+  const regionPolygonGroupRef = useRef<L.FeatureGroup | null>(null);
   const markerLayersRef = useRef<Record<string, L.Marker>>({});
   const frontlinesLayerRef = useRef<L.LayerGroup | null>(null);
   const neighborsLayerRef = useRef<L.GeoJSON | null>(null);
+
+  // ResizeObserver for automatic map fitting on container resize
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+        if (regionPolygonGroupRef.current && regionPolygonGroupRef.current.getBounds().isValid()) {
+          mapInstanceRef.current.fitBounds(regionPolygonGroupRef.current.getBounds(), { padding: [24, 24], maxZoom: 8 });
+        }
+      }
+    });
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const selectedDivision = useMemo(() => {
     return divisions.find(d => d.id === selectedDivisionId) || null;
@@ -263,24 +334,38 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
     const frontlinesGroup = L.layerGroup().addTo(map);
     frontlinesLayerRef.current = frontlinesGroup;
 
+    const polygonGroup = L.featureGroup();
+
+    // Ensure Leaflet SVG defs has buffer hatch pattern
+    const svgEl = map.getPanes().overlayPane.querySelector('svg');
+    if (svgEl && !svgEl.querySelector('#buffer-hatch-pattern')) {
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `<pattern id="buffer-hatch-pattern" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#334155"/><line x1="0" y1="0" x2="0" y2="8" stroke="#cbd5e1" stroke-width="2.5"/></pattern>`;
+      svgEl.insertBefore(defs, svgEl.firstChild);
+    }
+
+    const controlMap = getTerritoryControlMap();
+
     regions.forEach(reg => {
-      const isFriendly = reg.controllerId === friendlySideId;
+      const isBuffer = reg.controllerId === 'BUFFER_ZONE' || isBufferZone(reg.id) || isBufferZone(reg.name) || controlMap[reg.id] === 'BUFFER_ZONE';
+      const isFriendly = !isBuffer && (reg.controllerId === friendlySideId || controlMap[reg.id] === country.id);
       const isReachable = reachableRegionIds.has(reg.id);
       const isSelected = selectedRegionId === reg.id;
       const isHovered = hoveredRegionId === reg.id;
 
       // Color scheme
-      let fillColor = isFriendly ? '#1e40af' : '#991b1b'; // Friendly Navy vs Hostile Crimson
-      let fillOpacity = 0.55;
-      let borderColor = isFriendly ? '#3b82f6' : '#ef4444';
+      let fillColor = isBuffer ? '#334155' : isFriendly ? '#1e40af' : '#991b1b'; // Buffer Slate vs Friendly Navy vs Hostile Crimson
+      let fillOpacity = isBuffer ? 0.85 : 0.55;
+      let borderColor = isBuffer ? '#94a3b8' : isFriendly ? '#3b82f6' : '#ef4444';
       let borderWidth = 2;
+      let dashArray = isBuffer ? '4, 3' : undefined;
 
       if (isSelected) {
         borderColor = '#fbbf24'; // Gold highlight
         borderWidth = 3.5;
         fillOpacity = 0.75;
       } else if (isReachable) {
-        if (!isFriendly) {
+        if (!isFriendly && !isBuffer) {
           borderColor = '#f59e0b'; // Target enemy region highlighted in pulsing amber
           borderWidth = 3;
           fillOpacity = 0.7;
@@ -291,19 +376,20 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
         }
       }
 
-      // Render polygon
+      // Render polygon with hatched neutral style for buffer zones (Requirement 2)
       const polygon = L.polygon(reg.polygon, {
         fillColor,
         fillOpacity,
         color: borderColor,
         weight: borderWidth,
-        className: isReachable ? 'cursor-pointer transition-all duration-200' : 'cursor-default'
+        dashArray,
+        className: isBuffer ? 'buffer-zone-hatched cursor-default' : isReachable ? 'cursor-pointer transition-all duration-200' : 'cursor-default'
       }).addTo(map);
 
       // Region tooltip / label
       const terrainBadge = getTerrainIcon(reg.terrain);
       const portBadge = reg.isPort ? '⚓ Port' : '';
-      const controllerLabel = isFriendly ? '🔵 Friendly Control' : '🔴 Hostile Occupied';
+      const controllerLabel = isBuffer ? '🛡️ Demilitarized Buffer Zone' : isFriendly ? '🔵 Friendly Control' : '🔴 Hostile Occupied';
 
       polygon.bindTooltip(`
         <div class="p-1 font-mono text-xs">
@@ -335,6 +421,7 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
       });
 
       regionLayersRef.current[reg.id] = polygon;
+      polygonGroup.addLayer(polygon);
 
       // Draw thick contested frontline if this region borders an enemy region
       reg.adjacentRegionIds.forEach(adjId => {
@@ -351,7 +438,12 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
         }
       });
     });
-  }, [regions, reachableRegionIds, selectedRegionId, hoveredRegionId, friendlySideId]);
+
+    regionPolygonGroupRef.current = polygonGroup;
+    if (regions.length > 0 && polygonGroup.getBounds().isValid()) {
+      map.fitBounds(polygonGroup.getBounds(), { padding: [24, 24], maxZoom: 8 });
+    }
+  }, [regions, reachableRegionIds, selectedRegionId, hoveredRegionId, friendlySideId, territoryVersion]);
 
   // Render & Update NATO Unit Markers
   useEffect(() => {
@@ -470,6 +562,11 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
             handleSelectDivision(div);
           } else if (selectedDivision && reachableRegionIds.has(div.regionId)) {
             // Player clicked on an enemy division in a reachable adjacent region -> trigger assault!
+            if (canCommandMilitary === false) {
+              playSound('error');
+              addCombatLog("🔒 GENERAL STAFF OPERATIONAL COMMAND: As an opposition/election candidate, you have observation clearance only. Sovereign military orders are reserved until you win executive power.");
+              return;
+            }
             const targetReg = regions.find(r => r.id === div.regionId);
             if (targetReg) {
               executeCombatEngagement(selectedDivision, targetReg);
@@ -480,7 +577,7 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
         markerLayersRef.current[div.id] = marker;
       });
     });
-  }, [divisions, regions, selectedDivisionId, reachableRegionIds]);
+  }, [divisions, regions, selectedDivisionId, reachableRegionIds, canCommandMilitary]);
 
   // Select Division Handler
   const handleSelectDivision = (div: NATODivision) => {
@@ -508,6 +605,12 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
 
     if (targetRegion.id === selectedDivision.regionId) {
       setSelectedDivisionId(null);
+      return;
+    }
+
+    if (canCommandMilitary === false) {
+      playSound('error');
+      addCombatLog("🔒 GENERAL STAFF OPERATIONAL COMMAND: As an opposition/election candidate, you have observation clearance only. Sovereign military orders are reserved until you win executive power.");
       return;
     }
 
@@ -719,6 +822,10 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
     setIsResolvingTurn(true);
     setTurnCounter(prev => prev + 1);
 
+    if (onTurnAdvance) {
+      onTurnAdvance();
+    }
+
     // AI Counter-Maneuver Simulation (Deterministic enemy pressure on weak friendly borders)
     setTimeout(() => {
       const hostileDivs = divisions.filter(d => d.side !== 'FRIENDLY' && d.manpower > 5000);
@@ -774,6 +881,14 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
 
       {/* Main Map Container */}
       <div className="relative flex-1 w-full h-full min-h-[520px]">
+        {/* Observer Clearance Banner when player lacks military command */}
+        {canCommandMilitary === false && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-950/90 border border-amber-500/60 backdrop-blur-md px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 text-amber-200 text-xs font-mono pointer-events-none max-w-xl text-center">
+            <Eye className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+            <span>OBSERVER CLEARANCE: General Staff directs national armed forces during election period. Military command is locked until executive authority is won.</span>
+          </div>
+        )}
+
         {/* Leaflet Map Div */}
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 

@@ -8,6 +8,7 @@ import { Country, ScenarioYear } from '../types';
 import { PLAYABLE_COUNTRIES, countryColors } from '../constants/countries';
 import { getPlayableCountriesForScenario } from '../constants/eraCountries';
 import { HISTORICAL_SCENARIOS } from '../constants/scenarios';
+import { isCountryActive, getSuccessorCountryId, migrateCountryId } from '../utils/countryUtils';
 import { 
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
@@ -30,7 +31,7 @@ const countryCoords: Record<string, [number, number]> = {
   US: [38.0, -97.0],
   BR: [-14.235, -51.925],
   GB: [55.378, -3.436],
-  DE: [50.7374, 7.0982], // Bonn / West Germany
+  DE: [51.1657, 10.4515], // Unified Germany
   DDR: [52.5200, 13.4050], // Berlin / East Germany
   SU: [55.7558, 37.6173], // Moscow / Soviet Union
   CS: [49.8175, 15.4730], // Prague / Czechoslovakia
@@ -59,6 +60,10 @@ const countryCoords: Record<string, [number, number]> = {
   IS: [64.9631, -19.0208],
   PT: [39.3999, -8.2245],
   GR: [39.0742, 21.8243],
+  FI: [61.9241, 25.7482],
+  NO: [60.4720, 8.4689],
+  SE: [60.1282, 18.6435],
+  CH: [46.8182, 8.2275],
   // Breakaway & Conflict States
   SY: [34.8021, 38.9968],
   SY_SDF: [36.5000, 40.7500], // Rojava / Hasakah
@@ -71,13 +76,14 @@ const countryCoords: Record<string, [number, number]> = {
   YE: [15.3694, 44.1910],
   YE_HOU: [15.3500, 44.2000], // Sanaa / Hodeidah
   CD: [-4.4419, 15.2663],
-  CD_M23: [-1.2800, 29.4500]  // North Kivu / Rutshuru
+  CD_M23: [-1.2800, 29.4500], // North Kivu / Rutshuru
+  CG: [-4.2634, 15.2429]
 };
 
 const englishNames: Record<string, string> = {
   TR: "Turkey",
   US: "United States of America",
-  DE: "Federal Republic of Germany",
+  DE: "Germany",
   DDR: "German Democratic Republic",
   SU: "Union of Soviet Socialist Republics",
   CS: "Czechoslovak Republic",
@@ -107,6 +113,10 @@ const englishNames: Record<string, string> = {
   IS: "Iceland",
   PT: "Portuguese Republic",
   GR: "Hellenic Republic",
+  FI: "Republic of Finland",
+  NO: "Kingdom of Norway",
+  SE: "Kingdom of Sweden",
+  CH: "Swiss Confederation",
   SY: "Syrian Arab Republic",
   SY_SDF: "Autonomous Admin. of North & East Syria (Rojava)",
   LY: "State of Libya (GNU)",
@@ -118,7 +128,8 @@ const englishNames: Record<string, string> = {
   YE: "Republic of Yemen (PLC)",
   YE_HOU: "Supreme Political Council (Ansar Allah / Sanaa)",
   CD: "Democratic Republic of the Congo",
-  CD_M23: "Alliance Fleuve Congo & M23 Resistance"
+  CD_M23: "Alliance Fleuve Congo & M23 Resistance",
+  CG: "Republic of the Congo"
 };
 
 const countryRadii: Record<string, number> = {
@@ -138,6 +149,8 @@ const countryRadii: Record<string, number> = {
   CA: 950000,
   AR: 600000,
   ZA: 500000,
+  CD: 650000,
+  CG: 280000,
   IN: 650000,
   IT: 300000,
   ID: 700000,
@@ -154,6 +167,10 @@ const countryRadii: Record<string, number> = {
   IS: 250000,
   PT: 300000,
   GR: 280000,
+  FI: 380000,
+  NO: 420000,
+  SE: 500000,
+  CH: 200000,
   SY: 300000,
   SY_SDF: 240000,
   LY: 450000,
@@ -164,7 +181,6 @@ const countryRadii: Record<string, number> = {
   MM_NUG_PDF: 350000,
   YE: 350000,
   YE_HOU: 280000,
-  CD: 650000,
   CD_M23: 250000
 };
 
@@ -415,6 +431,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     if (id3 === 'SWE' || id2 === 'SE' || name.includes('SWEDEN')) {
       if (activeCountries.some(c => c.id === 'SE')) return 'SE';
     }
+    if (id3 === 'FIN' || id2 === 'FI' || name.includes('FINLAND') || name.includes('SUOMI')) {
+      if (activeCountries.some(c => c.id === 'FI')) return 'FI';
+    }
+    if (id3 === 'NOR' || id2 === 'NO' || name.includes('NORWAY') || name.includes('NORGE')) {
+      if (activeCountries.some(c => c.id === 'NO')) return 'NO';
+    }
+    if (id3 === 'CHE' || id2 === 'CH' || name.includes('SWITZERLAND') || name.includes('SUISSE') || name.includes('SCHWEIZ') || name.includes('SVIZZERA')) {
+      if (activeCountries.some(c => c.id === 'CH')) return 'CH';
+    }
     if (id3 === 'SAU' || id2 === 'SA' || name.includes('SAUDI')) {
       if (activeCountries.some(c => c.id === 'SA')) return 'SA';
     }
@@ -447,9 +472,15 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       if (activeCountries.some(c => c.id === 'YE')) return 'YE';
       if (activeCountries.some(c => c.id === 'YE_HOU')) return 'YE_HOU';
     }
-    if (id3 === 'COD' || id2 === 'CD' || id3 === 'ZAR' || name.includes('CONGO') || name.includes('DRC')) {
+    // Congo: DRC vs Republic of the Congo
+    if (id3 === 'COD' || id2 === 'CD' || id3 === 'ZAR' || name.includes('DEMOCRATIC REPUBLIC OF THE CONGO') || name.includes('DRC') || name.includes('KINSHASA')) {
       if (activeCountries.some(c => c.id === 'CD')) return 'CD';
+      if (activeCountries.some(c => c.id === 'COD')) return 'COD';
       if (activeCountries.some(c => c.id === 'CD_M23')) return 'CD_M23';
+    }
+    if (id3 === 'COG' || id2 === 'CG' || name.includes('REPUBLIC OF THE CONGO') || name.includes('BRAZZAVILLE') || name === 'CONGO') {
+      if (activeCountries.some(c => c.id === 'CG')) return 'CG';
+      if (activeCountries.some(c => c.id === 'COG')) return 'COG';
     }
 
     return null;
@@ -756,7 +787,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           return '#dc2626'; // Not Free (Red)
         }
         const country = activeCountries.find(c => c.id === countryId) || PLAYABLE_COUNTRIES.find(c => c.id === countryId);
-        const score = country?.freedomScore ?? (['SU', 'DDR', 'CN', 'CS'].includes(countryId) ? 18 : ['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS'].includes(countryId) ? 88 : 55);
+        const score = country?.freedomScore ?? (['SU', 'DDR', 'CN', 'CS'].includes(countryId) ? 18 : ['US', 'GB', 'FR', 'DE', 'CA', 'AU', 'IS', 'SE', 'NO', 'FI', 'CH'].includes(countryId) ? 95 : 55);
         if (score >= 70) return '#16a34a'; // Free (Green)
         if (score >= 40) return '#d97706'; // Partly Free (Amber)
         return '#dc2626'; // Not Free (Red)
@@ -774,7 +805,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         }
         if (['SU', 'DDR', 'CN', 'CS', 'YU'].includes(countryId)) return '#991b1b'; // Communist / Marxist-Leninist
         if (['PL', 'RO', 'HU'].includes(countryId)) return activeScenarioId === '1950' ? '#991b1b' : '#2563eb';
-        if (['US', 'GB', 'JP', 'CA', 'AU', 'IS', 'PT'].includes(countryId)) return '#2563eb'; // Conservative / Capitalist / Liberal Dem
+        if (['US', 'GB', 'JP', 'CA', 'AU', 'IS', 'PT', 'SE', 'NO', 'FI', 'CH'].includes(countryId)) return '#2563eb'; // Conservative / Capitalist / Liberal Dem
         if (['DE', 'FR', 'IT', 'ES', 'CL', 'GR'].includes(countryId)) return '#0891b2'; // Social / Liberal / Christian Dem
         if (['TR', 'EG', 'ZA', 'BR', 'MX', 'AR', 'IN', 'ID'].includes(countryId)) return '#ca8a04'; // Centrist / Nationalist / Republic
         if (['RU'].includes(countryId)) return '#7f1d1d'; // Illiberal / Traditionalist
