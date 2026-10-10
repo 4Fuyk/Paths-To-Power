@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Country, Region, RivalParty } from '../types';
+import { Country, Region, RivalParty, Party } from '../types';
 
 function makeRegions(names: string[], countryId: string, capitalName: string): Region[] {
   return names.map((name, idx) => {
@@ -179,15 +179,15 @@ export const YEMEN: Country = {
 
 // 6. SOMALIA (SO)
 const somaliaRegionNames = [
-  'Banaadir', 'Galguduud', 'Hiran', 'Middle Shabelle', 'Lower Shabelle', 
-  'Middle Juba', 'Lower Juba', 'Gedo', 'Bay', 'Bakool', 'Mudug', 
-  'Nugaal', 'Bari', 'Sool', 'Sanaag', 'Togdheer', 'Woqooyi Galbeed', 'Awdal'
+  'Awdal', 'Bakool', 'Banaadir', 'Bari', 'Bay', 'Galguduud', 'Gedo', 
+  'Hiiraan', 'JubbadaDhexe', 'JubbadaHoose', 'Mudug', 'Nugaal', 
+  'Sanaag', 'ShabeellahaDhexe', 'ShabeellahaHoose', 'Sool', 'Togdheer', 'WoqooyiGalbeed'
 ];
 
 export const SOMALIA: Country = {
   id: 'SO',
   name: 'Somalia',
-  description: 'A Horn of Africa nation navigating long-standing federal state-building, regional clan balances, and persistent counter-insurgency operations.',
+  description: 'A Horn of Africa nation navigating federal state-building, regional autonomy dynamics, and counter-insurgency operations.',
   flag: '🇸🇴',
   seats: 275,
   parliamentName: 'Federal Parliament of Somalia',
@@ -198,8 +198,11 @@ export const SOMALIA: Country = {
   capitalRegionId: 'Banaadir',
   regions: makeRegions(somaliaRegionNames, 'SO', 'Banaadir'),
   rivals: [
-    { id: 'SO_FGS', name: 'Federal Government of Somalia (Mogadishu)', leader: 'Hassan Sheikh Mohamud', ideology: 'Centrist', symbol: 'Building', color: '#2563eb', baseSupport: 62 },
-    { id: 'SO_AS', name: 'Al-Shabaab Insurgency', leader: 'Ahmed Diriye', ideology: 'Conservative', symbol: 'Flame', color: '#1e293b', baseSupport: 38 }
+    { id: 'SO_FGS', name: 'Federal Government + AU forces', leader: 'Hassan Sheikh Mohamud', ideology: 'Centrist', symbol: 'Building', color: '#2563eb', baseSupport: 30 },
+    { id: 'SO_SHA', name: 'al-Shabaab', leader: 'Ahmed Diriye ("Abu Ubaidah")', ideology: 'Conservative', symbol: 'Flame', color: '#dc2626', baseSupport: 25 },
+    { id: 'SO_PUNT', name: 'Puntland', leader: 'Said Abdullahi Deni', ideology: 'Nationalist', symbol: 'Shield', color: '#059669', baseSupport: 18 },
+    { id: 'SO_JUBA', name: 'Jubaland', leader: 'Ahmed Madobe', ideology: 'Conservative', symbol: 'ShieldCheck', color: '#7c3aed', baseSupport: 12 },
+    { id: 'SO_SOM', name: 'Somaliland (separate de facto state)', leader: 'Abdirahman Mohamed Abdullahi ("Cirro")', ideology: 'Liberal', symbol: 'Globe', color: '#d97706', baseSupport: 15 }
   ],
   bills: [],
   campaignTurns: 52,
@@ -208,35 +211,130 @@ export const SOMALIA: Country = {
 
 // 7. AFGHANISTAN (AF)
 const afghanistanRegionNames = [
-  'Kabul', 'Kandahar', 'Herat', 'Balkh', 'Nangarhar', 'Helmand', 
-  'Kunduz', 'Ghazni', 'Badakhshan', 'Baghlan', 'Takhar', 'Panjshir', 
-  'Parwan', 'Wardak', 'Logar', 'Paktia', 'Paktika', 'Khost', 
-  'Bamyan', 'Daykundi', 'Ghor', 'Farah', 'Nimruz', 'Zabul', 
-  'Uruzgan', 'Samangan', 'Sar-e Pol', 'Jowzjan', 'Faryab', 
-  'Badghis', 'Nuristan', 'Kunar', 'Laghman', 'Kapisa'
+  'Badakhshan', 'Badghis', 'Baghlan', 'Balkh', 'Bamyan', 'Daykundi', 'Farah', 'Faryab', 
+  'Ghazni', 'Ghor', 'Hilmand', 'Hirat', 'Jawzjan', 'Kabul', 'Kandahar', 'Kapisa', 
+  'Khost', 'Kunar', 'Kunduz', 'Laghman', 'Logar', 'Nangarhar', 'Nimroz', 'Nuristan', 
+  'Paktika', 'Paktya', 'Panjshir', 'Parwan', 'Samangan', 'SariPul', 'Takhar', 
+  'Uruzgan', 'Wardak', 'Zabul'
 ];
 
 export const AFGHANISTAN: Country = {
   id: 'AF',
   name: 'Afghanistan',
-  description: 'A mountainous Central Asian nation ruled by the Taliban theocracy, confronted with armed republican resistance and severe humanitarian challenges.',
+  description: 'A mountainous Central Asian nation ruled by the Taliban theocracy, facing armed republican resistance and ISIS-K attacks.',
   flag: '🇦🇫',
   seats: 249,
   parliamentName: 'Loya Jirga / Islamic Emirate Council',
-  system: 'Theocratic Emirate / Guerrilla Front',
+  system: 'Theocratic Emirate / Civil Conflict',
   population: '41.1 Million',
   primaryColor: '#1e293b',
   countryMode: 'civilwar',
   capitalRegionId: 'Kabul',
   regions: makeRegions(afghanistanRegionNames, 'AF', 'Kabul'),
   rivals: [
-    { id: 'AF_TALIBAN', name: 'Islamic Emirate of Afghanistan (Taliban)', leader: 'Hibatullah Akhundzada', ideology: 'Conservative', symbol: 'Building', color: '#1e293b', baseSupport: 72 },
-    { id: 'AF_NRF', name: 'National Resistance Front (NRF)', leader: 'Ahmad Massoud', ideology: 'Liberal', symbol: 'Shield', color: '#15803d', baseSupport: 28 }
+    { id: 'AF_TAL', name: 'Taliban government', leader: 'Hibatullah Akhundzada & Sirajuddin Haqqani', ideology: 'Traditionalist', symbol: 'Building', color: '#1e293b', baseSupport: 65 },
+    { id: 'AF_NRF', name: 'National Resistance Front', leader: 'Ahmad Massoud', ideology: 'Liberal', symbol: 'Shield', color: '#059669', baseSupport: 22 },
+    { id: 'AF_ISKP', name: 'ISIS-K', leader: 'Sanaullah Ghafari ("Shahab al-Muhajir")', ideology: 'Conservative', symbol: 'Flame', color: '#dc2626', baseSupport: 13 }
   ],
   bills: [],
   campaignTurns: 52,
   electionCycleYears: 5
 };
+
+// 8. ETHIOPIA (ET)
+const ethiopiaRegionNames = [
+  'AddisAbeba', 'Afar', 'Amhara', 'Benshangul-Gumaz', 'DireDawa', 
+  'GambelaPeoples', 'HarariPeople', 'Oromia', 'Somali', 
+  'SouthernNations,Nationalities', 'Tigray'
+];
+
+export const ETHIOPIA: Country = {
+  id: 'ET',
+  name: 'Ethiopia',
+  description: 'A federal Horn of Africa nation confronting armed insurgencies in Amhara and Oromia alongside post-conflict Tigray tensions.',
+  flag: '🇪🇹',
+  seats: 547,
+  parliamentName: 'House of Peoples\' Representatives (Wartime Administration)',
+  system: 'Civil War / Federal Insurgency',
+  population: '126.5 Million',
+  primaryColor: '#15803d',
+  countryMode: 'civilwar',
+  capitalRegionId: 'AddisAbeba',
+  regions: makeRegions(ethiopiaRegionNames, 'ET', 'AddisAbeba'),
+  rivals: [
+    { id: 'ET_GOV', name: 'Federal Government', leader: 'Abiy Ahmed', ideology: 'Centrist', symbol: 'Building', color: '#15803d', baseSupport: 45 },
+    { id: 'ET_TPLF', name: 'TPLF/Tigray forces', leader: 'Debretsion Gebremichael', ideology: 'Socialist', symbol: 'Shield', color: '#dc2626', baseSupport: 22 },
+    { id: 'ET_FANO', name: 'Fano (Amhara)', leader: 'Zemene Kassie', ideology: 'Nationalist', symbol: 'Users', color: '#2563eb', baseSupport: 20 },
+    { id: 'ET_OLA', name: 'OLA (Oromo)', leader: 'Jaal Marroo (Kumsa Diriba)', ideology: 'Liberal', symbol: 'Flame', color: '#d97706', baseSupport: 13 }
+  ],
+  bills: [],
+  campaignTurns: 52,
+  electionCycleYears: 5
+};
+
+// 9. HAITI (HT)
+const haitiRegionNames = [
+  'Centre', "Grand'Anse", "L'Artibonite", 'Nippes', 'Nord', 
+  'Nord-Est', 'Nord-Ouest', 'Ouest', 'Sud', 'Sud-Est'
+];
+
+export const HAITI: Country = {
+  id: 'HT',
+  name: 'Haiti',
+  description: 'A Caribbean republic gripped by metropolitan gang warfare, supported by the Kenya-led UN security mission.',
+  flag: '🇭🇹',
+  seats: 119,
+  parliamentName: 'National Assembly of Haiti (Suspended)',
+  system: 'Civil War / Security Crisis',
+  population: '11.7 Million',
+  primaryColor: '#1e3a8a',
+  countryMode: 'civilwar',
+  capitalRegionId: 'Ouest',
+  regions: makeRegions(haitiRegionNames, 'HT', 'Ouest'),
+  rivals: [
+    { id: 'HT_TRANSITION', name: 'Transitional Government + the Kenya-led security mission', leader: 'Leslie Voltaire & Alix Didier Fils-Aimé', ideology: 'Centrist', symbol: 'Building', color: '#1e3a8a', baseSupport: 48 },
+    { id: 'HT_VIV_ANSANM', name: 'Viv Ansanm gang coalition', leader: 'Jimmy Chérizier ("Barbecue") & Johnson André ("Izo")', ideology: 'Nationalist', symbol: 'Flame', color: '#dc2626', baseSupport: 52 }
+  ],
+  bills: [],
+  campaignTurns: 52,
+  electionCycleYears: 5
+};
+
+// 10. MALI (ML)
+const maliRegionNames = [
+  'Bamako', 'Gao', 'Kayes', 'Kidal', 'Koulikoro', 'Mopti', 'Ségou', 'Sikasso', 'Timbuktu'
+];
+
+export const MALI: Country = {
+  id: 'ML',
+  name: 'Mali',
+  description: 'A Sahelian nation embroiled in multi-sided conflict between the military junta, Africa Corps, Tuareg rebels, and jihadist coalitions.',
+  flag: '🇲🇱',
+  seats: 147,
+  parliamentName: 'National Transitional Council (CNT)',
+  system: 'Civil War / Sahel Conflict',
+  population: '23.2 Million',
+  primaryColor: '#15803d',
+  countryMode: 'civilwar',
+  capitalRegionId: 'Bamako',
+  regions: makeRegions(maliRegionNames, 'ML', 'Bamako'),
+  rivals: [
+    { id: 'ML_JUNTA', name: 'Junta + Africa Corps', leader: 'Col. Assimi Goïta & Gen. Sadio Camara', ideology: 'Nationalist', symbol: 'Building', color: '#15803d', baseSupport: 45 },
+    { id: 'ML_FLA', name: 'FLA (Azawad)', leader: 'Bilal Ag Acherif & Alghabass Ag Intalla', ideology: 'Liberal', symbol: 'Shield', color: '#2563eb', baseSupport: 22 },
+    { id: 'ML_JNIM', name: 'JNIM', leader: 'Iyad Ag Ghaly & Amadou Koufa', ideology: 'Conservative', symbol: 'Flame', color: '#d97706', baseSupport: 20 },
+    { id: 'ML_ISSP', name: 'ISSP', leader: 'Abu al-Bara al-Sahrawi', ideology: 'Traditionalist', symbol: 'Crosshair', color: '#dc2626', baseSupport: 13 }
+  ],
+  bills: [],
+  campaignTurns: 52,
+  electionCycleYears: 5
+};
+
+// Aliases with 3-letter ISO IDs for direct lookup compatibility
+export const ETHIOPIA_ETH: Country = { ...ETHIOPIA, id: 'ETH' };
+export const SOMALIA_SOM: Country = { ...SOMALIA, id: 'SOM' };
+export const AFGHANISTAN_AFG: Country = { ...AFGHANISTAN, id: 'AFG' };
+export const HAITI_HTI: Country = { ...HAITI, id: 'HTI' };
+export const MALI_MLI: Country = { ...MALI, id: 'MLI' };
 
 // 8. UKRAINE (UA - Hybrid Mode)
 const ukraineRegionNames = [
@@ -339,6 +437,9 @@ export const CIVIL_WAR_PLAYABLE_COUNTRIES: Country[] = [
   YEMEN,
   SOMALIA,
   AFGHANISTAN,
+  ETHIOPIA,
+  HAITI,
+  MALI,
   DR_CONGO
 ];
 
@@ -414,10 +515,200 @@ export const REAL_COUNTRY_PARTIES: Record<string, RivalParty[]> = {
     { id: 'HW', name: 'Hezb-e Wahdat Civic Party', leader: 'Mohammad Mohaqiq', ideology: 'Social Democrat', symbol: 'Users', color: '#d97706', baseSupport: 18 },
     { id: 'ASDP', name: 'Afghan Social Democratic Party (Afghan Mellat)', leader: 'Stana Gul Sherzad', ideology: 'Nationalist', symbol: 'Shield', color: '#dc2626', baseSupport: 12 },
     { id: 'RDF', name: 'Republican Democratic Front', leader: 'Fawzia Koofi', ideology: 'Liberal', symbol: 'Sparkles', color: '#7c3aed', baseSupport: 8 }
+  ],
+  ET: [
+    { id: 'PP', name: 'Prosperity Party (PP)', leader: 'Abiy Ahmed', ideology: 'Centrist', symbol: 'Building', color: '#15803d', baseSupport: 46 },
+    { id: 'EZEMA', name: 'Ethiopian Citizens for Social Justice (Ezema)', leader: 'Berhanu Nega', ideology: 'Liberal', symbol: 'Compass', color: '#2563eb', baseSupport: 22 },
+    { id: 'OFC', name: 'Oromo Federalist Congress (OFC)', leader: 'Merera Gudina', ideology: 'Social Democrat', symbol: 'Users', color: '#f59e0b', baseSupport: 18 },
+    { id: 'NAMA', name: 'National Movement of Amhara (NaMA)', leader: 'Belete Molla', ideology: 'Nationalist', symbol: 'Shield', color: '#dc2626', baseSupport: 14 }
+  ],
+  HT: [
+    { id: 'LAVALAS', name: 'Fanmi Lavalas', leader: 'Maryse Narcisse', ideology: 'Social Democrat', symbol: 'Users', color: '#dc2626', baseSupport: 34 },
+    { id: 'DESALIN', name: 'Pitit Desalin', leader: 'Jean-Charles Moïse', ideology: 'Nationalist', symbol: 'Flame', color: '#b91c1c', baseSupport: 28 },
+    { id: 'FUSION', name: 'Fusion of Haitian Social Democrats', leader: 'Edmonde Supplice Beauzile', ideology: 'Socialist', symbol: 'Building', color: '#2563eb', baseSupport: 20 },
+    { id: 'OPL', name: 'Organisation du Peuple en Lutte (OPL)', leader: 'Edgard Leblanc Fils', ideology: 'Centrist', symbol: 'Globe', color: '#059669', baseSupport: 18 }
+  ],
+  ML: [
+    { id: 'RPM', name: 'Rassemblement pour le Mali (RPM)', leader: 'Bocary Tréta', ideology: 'Social Democrat', symbol: 'Building', color: '#15803d', baseSupport: 36 },
+    { id: 'ADEMA', name: 'ADEMA-PASJ', leader: 'Marimantia Diarra', ideology: 'Socialist', symbol: 'Users', color: '#dc2626', baseSupport: 28 },
+    { id: 'URD', name: 'Union for the Republic and Democracy (URD)', leader: 'Gouagnon Coulibaly', ideology: 'Liberal', symbol: 'Compass', color: '#2563eb', baseSupport: 22 },
+    { id: 'CODEM', name: 'Convergence for the Development of Mali', leader: 'Housseini Amion Guindo', ideology: 'Centrist', symbol: 'Shield', color: '#f59e0b', baseSupport: 14 }
+  ],
+  CN: [
+    { id: 'CPC', name: 'Communist Party of China (CPC)', leader: 'Mao Zedong & Zhou Enlai', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 68 },
+    { id: 'KMT', name: 'Kuomintang / Nationalist Party (KMT)', leader: 'Chiang Kai-shek & Chen Cheng', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 22 },
+    { id: 'CDL', name: 'China Democratic League (CDL)', leader: 'Zhang Lan', ideology: 'Liberal', symbol: 'Compass', color: '#059669', baseSupport: 10 }
+  ],
+  VN: [
+    { id: 'VWP', name: 'Workers\' Party of Vietnam (Đảng Lao động Việt Nam)', leader: 'Hồ Chí Minh & Trường Chinh', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 60 },
+    { id: 'VNQDD', name: 'Vietnamese Nationalist Party (Việt Nam Quốc Dân Đảng)', leader: 'Nguyễn Tường Tam', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 25 },
+    { id: 'DVP', name: 'Democratic Party of Vietnam (Đảng Dân chủ Việt Nam)', leader: 'Dương Đức Hiền', ideology: 'Liberal', symbol: 'Users', color: '#059669', baseSupport: 15 }
   ]
 };
 
+// Mirror ISO3 keys
+REAL_COUNTRY_PARTIES.COD = REAL_COUNTRY_PARTIES.CD;
+REAL_COUNTRY_PARTIES.LBY = REAL_COUNTRY_PARTIES.LY;
+REAL_COUNTRY_PARTIES.SYR = REAL_COUNTRY_PARTIES.SY;
+REAL_COUNTRY_PARTIES.SDN = REAL_COUNTRY_PARTIES.SD;
+REAL_COUNTRY_PARTIES.MMR = REAL_COUNTRY_PARTIES.MM;
+REAL_COUNTRY_PARTIES.YEM = REAL_COUNTRY_PARTIES.YE;
+REAL_COUNTRY_PARTIES.SOM = REAL_COUNTRY_PARTIES.SO;
+REAL_COUNTRY_PARTIES.AFG = REAL_COUNTRY_PARTIES.AF;
+REAL_COUNTRY_PARTIES.ETH = REAL_COUNTRY_PARTIES.ET;
+REAL_COUNTRY_PARTIES.HTI = REAL_COUNTRY_PARTIES.HT;
+REAL_COUNTRY_PARTIES.MLI = REAL_COUNTRY_PARTIES.ML;
+REAL_COUNTRY_PARTIES.CHN = REAL_COUNTRY_PARTIES.CN;
+REAL_COUNTRY_PARTIES.VNM = REAL_COUNTRY_PARTIES.VN;
+
+// Bind postWarParties to each civil-war country definition
+LIBYA.postWarParties = REAL_COUNTRY_PARTIES.LY;
+SYRIA.postWarParties = REAL_COUNTRY_PARTIES.SY;
+SUDAN.postWarParties = REAL_COUNTRY_PARTIES.SD;
+MYANMAR.postWarParties = REAL_COUNTRY_PARTIES.MM;
+YEMEN.postWarParties = REAL_COUNTRY_PARTIES.YE;
+SOMALIA.postWarParties = REAL_COUNTRY_PARTIES.SO;
+AFGHANISTAN.postWarParties = REAL_COUNTRY_PARTIES.AF;
+ETHIOPIA.postWarParties = REAL_COUNTRY_PARTIES.ET;
+HAITI.postWarParties = REAL_COUNTRY_PARTIES.HT;
+MALI.postWarParties = REAL_COUNTRY_PARTIES.ML;
+DR_CONGO.postWarParties = REAL_COUNTRY_PARTIES.CD;
+
 export function getRealPartiesForCountry(countryId: string): RivalParty[] | null {
-  return REAL_COUNTRY_PARTIES[countryId] || null;
+  if (!countryId) return null;
+  const upper = countryId.toUpperCase();
+  return REAL_COUNTRY_PARTIES[upper] || null;
+}
+
+/**
+ * Maps armed factions to authentic real political parties upon civil-war victory
+ * and sets up constitutional democracy rosters without armed factions.
+ */
+export function resolvePostWarTransition(
+  country: Country,
+  currentFactionOrPartyId?: string
+): { updatedCountry: Country; updatedPlayerParty: Party } {
+  const postWar = country.postWarParties || getRealPartiesForCountry(country.id) || [];
+  if (postWar.length === 0) {
+    return {
+      updatedCountry: { ...country, countryMode: 'electoral' },
+      updatedPlayerParty: country.rivals[0] ? ({ ...country.rivals[0], influence: 50 } as unknown as Party) : {
+        id: `${country.id}_DEM`,
+        name: `${country.name} Democratic Coalition`,
+        leader: 'Interim Prime Minister',
+        ideology: 'Centrist',
+        symbol: 'Building',
+        color: '#2563eb',
+        influence: 50
+      }
+    };
+  }
+
+  // Faction to political party mapping
+  const factionMap: Record<string, string> = {
+    // Yemen: Houthis and PLC NEVER appear as parties!
+    'YE_PLC': 'GPC',
+    'PLC': 'GPC',
+    'YE_STC': 'HIRAK',
+    'STC': 'HIRAK',
+    'YE_HOU': 'ISLAH',
+    'HOU': 'ISLAH',
+    'YE_ISLAH': 'ISLAH',
+    // Sudan
+    'SD_SAF': 'NUP',
+    'SD_RSF': 'SCOP',
+    // Libya
+    'LY_GNU': 'NFA',
+    'LY_LNA': 'LNP',
+    // Syria
+    'SY_SAA': 'BAATH',
+    'SY_SDF': 'KDP_SY',
+    // Myanmar
+    'MM_NUG': 'NLD',
+    'MM_NUG_PDF': 'NLD',
+    'MM_JUNTA': 'USDP',
+    // Ethiopia
+    'ET_GOV': 'PP',
+    'ET_TPLF': 'EZEMA',
+    'ET_OLA': 'OFC',
+    'ET_FANO': 'NAMA',
+    // Haiti
+    'HT_GOV': 'LAVALAS',
+    'HT_GANG': 'DESALIN',
+    // Mali
+    'ML_GOV': 'RPM',
+    'ML_CSP': 'ADEMA',
+    // Somalia
+    'SO_GOV': 'UPD',
+    'SO_SHABAAB': 'HQ',
+    // Afghanistan
+    'AF_TALIBAN': 'JI',
+    'AF_NRF': 'NCA',
+    // DR Congo
+    'CD_GOV': 'UDPS',
+    'CD_M23': 'MLC',
+    // 1950 China & Vietnam
+    'CN_PRC': 'CPC',
+    'CN_ROC': 'KMT',
+    'VN_VIETMINH': 'VWP',
+    'VN_FRENCH_STATE': 'VNQDD'
+  };
+
+  const fid = (currentFactionOrPartyId || '').toUpperCase();
+  let matchedPartyId = factionMap[fid] || factionMap[currentFactionOrPartyId || ''];
+  
+  // If not mapped directly, check if currentFactionOrPartyId already matches an existing postWar party ID
+  if (!matchedPartyId) {
+    const existing = postWar.find(p => p.id.toUpperCase() === fid);
+    if (existing) matchedPartyId = existing.id;
+  }
+
+  // Fallback to first party in post-war roster
+  if (!matchedPartyId) {
+    matchedPartyId = postWar[0].id;
+  }
+
+  const playerPartyData = postWar.find(p => p.id === matchedPartyId) || postWar[0];
+  const rivalsData = postWar.filter(p => p.id !== playerPartyData.id);
+
+  const updatedPlayerParty: Party = {
+    id: playerPartyData.id,
+    name: playerPartyData.name,
+    leader: playerPartyData.leader,
+    ideology: playerPartyData.ideology,
+    symbol: playerPartyData.symbol,
+    color: playerPartyData.color,
+    influence: 65,
+    seats: Math.round((playerPartyData.baseSupport / 100) * (country.seats || 100))
+  };
+
+  // Re-distribute provincial supports cleanly across the authentic postWar parties
+  const totalBase = postWar.reduce((sum, p) => sum + p.baseSupport, 0) || 100;
+  const updatedRegions = (country.regions || []).map(r => {
+    const supports: Record<string, number> = {};
+    postWar.forEach(p => {
+      supports[p.id] = Math.round((p.baseSupport / totalBase) * 100);
+    });
+    return {
+      ...r,
+      controlledBy: updatedPlayerParty.id,
+      ownerPartyId: updatedPlayerParty.id,
+      supports
+    };
+  });
+
+  const updatedCountry: Country = {
+    ...country,
+    countryMode: 'electoral',
+    system: 'Constitutional Parliamentary Democracy',
+    parliamentName: country.id === 'YE' 
+      ? 'House of Representatives (مجلس النواب)' 
+      : country.parliamentName.replace(/\(Suspended\)/i, '(Restored)'),
+    rivals: rivalsData,
+    postWarParties: postWar,
+    regions: updatedRegions
+  };
+
+  return { updatedCountry, updatedPlayerParty };
 }
 

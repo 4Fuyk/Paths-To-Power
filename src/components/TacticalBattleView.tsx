@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { normalizeName, getRegionIdFromNormalizedName, getFeatureName } from '../utils/mapUtils';
 import { loadCountryMapData, getCountryMapConfig, getFeatureRegionName } from '../data/mapRegistry';
-import { Country, ScenarioYear, Region, getCountryMode } from '../types';
+import { Country, ScenarioYear, Region, getCountryMode, VassalState } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { playSound } from '../lib/sounds';
@@ -20,7 +20,8 @@ import {
   calculateCombatPower, 
   setRegionController, 
   getTerritoryControlMap, 
-  applyPeaceDealAnnexation 
+  applyPeaceDealAnnexation,
+  registerVassalState
 } from '../utils/territorialControl';
 import { WarFrontlineMap } from './WarFrontlineMap';
 import { CivilWarBattleMap } from './CivilWarBattleMap';
@@ -2004,9 +2005,30 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                 onAnnexProvinces(terms.annexedProvinces, terms.targetCountryId, repAmount);
               }
             }
+
+            // 2b. Buffer / Puppet Vassal State Creation (Requirement 2)
+            let createdVassalId: string | null = null;
+            if (terms.bufferState && terms.bufferState.provinces && terms.bufferState.provinces.length > 0) {
+              const bState = terms.bufferState;
+              createdVassalId = bState.id || `VASSAL_${terms.targetCountryId}_${Date.now().toString(36)}`;
+              const newVassal: VassalState = {
+                id: createdVassalId,
+                name: bState.name,
+                color: bState.color,
+                flag: bState.flag || '🛡️',
+                suzerainId: country.id,
+                suzerainName: country.name,
+                provinces: bState.provinces,
+                rulingParty: `${bState.name} Provisional Authority`,
+                leader: `Governor (${country.name})`,
+                ideology: terms.newIdeology || 'Aligned Satellite'
+              };
+              registerVassalState(newVassal);
+            }
+
             // 3. Imposed Ideology, Settlement & Confiscations
             if (onUpdateRelations) {
-              onUpdateRelations({
+              const updatedRels: any = {
                 ...diplomaticRelations,
                 [terms.targetCountryId]: {
                   status: 'Peace Treaty / Demilitarized Accord',
@@ -2019,10 +2041,26 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                   confiscateTanks: terms.confiscateTanks,
                   confiscateAircraft: terms.confiscateAircraft
                 }
-              });
+              };
+
+              // Register vassal state in diplomatic relations as loyal vassal (Requirement 2)
+              if (createdVassalId && terms.bufferState) {
+                updatedRels[createdVassalId] = {
+                  status: 'Alliance',
+                  opinion: 100,
+                  isVassal: true,
+                  suzerainId: country.id,
+                  vassalOf: country.name,
+                  name: terms.bufferState.name,
+                  flag: terms.bufferState.flag || '🛡️',
+                  color: terms.bufferState.color
+                };
+              }
+
+              onUpdateRelations(updatedRels);
             }
             setBattleLogs(prev => [
-              `🕊️ PEACE RATIFIED: Peace conference concluded with ${terms.targetCountryName}. Annexed ${terms.annexedProvinces.length} provinces, secured $${repAmount.toLocaleString()} indemnities, established ${terms.newIdeology}.`,
+              `🕊️ PEACE RATIFIED: Peace conference concluded with ${terms.targetCountryName}. Annexed ${terms.annexedProvinces.length} provinces${terms.bufferState ? `, established Vassal State "${terms.bufferState.name}" (${terms.bufferState.provinces.length} provinces)` : ''}, secured $${repAmount.toLocaleString()} indemnities, established ${terms.newIdeology}.`,
               ...prev
             ]);
             setPeaceConferenceTarget(null);

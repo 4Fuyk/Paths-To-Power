@@ -6,7 +6,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, Party, MinisterCandidate, Coalition, GameDifficulty, ScenarioYear, CivilWarFaction, getCountryMode } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
-import { getRealPartiesForCountry } from './data/civilWarCountries';
+import { getRealPartiesForCountry, resolvePostWarTransition } from './data/civilWarCountries';
+import { runForeignCountryElection, getForeignElectionsForTurn, ForeignElectionResult, FOREIGN_ELECTION_PROFILES } from './utils/foreignElections';
 import { ALL_PRESS_QUESTIONS } from './constants/pressQuestions';
 import { ThemeToggle } from './components/ThemeToggle';
 import { StartScreen } from './components/StartScreen';
@@ -33,7 +34,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { STATE_CRISIS_BANK } from './constants/crisisEvents';
 import { OngoingSituation, StateCrisisEvent, DynamicGameEvent, GameEventChoice, ResolvedEventLog } from './types';
 import { evaluateEventTrigger, executeEventChoice } from './services/eventEngine';
-import { GlobalWar, getInitialGlobalWars, getInitialDiplomaticRelations } from './constants/globalWarData';
+import { GlobalWar, getInitialGlobalWars, getInitialDiplomaticRelations, INITIAL_GLOBAL_WARS, KOREAN_WAR_TRIGGER_DATE } from './constants/globalWarData';
 import { 
   Landmark, Megaphone, Users, Award, Calendar, 
   Coins, HelpCircle, RefreshCw, LogOut, CheckCircle, Info, X, Play, Pause, FastForward, Swords,
@@ -330,12 +331,17 @@ export default function App() {
   const [hasPromptedTimeMode, setHasPromptedTimeMode] = useState<boolean>(false);
   const [showTimeModeModal, setShowTimeModeModal] = useState<boolean>(false);
   const hasTriggeredColonialEvent = useRef<Record<number, boolean>>({});
+  const hasTriggeredKoreanWar = useRef<boolean>(false);
 
   // Dynamic country ideologies and freedom indexes reflecting election & policy shifts
   const [customCountryIdeologies, setCustomCountryIdeologies] = useState<Record<string, string>>({
     TR: 'Right / Conservative-Nationalist'
   });
   const [customCountryFreedomScores, setCustomCountryFreedomScores] = useState<Record<string, number>>({});
+
+  // Foreign Country Leaders & Ruling Parties (Real-time foreign elections system)
+  const [foreignLeaders, setForeignLeaders] = useState<Record<string, { leader: string; rulingParty: string; ideology: string; portrait?: string }>>({});
+  const [foreignElectionPopup, setForeignElectionPopup] = useState<ForeignElectionResult | null>(null);
 
   // Global Wars State seeded with real conflicts per era
   const [globalWars, setGlobalWars] = useState<GlobalWar[]>(() => getInitialGlobalWars(selectedScenario));
@@ -574,6 +580,8 @@ export default function App() {
       const initCountry = { ...targetCountry, regions: syncedRegions };
       setSelectedCountry(initCountry);
       setResolvedWarIds([]);
+      hasTriggeredKoreanWar.current = false;
+      hasTriggeredColonialEvent.current = {};
       setGlobalWars(getInitialGlobalWars(selectedScenario));
       setDiplomaticRelations(getInitialDiplomaticRelations(selectedScenario, targetCountry.id));
       setTurnsSinceLastEvent(3);
@@ -735,19 +743,17 @@ export default function App() {
   const handleTransitionCivilWarToElectoral = () => {
     if (!selectedCountry || !playerParty) return;
     playSound('win');
-    const updatedCountry: Country = {
-      ...selectedCountry,
-      countryMode: 'electoral'
-    };
+    const { updatedCountry, updatedPlayerParty } = resolvePostWarTransition(selectedCountry, playerParty.id);
     setSelectedCountry(updatedCountry);
+    setPlayerParty(updatedPlayerParty);
     setIsRuling(true);
     setConfirmModal({
       title: 'CONSTITUTIONAL SOVEREIGNTY RESTORED',
-      message: `Strategic victory! By securing overwhelming territorial control over ${selectedCountry.name}, your faction "${playerParty.name}" has officially reconstituted the state. Constitutional governance is restored, your faction is registered as the governing political party, and nationwide democratic parliamentary elections are now unlocked!`,
+      message: `Strategic victory! By securing overwhelming territorial control over ${selectedCountry.name}, your administration has officially reconstituted constitutional democracy. Armed factions have been dissolved, "${updatedPlayerParty.name}" is registered as the governing political party, and nationwide democratic parliamentary elections are now unlocked!`,
       confirmText: 'Enter Constitutional Era',
       onConfirm: () => {
         setConfirmModal(null);
-        setDashboardTab('CAMPAIGN');
+        setDashboardTab('PARLIAMENT');
       }
     });
   };
@@ -849,6 +855,110 @@ export default function App() {
     return `${str.trim()} left`;
   };
 
+  const triggerForeignElectionsCheck = (turnNumber: number) => {
+    if (!selectedCountry) return;
+    const scheduledCountries = getForeignElectionsForTurn(turnNumber, selectedCountry.id);
+    for (const cid of scheduledCountries) {
+      const currentData = foreignLeaders[cid];
+      const profile = FOREIGN_ELECTION_PROFILES[cid];
+      if (!profile) continue;
+
+      const currentLeaderName = currentData?.leader || profile.candidates[0].name;
+      const currentPartyName = currentData?.rulingParty || profile.candidates[0].party;
+      const currentIdeology = currentData?.ideology || customCountryIdeologies[cid] || profile.candidates[0].ideology;
+
+      const isCountryAtWar = globalWars.some(w => 
+        w.status === 'ACTIVE' && 
+        ((w.belligerentsA && w.belligerentsA.includes(cid)) || (w.belligerentsB && w.belligerentsB.includes(cid)))
+      );
+
+      const electionResult = runForeignCountryElection(
+        cid,
+        currentLeaderName,
+        currentPartyName,
+        currentIdeology,
+        75,
+        isCountryAtWar
+      );
+
+      if (electionResult && !electionResult.incumbentWon) {
+        setForeignLeaders(prev => ({
+          ...prev,
+          [cid]: {
+            leader: electionResult.winner.name,
+            rulingParty: electionResult.winner.party,
+            ideology: electionResult.winner.ideology,
+            portrait: electionResult.winner.portrait
+          }
+        }));
+
+        setCustomCountryIdeologies(prev => ({
+          ...prev,
+          [cid]: electionResult.winner.ideology
+        }));
+
+        setForeignElectionPopup(electionResult);
+        playSound('news');
+
+        setEventHistory(prev => [
+          {
+            id: `election_${cid}_${Date.now()}`,
+            title: `Election in ${electionResult.countryName}: ${electionResult.winner.name} defeats ${electionResult.incumbent.name}`,
+            date: getFormattedGameDate(),
+            description: electionResult.summary,
+            category: "GLOBAL_DIPLOMACY"
+          },
+          ...prev
+        ]);
+        break;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).triggerForeignElectionForTest = (countryId = 'US', forceDefeat = true) => {
+        const profile = FOREIGN_ELECTION_PROFILES[countryId] || FOREIGN_ELECTION_PROFILES.US;
+        const currentData = foreignLeaders[countryId];
+        const incumbentName = currentData ? currentData.leader : profile.candidates[0].name;
+        const challenger = profile.candidates.find(c => c.name.toLowerCase() !== incumbentName.toLowerCase()) || profile.candidates[1];
+        const incumbentCandidate = profile.candidates.find(c => c.name.toLowerCase() === incumbentName.toLowerCase()) || profile.candidates[0];
+
+        const result: ForeignElectionResult = {
+          countryId,
+          countryName: profile.countryName,
+          flag: profile.flag,
+          incumbentWon: !forceDefeat,
+          winner: forceDefeat ? challenger : incumbentCandidate,
+          incumbent: incumbentCandidate,
+          winnerVotesPercent: 54,
+          incumbentVotesPercent: 46,
+          newIdeology: forceDefeat ? challenger.ideology : incumbentCandidate.ideology,
+          summary: `Election in ${profile.countryName}: ${forceDefeat ? challenger.name : incumbentCandidate.name} defeats ${incumbentName} with 54% of the vote.`
+        };
+
+        if (forceDefeat) {
+          setForeignLeaders(prev => ({
+            ...prev,
+            [countryId]: {
+              leader: challenger.name,
+              rulingParty: challenger.party,
+              ideology: challenger.ideology,
+              portrait: challenger.portrait
+            }
+          }));
+          setCustomCountryIdeologies(prev => ({
+            ...prev,
+            [countryId]: challenger.ideology
+          }));
+        }
+        setForeignElectionPopup(result);
+        playSound('news');
+        return result;
+      };
+    }
+  }, [foreignLeaders, customCountryIdeologies]);
+
   const handleNextMonth = () => {
     if (!selectedCountry) return;
 
@@ -943,6 +1053,61 @@ export default function App() {
         ]
       });
       return;
+    }
+
+    // Check for 1950 Korean War Trigger in ruling mode (Month 5 = June 1950)
+    if (selectedScenario === '1950' && !hasTriggeredKoreanWar.current && nextMonths >= 5) {
+      hasTriggeredKoreanWar.current = true;
+      const kw = INITIAL_GLOBAL_WARS.find(w => w.id === 'WAR_KOREA_1950');
+      if (kw) {
+        setGlobalWars(prev => prev.some(w => w.id === 'WAR_KOREA_1950') ? prev : [...prev, kw]);
+      }
+      if (['KR', 'US', 'GB', 'TR', 'AU', 'CA'].includes(selectedCountry.id)) {
+        setDiplomaticRelations(prev => ({
+          ...prev,
+          KP: { status: 'At War', opinion: 0 },
+          CN: { status: 'At War', opinion: 0 },
+          SU: { status: 'Sanctioned', opinion: 15 }
+        }));
+      } else if (['CN', 'KP'].includes(selectedCountry.id)) {
+        setDiplomaticRelations(prev => ({
+          ...prev,
+          KR: { status: 'At War', opinion: 0 },
+          US: { status: 'At War', opinion: 0 },
+          GB: { status: 'At War', opinion: 0 },
+          SU: { status: 'Alliance', opinion: 90 }
+        }));
+      }
+      playSound('battle');
+      setCurrentEvent({
+        title: `🚨 25 JUNE 1950: NORTH KOREAN INVASION - THE KOREAN WAR BEGINS!`,
+        description: `Historical Emergency (25 June 1950): At 04:00 KST, the Korean People's Army (KPA) crossed the 38th Parallel in massive force with T-34 armor and heavy artillery, launching an all-out invasion of the Republic of Korea! Seoul is under imminent threat, and the United Nations Security Council in New York is convening an emergency session.`,
+        options: [
+          {
+            text: "Sponsor Immediate UN Security Council Intervention (Resolution 83)",
+            effect: () => {
+              setWarningAlert("⚔️ UN RESOLUTION 83: UN Member states authorize armed assistance to repel the armed invasion and restore international peace.");
+              setCurrentEvent(null);
+            }
+          },
+          {
+            text: "Mobilize Military Aid & Forward Base Infrastructure (Cost: ₺120,000, Reputation +20)",
+            effect: () => {
+              setTreasury(prev => Math.max(0, prev - 120000));
+              setInternationalReputation(prev => Math.min(100, prev + 20));
+              setWarningAlert("🛡️ ARMED SUPPORT: Military aid convoys and naval patrols dispatched to the Korean peninsula.");
+              setCurrentEvent(null);
+            }
+          },
+          {
+            text: "Enter Battlefield Command & Inspect War Frontline",
+            effect: () => {
+              setDashboardTab('TACTICAL_BATTLE');
+              setCurrentEvent(null);
+            }
+          }
+        ]
+      });
     }
 
     // Calculate tax revenues based on tax rates
@@ -1520,8 +1685,67 @@ export default function App() {
         }
       }
 
-      // Check for 1951-1952 Colonial Independence Crisis Events
+      // Check for 1950 Korean War Trigger (Starts on 25 June 1950 when North Korea invades)
       const baseYear = parseInt(selectedScenario) || 2026;
+      if (selectedScenario === '1950' && !hasTriggeredKoreanWar.current) {
+        const turnDate = new Date(baseYear, 0, 10);
+        turnDate.setDate(turnDate.getDate() + ((next - 1) * 7));
+        if (turnDate >= KOREAN_WAR_TRIGGER_DATE) {
+          hasTriggeredKoreanWar.current = true;
+          const kw = INITIAL_GLOBAL_WARS.find(w => w.id === 'WAR_KOREA_1950');
+          if (kw) {
+            setGlobalWars(prev => prev.some(w => w.id === 'WAR_KOREA_1950') ? prev : [...prev, kw]);
+          }
+          if (['KR', 'US', 'GB', 'TR', 'AU', 'CA'].includes(selectedCountry.id)) {
+            setDiplomaticRelations(prev => ({
+              ...prev,
+              KP: { status: 'At War', opinion: 0 },
+              CN: { status: 'At War', opinion: 0 },
+              SU: { status: 'Sanctioned', opinion: 15 }
+            }));
+          } else if (['CN', 'KP'].includes(selectedCountry.id)) {
+            setDiplomaticRelations(prev => ({
+              ...prev,
+              KR: { status: 'At War', opinion: 0 },
+              US: { status: 'At War', opinion: 0 },
+              GB: { status: 'At War', opinion: 0 },
+              SU: { status: 'Alliance', opinion: 90 }
+            }));
+          }
+          playSound('battle');
+          setCurrentEvent({
+            title: `🚨 25 JUNE 1950: NORTH KOREAN INVASION - THE KOREAN WAR BEGINS!`,
+            description: `Historical Emergency (25 June 1950): At 04:00 KST, the Korean People's Army (KPA) crossed the 38th Parallel in massive force with T-34 armor and heavy artillery, launching an all-out invasion of the Republic of Korea! Seoul is under imminent threat, and the United Nations Security Council in New York is convening an emergency session.`,
+            options: [
+              {
+                text: "Sponsor Immediate UN Security Council Intervention (Resolution 83)",
+                effect: () => {
+                  setWarningAlert("⚔️ UN RESOLUTION 83: UN Member states authorize armed assistance to repel the armed invasion and restore international peace.");
+                  setCurrentEvent(null);
+                }
+              },
+              {
+                text: "Mobilize Military Aid & Expeditionary Air Wings (Cost: ₺120,000, Reputation +20)",
+                effect: () => {
+                  setTreasury(prev => Math.max(0, prev - 120000));
+                  setInternationalReputation(prev => Math.min(100, prev + 20));
+                  setWarningAlert("🛡️ ARMED SUPPORT: Military aid convoys and naval patrols dispatched to the Korean peninsula.");
+                  setCurrentEvent(null);
+                }
+              },
+              {
+                text: "Enter Battlefield Command & Inspect War Frontline",
+                effect: () => {
+                  setDashboardTab('TACTICAL_BATTLE');
+                  setCurrentEvent(null);
+                }
+              }
+            ]
+          });
+        }
+      }
+
+      // Check for 1951-1952 Colonial Independence Crisis Events
       const currentYear = baseYear + Math.floor(((next - 1) * 7) / 365);
       if (selectedScenario === '1950' && (currentYear === 1951 || currentYear === 1952) && !hasTriggeredColonialEvent.current[currentYear]) {
         hasTriggeredColonialEvent.current[currentYear] = true;

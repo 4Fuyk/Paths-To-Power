@@ -133,13 +133,30 @@ export interface Country {
   electionCycleYears: number; // election cycle frequency in years
   termLimit?: number; // Maximum number of terms allowed (e.g. 2 for US). Infinite if undefined.
   freedomScore?: number;
+  postWarParties?: RivalParty[]; // Authentic real political parties for post-civil-war parliament
   isBreakaway?: boolean; // True if state is a de facto separatist/breakaway state from civil conflict
+  isVassal?: boolean; // True if state was established as a puppet / buffer vassal state
+  suzerainId?: string; // e.g. TR, US, RU - country that controls this vassal state
+  vassalOf?: string; // Display name of suzerain nation e.g. 'United States'
   parentCountryId?: string; // e.g. 'SY', 'LY', 'SD', 'MM', 'YE', 'CD'
   activeConflictId?: string; // Associated ongoing conflict ID
   countryMode?: CountryMode; // 'electoral' | 'civilwar' | 'hybrid'
   capitalRegionId?: string; // e.g. 'Tripoli', 'Damascus', 'Khartoum'
   validFrom?: number; // Earliest historical year country existed
   validUntil?: number; // Latest historical year country existed before dissolution/succession
+}
+
+export interface VassalState {
+  id: string;
+  name: string;
+  color: string;
+  flag: string;
+  suzerainId: string;
+  suzerainName: string;
+  provinces: string[];
+  rulingParty?: string;
+  leader?: string;
+  ideology?: string;
 }
 
 /**
@@ -149,8 +166,11 @@ export function getCountryMode(country: Country | null | undefined): CountryMode
   if (!country) return 'electoral';
   if (country.countryMode) return country.countryMode;
   const id = (country.id || '').toUpperCase();
-  // Civil war countries: Libya, Syria, Sudan, Myanmar, Yemen, Somalia, Afghanistan, Mali, DR Congo (CD/COD), Ethiopia, Haiti
-  if (['LY', 'SY', 'SD', 'MM', 'YE', 'SO', 'AF', 'ML', 'CD', 'COD', 'ET', 'HT'].includes(id)) {
+  // Civil war countries: Libya, Syria, Sudan, Myanmar, Yemen, Somalia, Afghanistan, Mali, DR Congo, Ethiopia, Haiti, Vietnam
+  if ([
+    'LY', 'SY', 'SD', 'MM', 'YE', 'SO', 'AF', 'ML', 'CD', 'COD', 'ET', 'HT', 'VN',
+    'ETH', 'SOM', 'AFG', 'HTI', 'MLI', 'LBY', 'SYR', 'SDN', 'MMR', 'YEM', 'VNM'
+  ].includes(id)) {
     return 'civilwar';
   }
   // Hybrid countries: Russia, Ukraine
@@ -166,6 +186,13 @@ export interface PeaceTreatyTerms {
   isUNCompliant: boolean;
   annexedProvinces: string[];
   demilitarizedProvinces: string[];
+  bufferState?: {
+    id?: string;
+    name: string;
+    color: string;
+    flag?: string;
+    provinces: string[];
+  };
   newGovernmentType?: string;
   newIdeology?: string;
   newReligion?: string;

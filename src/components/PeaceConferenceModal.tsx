@@ -52,6 +52,11 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
   const [provinceStatusMap, setProvinceStatusMap] = useState<Record<string, 'ANNEX' | 'BUFFER' | 'RETAIN'>>({});
   const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
 
+  // Buffer State / Vassal State Configuration (Requirement 2)
+  const [bufferStateName, setBufferStateName] = useState<string>(() => `${targetCountryName} Buffer State`);
+  const [bufferStateColor, setBufferStateColor] = useState<string>('#f59e0b');
+  const [bufferStateFlag, setBufferStateFlag] = useState<string>('🛡️');
+
   // Ideology / Regime Change options (Context-appropriate modern treaties)
   const [selectedIdeology, setSelectedIdeology] = useState<string>('Status Quo Sovereign Peace');
   const [selectedGovernment, setSelectedGovernment] = useState<string>('Sovereign Constitutional Republic');
@@ -100,22 +105,34 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
             const name = getFeatureRegionName(feat, targetCountryId);
             if (name) {
               const currentCtrl = controlMap[name];
-              initialMap[name] = currentCtrl === 'BUFFER_ZONE' ? 'BUFFER' : currentCtrl === victorCountry.id ? 'ANNEX' : 'RETAIN';
+              initialMap[name] = (currentCtrl === 'BUFFER_ZONE' || currentCtrl?.startsWith('VASSAL_'))
+                ? 'BUFFER' 
+                : currentCtrl === victorCountry.id 
+                  ? 'ANNEX' 
+                  : 'RETAIN';
               combinedFeatures.push({ ...feat, _countryId: targetCountryId, _regionName: name, _isCoreEnemy: true });
             }
           });
         }
 
-        // 2. Player-held or occupied regions that originally belonged to the player (e.g. Crimea, Donbas, Zaporizhzhia)
+        // 2. Player-held or occupied regions that originally belonged to the player (e.g. Crimea, Donbas, Zaporizhzhia, Kherson)
         if (victorRes && victorRes.features) {
           victorRes.features.forEach((feat: any) => {
             const name = getFeatureRegionName(feat, victorCountry.id);
             if (name) {
               const currentCtrl = controlMap[name];
-              const isOccupiedByEnemy = currentCtrl === targetCountryId || /crimea|donetsk|luhansk|zaporizhzhia|kherson|kursk|belgorod/i.test(name);
-              // Only include occupied/frontline regions from victor country so map focuses on the conflict theater
+              const normName = name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+              const isOccupiedByEnemy = currentCtrl === targetCountryId || 
+                /crimea|sevastopol|donet|luhan|zaporiz|kherson|kursk|belgorod|bryansk|rostov/i.test(normName);
+
+              // Include occupied/frontline regions from victor country so map focuses on the conflict theater
               if (isOccupiedByEnemy || (targetCountryId === 'RU' && victorCountry.id === 'UA') || (targetCountryId === 'UA' && victorCountry.id === 'RU')) {
-                initialMap[name] = currentCtrl === 'BUFFER_ZONE' ? 'BUFFER' : currentCtrl === targetCountryId ? 'RETAIN' : 'ANNEX';
+                // If enemy occupied it, victor can demand it retained or annex or buffer
+                initialMap[name] = (currentCtrl === 'BUFFER_ZONE' || currentCtrl?.startsWith('VASSAL_'))
+                  ? 'BUFFER'
+                  : currentCtrl === targetCountryId
+                    ? 'RETAIN'
+                    : 'ANNEX';
                 combinedFeatures.push({ ...feat, _countryId: victorCountry.id, _regionName: name, _isOccupiedPlayerTerritory: isOccupiedByEnemy });
               }
             }
@@ -247,6 +264,13 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
       isUNCompliant,
       annexedProvinces: annexedList,
       demilitarizedProvinces: bufferList,
+      bufferState: bufferList.length > 0 ? {
+        id: `VASSAL_${targetCountryId}_${Date.now().toString(36)}`,
+        name: bufferStateName.trim() || `${targetCountryName} Buffer State`,
+        color: bufferStateColor || '#f59e0b',
+        flag: bufferStateFlag || '🛡️',
+        provinces: bufferList
+      } : undefined,
       newGovernmentType: selectedGovernment,
       newIdeology: selectedIdeology,
       newReligion: 'Secular Civil Code',
@@ -485,6 +509,68 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
                 );
               })}
             </div>
+
+            {/* BUFFER / PUPPET STATE CREATOR CARD (Requirement 2) */}
+            {bufferCount > 0 && (
+              <div className="p-3.5 rounded-2xl bg-amber-950/25 border border-amber-500/40 flex flex-col gap-2.5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{bufferStateFlag}</span>
+                    <h5 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                      Buffer State & Vassal Creation
+                    </h5>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30 font-bold">
+                    {bufferCount} province{bufferCount > 1 ? 's' : ''} assigned
+                  </span>
+                </div>
+                <p className="text-[10.5px] text-slate-300 leading-relaxed">
+                  Designated buffer provinces will form a new sovereign buffer state on the world map. As a <strong className="text-amber-200">Vassal of {victorCountry.name}</strong>, it will follow our foreign policy and cannot attack us.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono uppercase text-slate-400 font-bold">New State Name</label>
+                    <input
+                      type="text"
+                      id="input-buffer-state-name"
+                      value={bufferStateName}
+                      onChange={(e) => setBufferStateName(e.target.value)}
+                      placeholder="e.g. Free Neutral Buffer Republic"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono uppercase text-slate-400 font-bold">State Color & Flag</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {['#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16'].map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setBufferStateColor(c)}
+                            className={`w-5 h-5 rounded-md transition-transform cursor-pointer border ${bufferStateColor === c ? 'scale-115 border-white ring-2 ring-white/50' : 'border-black/40'}`}
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                      </div>
+                      <select
+                        value={bufferStateFlag}
+                        onChange={(e) => setBufferStateFlag(e.target.value)}
+                        className="px-2 py-1 rounded-lg bg-slate-900 border border-amber-500/40 text-xs text-white focus:outline-none"
+                      >
+                        <option value="🛡️">🛡️ Shield</option>
+                        <option value="🏳️">🏳️ Neutral</option>
+                        <option value="🌟">🌟 Star</option>
+                        <option value="🕊️">🕊️ Peace</option>
+                        <option value="🦅">🦅 Eagle</option>
+                        <option value="🏛️">🏛️ Republic</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT: UN MODE, REGIME, RELIGION, MILITARY, REPARATIONS */}

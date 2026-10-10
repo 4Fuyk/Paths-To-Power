@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Region, Country } from '../types';
+import { Region, Country, VassalState } from '../types';
 
 const STORAGE_KEY = 'world_political_territory_control';
 
@@ -32,6 +32,74 @@ export interface FrontlineBattleResult {
 }
 
 export const BUFFER_ZONE_ID = 'BUFFER_ZONE';
+const VASSAL_STORAGE_KEY = 'world_political_vassal_states';
+
+/**
+ * Retrieves all registered puppet / buffer vassal states
+ */
+export function getVassalStates(): VassalState[] {
+  try {
+    const saved = localStorage.getItem(VASSAL_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.warn('Failed to load vassal states', e);
+    return [];
+  }
+}
+
+/**
+ * Saves and registers a new puppet / buffer vassal state and broadcasts update
+ */
+export function registerVassalState(vassal: VassalState): void {
+  try {
+    const current = getVassalStates();
+    const updated = [...current.filter(v => v.id !== vassal.id), vassal];
+    localStorage.setItem(VASSAL_STORAGE_KEY, JSON.stringify(updated));
+
+    // Also update territory controllers for all provinces belonging to this vassal state
+    const territoryUpdates: Record<string, string> = {};
+    (vassal.provinces || []).forEach(prov => {
+      territoryUpdates[prov] = vassal.id;
+    });
+    setBatchRegionControllers(territoryUpdates);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vassal_states_updated', {
+        detail: { vassal, allVassals: updated }
+      }));
+    }
+  } catch (e) {
+    console.warn('Failed to register vassal state', e);
+  }
+}
+
+/**
+ * Finds if a province belongs to an active vassal / buffer state
+ */
+export function getVassalStateForRegion(regionIdOrName: string): VassalState | null {
+  if (!regionIdOrName) return null;
+  const vassals = getVassalStates();
+  const norm = regionIdOrName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  for (const vassal of vassals) {
+    if (vassal.id === regionIdOrName) return vassal;
+    for (const p of vassal.provinces) {
+      const pNorm = p.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (pNorm === norm || (pNorm.length > 3 && (pNorm.includes(norm) || norm.includes(pNorm)))) {
+        return vassal;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Get vassal state by its ID
+ */
+export function getVassalStateById(vassalId: string): VassalState | null {
+  const vassals = getVassalStates();
+  return vassals.find(v => v.id === vassalId) || null;
+}
 
 /**
  * Retrieves the global persistent territorial control registry
@@ -47,16 +115,17 @@ export function getTerritoryControlMap(): Record<string, string> {
 }
 
 /**
- * Checks if a given region is designated as a Demilitarized Buffer Zone (Requirement 2)
+ * Checks if a given region is designated as a Demilitarized Buffer Zone or Puppet State (Requirement 2)
  */
 export function isBufferZone(regionIdOrName: string): boolean {
   if (!regionIdOrName) return false;
+  if (getVassalStateForRegion(regionIdOrName) !== null) return true;
   const current = getTerritoryControlMap();
   if (current[regionIdOrName] === BUFFER_ZONE_ID) return true;
   
   const norm = regionIdOrName.toLowerCase().replace(/[^a-z0-9]/g, '');
   return Object.entries(current).some(([k, v]) => {
-    if (v !== BUFFER_ZONE_ID) return false;
+    if (v !== BUFFER_ZONE_ID && !v.startsWith('VASSAL_')) return false;
     const kNorm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
     return kNorm === norm || (kNorm.length > 3 && (kNorm.includes(norm) || norm.includes(kNorm)));
   });
@@ -68,7 +137,7 @@ export function isBufferZone(regionIdOrName: string): boolean {
 export function getBufferZones(): string[] {
   const current = getTerritoryControlMap();
   return Object.entries(current)
-    .filter(([_, v]) => v === BUFFER_ZONE_ID)
+    .filter(([_, v]) => v === BUFFER_ZONE_ID || v.startsWith('VASSAL_'))
     .map(([k]) => k);
 }
 

@@ -1219,33 +1219,72 @@ const COUNTRIES_1950: Country[] = [
   },
   {
     id: 'CN',
-    name: 'People\'s Republic of China (1950)',
-    description: 'Proclaimed by Chairman Mao Zedong at Tiananmen Square in October 1949, consolidating agrarian reform and national reconstruction.',
+    name: 'China - Civil War (PRC vs. ROC 1950)',
+    description: 'In 1950, Chairman Mao\'s PRC controls the mainland while Chiang Kai-shek\'s ROC holds Taiwan and offshore islands, with fighting continuing across Hainan and Kinmen.',
     flag: '🇨🇳',
     seats: 600,
     parliamentName: 'Chinese People\'s Political Consultative Conference',
-    system: 'People\'s Democratic Dictatorship',
+    system: 'Civil War / Divided Sovereignty',
     population: '550 Million',
     primaryColor: '#dc2626',
+    countryMode: 'civilwar',
+    capitalRegionId: 'Beijing',
     rivals: [
-      { id: 'CCP', name: 'Communist Party of China (CCP)', leader: 'Mao Zedong & Zhou Enlai', ideology: 'Socialist', symbol: 'Flame', color: '#b91c1c', baseSupport: 85 },
-      { id: 'CDL', name: 'China Democratic League', leader: 'Zhang Lan', ideology: 'Liberal', symbol: 'Compass', color: '#2563eb', baseSupport: 10 },
-      { id: 'RCCK', name: 'Revolutionary Committee of the Kuomintang', leader: 'Li Jishen', ideology: 'Nationalist', symbol: 'Shield', color: '#16a34a', baseSupport: 5 },
+      { id: 'CN_PRC', name: 'People\'s Republic of China (PRC / PLA)', leader: 'Mao Zedong & Zhou Enlai', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 82 },
+      { id: 'CN_ROC', name: 'Republic of China (ROC / Taiwan)', leader: 'Chiang Kai-shek & Chen Cheng', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 18 },
     ],
     regions: generateHistoricalRegions('CN', [
-      { name: 'Northern China (Beijing & Tianjin & Hebei)', seats: 120, winner: 'CCP' },
-      { name: 'Eastern China (Shanghai, Jiangsu & Zhejiang)', seats: 130, winner: 'CCP' },
-      { name: 'Southern China (Guangdong & Guangxi)', seats: 90, winner: 'CCP' },
-      { name: 'Central China (Hubei & Hunan & Henan)', seats: 100, winner: 'CCP' },
-      { name: 'Southwestern China (Sichuan & Yunnan)', seats: 80, winner: 'CCP' },
-      { name: 'Northeastern China (Manchuria & Harbin)', seats: 50, winner: 'CCP' },
-      { name: 'Northwestern China (Shaanxi & Gansu)', seats: 30, winner: 'CCP' }
+      { name: 'Northern China (Beijing & Tianjin & Hebei)', seats: 120, winner: 'CN_PRC' },
+      { name: 'Eastern China (Shanghai, Jiangsu & Zhejiang)', seats: 130, winner: 'CN_PRC' },
+      { name: 'Southern China (Guangdong & Guangxi)', seats: 90, winner: 'CN_PRC' },
+      { name: 'Central China (Hubei & Hunan & Henan)', seats: 100, winner: 'CN_PRC' },
+      { name: 'Southwestern China (Sichuan & Yunnan)', seats: 80, winner: 'CN_PRC' },
+      { name: 'Northeastern China (Manchuria & Harbin)', seats: 50, winner: 'CN_PRC' },
+      { name: 'Northwestern China (Shaanxi & Gansu)', seats: 30, winner: 'CN_PRC' }
     ], [
-      { id: 'CCP', name: 'CCP', leader: 'Mao Zedong', ideology: 'Socialist', symbol: 'Flame', color: '#b91c1c', baseSupport: 85 },
-      { id: 'CDL', name: 'CDL', leader: 'Zhang Lan', ideology: 'Liberal', symbol: 'Compass', color: '#2563eb', baseSupport: 10 },
-      { id: 'RCCK', name: 'RCCK', leader: 'Li Jishen', ideology: 'Nationalist', symbol: 'Shield', color: '#16a34a', baseSupport: 5 }
+      { id: 'CN_PRC', name: 'PRC', leader: 'Mao Zedong', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 82 },
+      { id: 'CN_ROC', name: 'ROC', leader: 'Chiang Kai-shek', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 18 }
     ]),
-    bills: createHistoricalBills('1950', 'CN'),
+    bills: [],
+    postWarParties: [
+      { id: 'CPC', name: 'Communist Party of China (CPC)', leader: 'Mao Zedong & Zhou Enlai', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 68 },
+      { id: 'KMT', name: 'Kuomintang / Nationalist Party (KMT)', leader: 'Chiang Kai-shek & Chen Cheng', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 22 },
+      { id: 'CDL', name: 'China Democratic League (CDL)', leader: 'Zhang Lan', ideology: 'Liberal', symbol: 'Compass', color: '#059669', baseSupport: 10 }
+    ],
+    campaignTurns: 53,
+    electionCycleYears: 4,
+  },
+  {
+    id: 'VN',
+    name: 'Vietnam - Indochina War (1950)',
+    description: 'The First Indochina War rages as Ho Chi Minh\'s Viet Minh battle the French Union Expeditionary Corps and the State of Vietnam under Emperor Bảo Đại.',
+    flag: '🇻🇳',
+    seats: 120,
+    parliamentName: 'National Consultative Assembly (Suspended)',
+    system: 'Civil War / Anti-Colonial Conflict',
+    population: '25.0 Million',
+    primaryColor: '#dc2626',
+    countryMode: 'civilwar',
+    capitalRegionId: 'HàNội',
+    rivals: [
+      { id: 'VN_VIETMINH', name: 'Viet Minh (Democratic Republic of Vietnam)', leader: 'Hồ Chí Minh & Võ Nguyên Giáp', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 52 },
+      { id: 'VN_FRENCH_STATE', name: 'French Union & State of Vietnam', leader: 'Bảo Đại & Gen. Jean de Lattre de Tassigny', ideology: 'Conservative', symbol: 'Shield', color: '#2563eb', baseSupport: 48 }
+    ],
+    regions: generateHistoricalRegions('VN', [
+      { name: 'Northern Tonkin Highlands & Viet Bac', seats: 40, winner: 'VN_VIETMINH' },
+      { name: 'Red River Delta & Hanoi', seats: 35, winner: 'VN_FRENCH_STATE' },
+      { name: 'Central Annam & Hue', seats: 25, winner: 'VN_FRENCH_STATE' },
+      { name: 'Southern Cochinchina & Saigon', seats: 45, winner: 'VN_FRENCH_STATE' }
+    ], [
+      { id: 'VN_VIETMINH', name: 'Viet Minh', leader: 'Hồ Chí Minh', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 52 },
+      { id: 'VN_FRENCH_STATE', name: 'French Union', leader: 'Bảo Đại', ideology: 'Conservative', symbol: 'Shield', color: '#2563eb', baseSupport: 48 }
+    ]),
+    bills: [],
+    postWarParties: [
+      { id: 'VWP', name: 'Workers\' Party of Vietnam (Đảng Lao động Việt Nam)', leader: 'Hồ Chí Minh & Trường Chinh', ideology: 'Socialist', symbol: 'Flame', color: '#dc2626', baseSupport: 60 },
+      { id: 'VNQDD', name: 'Vietnamese Nationalist Party (Việt Nam Quốc Dân Đảng)', leader: 'Nguyễn Tường Tam', ideology: 'Nationalist', symbol: 'Shield', color: '#2563eb', baseSupport: 25 },
+      { id: 'DVP', name: 'Democratic Party of Vietnam (Đảng Dân chủ Việt Nam)', leader: 'Dương Đức Hiền', ideology: 'Liberal', symbol: 'Users', color: '#059669', baseSupport: 15 }
+    ],
     campaignTurns: 53,
     electionCycleYears: 4,
   },

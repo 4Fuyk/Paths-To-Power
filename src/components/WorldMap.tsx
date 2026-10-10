@@ -15,6 +15,7 @@ import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon,
   Calendar, ShieldAlert
 } from 'lucide-react';
+import { getVassalStates, getVassalStateForRegion } from '../utils/territorialControl';
 import L from 'leaflet';
 
 interface WorldMapProps {
@@ -77,7 +78,19 @@ const countryCoords: Record<string, [number, number]> = {
   YE_HOU: [15.3500, 44.2000], // Sanaa / Hodeidah
   CD: [-4.4419, 15.2663],
   CD_M23: [-1.2800, 29.4500], // North Kivu / Rutshuru
-  CG: [-4.2634, 15.2429]
+  CG: [-4.2634, 15.2429],
+  ET: [9.145, 40.4896],
+  ETH: [9.145, 40.4896],
+  SO: [5.1521, 46.1996],
+  SOM: [5.1521, 46.1996],
+  AF: [33.9391, 67.7099],
+  AFG: [33.9391, 67.7099],
+  HT: [18.9712, -72.2852],
+  HTI: [18.9712, -72.2852],
+  ML: [17.5707, -3.9962],
+  MLI: [17.5707, -3.9962],
+  VN: [14.0583, 108.2772],
+  VNM: [14.0583, 108.2772]
 };
 
 const englishNames: Record<string, string> = {
@@ -89,6 +102,7 @@ const englishNames: Record<string, string> = {
   CS: "Czechoslovak Republic",
   PL: "Poland",
   CN: "People's Republic of China",
+  CHN: "People's Republic of China",
   YU: "FPR Yugoslavia",
   GB: "United Kingdom",
   BR: "Brazil",
@@ -129,7 +143,19 @@ const englishNames: Record<string, string> = {
   YE_HOU: "Supreme Political Council (Ansar Allah / Sanaa)",
   CD: "Democratic Republic of the Congo",
   CD_M23: "Alliance Fleuve Congo & M23 Resistance",
-  CG: "Republic of the Congo"
+  CG: "Republic of the Congo",
+  ET: "Federal Democratic Republic of Ethiopia",
+  ETH: "Federal Democratic Republic of Ethiopia",
+  SO: "Federal Republic of Somalia",
+  SOM: "Federal Republic of Somalia",
+  AF: "Islamic Emirate of Afghanistan",
+  AFG: "Islamic Emirate of Afghanistan",
+  HT: "Republic of Haiti",
+  HTI: "Republic of Haiti",
+  ML: "Republic of Mali",
+  MLI: "Republic of Mali",
+  VN: "Vietnam",
+  VNM: "Vietnam"
 };
 
 const countryRadii: Record<string, number> = {
@@ -142,7 +168,20 @@ const countryRadii: Record<string, number> = {
   CS: 260000,
   PL: 360000,
   CN: 950000,
+  CHN: 950000,
   YU: 300000,
+  ET: 450000,
+  ETH: 450000,
+  SO: 450000,
+  SOM: 450000,
+  AF: 400000,
+  AFG: 400000,
+  HT: 150000,
+  HTI: 150000,
+  ML: 500000,
+  MLI: 500000,
+  VN: 380000,
+  VNM: 380000,
   TR: 480000,
   EG: 450000,
   JP: 400000,
@@ -482,6 +521,30 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       if (activeCountries.some(c => c.id === 'CG')) return 'CG';
       if (activeCountries.some(c => c.id === 'COG')) return 'COG';
     }
+    if (id3 === 'ETH' || id2 === 'ET' || name.includes('ETHIOPIA')) {
+      if (activeCountries.some(c => c.id === 'ET')) return 'ET';
+      if (activeCountries.some(c => c.id === 'ETH')) return 'ETH';
+    }
+    if (id3 === 'SOM' || id2 === 'SO' || name.includes('SOMALIA') || name.includes('SOMALILAND')) {
+      if (activeCountries.some(c => c.id === 'SO')) return 'SO';
+      if (activeCountries.some(c => c.id === 'SOM')) return 'SOM';
+    }
+    if (id3 === 'AFG' || id2 === 'AF' || name.includes('AFGHANISTAN')) {
+      if (activeCountries.some(c => c.id === 'AF')) return 'AF';
+      if (activeCountries.some(c => c.id === 'AFG')) return 'AFG';
+    }
+    if (id3 === 'HTI' || id2 === 'HT' || name.includes('HAITI')) {
+      if (activeCountries.some(c => c.id === 'HT')) return 'HT';
+      if (activeCountries.some(c => c.id === 'HTI')) return 'HTI';
+    }
+    if (id3 === 'MLI' || id2 === 'ML' || name.includes('MALI')) {
+      if (activeCountries.some(c => c.id === 'ML')) return 'ML';
+      if (activeCountries.some(c => c.id === 'MLI')) return 'MLI';
+    }
+    if (id3 === 'VNM' || id2 === 'VN' || name.includes('VIETNAM') || name.includes('VIET NAM')) {
+      if (activeCountries.some(c => c.id === 'VN')) return 'VN';
+      if (activeCountries.some(c => c.id === 'VNM')) return 'VNM';
+    }
 
     return null;
   };
@@ -815,6 +878,19 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       const geoLayer = L.geoJSON({ type: 'FeatureCollection', features: featuresToRender } as any, {
         filter: () => true,
         style: (feature) => {
+          const featName = String(feature?.properties?.name || feature?.properties?.NAME || '').trim();
+          const featId = String(feature?.id || feature?.properties?.id || '').trim();
+          const vassal = getVassalStateForRegion(featName) || getVassalStateForRegion(featId);
+          if (vassal) {
+            return {
+              fillColor: vassal.color,
+              fillOpacity: 0.92,
+              color: vassal.color,
+              weight: 2.5,
+              opacity: 1.0
+            };
+          }
+
           const countryId = getPlayableCountryCode(feature);
           if (!countryId) {
             return {
@@ -848,6 +924,25 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           };
         },
         onEachFeature: (feature, layer) => {
+          const featName = String(feature?.properties?.name || feature?.properties?.NAME || '').trim();
+          const featId = String(feature?.id || feature?.properties?.id || '').trim();
+          const vassal = getVassalStateForRegion(featName) || getVassalStateForRegion(featId);
+          if (vassal) {
+            const tooltipHtml = `
+              <div style="font-family: sans-serif; padding: 4px 6px; min-width: 140px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <span style="font-size: 16px;">${vassal.flag || '🛡️'}</span>
+                  <span style="font-weight: 900; font-size: 12px; color: ${vassal.color};">${vassal.name}</span>
+                </div>
+                <div style="font-size: 10px; color: #f59e0b; margin-top: 2px; font-weight: bold;">
+                  Vassal of ${vassal.suzerainName}
+                </div>
+              </div>
+            `;
+            layer.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
+            return;
+          }
+
           const countryId = getPlayableCountryCode(feature);
           if (!countryId) return;
 

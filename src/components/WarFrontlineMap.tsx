@@ -27,6 +27,7 @@ import {
   setRegionController,
   getTerritoryControlMap,
   isBufferZone,
+  getVassalStateForRegion,
   CombatBelligerentForces,
   FrontlineBattleResult
 } from '../utils/territorialControl';
@@ -347,18 +348,19 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
     const controlMap = getTerritoryControlMap();
 
     regions.forEach(reg => {
-      const isBuffer = reg.controllerId === 'BUFFER_ZONE' || isBufferZone(reg.id) || isBufferZone(reg.name) || controlMap[reg.id] === 'BUFFER_ZONE';
+      const vassal = getVassalStateForRegion(reg.id) || getVassalStateForRegion(reg.name);
+      const isBuffer = Boolean(vassal) || reg.controllerId === 'BUFFER_ZONE' || isBufferZone(reg.id) || isBufferZone(reg.name) || controlMap[reg.id] === 'BUFFER_ZONE';
       const isFriendly = !isBuffer && (reg.controllerId === friendlySideId || controlMap[reg.id] === country.id);
       const isReachable = reachableRegionIds.has(reg.id);
       const isSelected = selectedRegionId === reg.id;
       const isHovered = hoveredRegionId === reg.id;
 
       // Color scheme
-      let fillColor = isBuffer ? '#334155' : isFriendly ? '#1e40af' : '#991b1b'; // Buffer Slate vs Friendly Navy vs Hostile Crimson
-      let fillOpacity = isBuffer ? 0.85 : 0.55;
-      let borderColor = isBuffer ? '#94a3b8' : isFriendly ? '#3b82f6' : '#ef4444';
+      let fillColor = vassal ? vassal.color : isBuffer ? '#334155' : isFriendly ? '#1e40af' : '#991b1b'; // Vassal custom vs Buffer Slate vs Friendly Navy vs Hostile Crimson
+      let fillOpacity = vassal ? 0.75 : isBuffer ? 0.85 : 0.55;
+      let borderColor = vassal ? vassal.color : isBuffer ? '#94a3b8' : isFriendly ? '#3b82f6' : '#ef4444';
       let borderWidth = 2;
-      let dashArray = isBuffer ? '4, 3' : undefined;
+      let dashArray = (isBuffer && !vassal) ? '4, 3' : undefined;
 
       if (isSelected) {
         borderColor = '#fbbf24'; // Gold highlight
@@ -376,20 +378,26 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
         }
       }
 
-      // Render polygon with hatched neutral style for buffer zones (Requirement 2)
+      // Render polygon with hatched neutral style for buffer zones or vassal border (Requirement 2)
       const polygon = L.polygon(reg.polygon, {
         fillColor,
         fillOpacity,
         color: borderColor,
         weight: borderWidth,
         dashArray,
-        className: isBuffer ? 'buffer-zone-hatched cursor-default' : isReachable ? 'cursor-pointer transition-all duration-200' : 'cursor-default'
+        className: (isBuffer && !vassal) ? 'buffer-zone-hatched cursor-default' : isReachable ? 'cursor-pointer transition-all duration-200' : 'cursor-default'
       }).addTo(map);
 
       // Region tooltip / label
       const terrainBadge = getTerrainIcon(reg.terrain);
       const portBadge = reg.isPort ? '⚓ Port' : '';
-      const controllerLabel = isBuffer ? '🛡️ Demilitarized Buffer Zone' : isFriendly ? '🔵 Friendly Control' : '🔴 Hostile Occupied';
+      const controllerLabel = vassal 
+        ? `🛡️ ${vassal.name} (Vassal of ${vassal.suzerainName})` 
+        : isBuffer 
+          ? '🛡️ Demilitarized Buffer Zone' 
+          : isFriendly 
+            ? '🔵 Friendly Control' 
+            : '🔴 Hostile Occupied';
 
       polygon.bindTooltip(`
         <div class="p-1 font-mono text-xs">
@@ -616,6 +624,11 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
 
     // Check reachability
     if (!reachableRegionIds.has(targetRegion.id)) {
+      if (currentReg.isPort && targetRegion.isPort && (casualtyStats.transportShips.total - casualtyStats.transportShips.inUse <= 0)) {
+        playSound('error');
+        addCombatLog(`⚠️ SEA CROSSING BLOCKED: You have 0 transport ships! Commission transport vessels in the War HUD or Finance view to cross sea routes.`);
+        return;
+      }
       playSound('error');
       addCombatLog(`⚠️ INACCESSIBLE SECTOR: ${targetRegion.name} is not adjacent by land. Units must advance sector by sector.`);
       return;

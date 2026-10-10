@@ -9,6 +9,7 @@ import {
   AlertTriangle, Swords, Flame, Check, Zap, X, Lock, Building2, 
   DollarSign, Activity, TrendingUp, Handshake, ShieldCheck, ShieldAlert 
 } from 'lucide-react';
+import { getVassalStates, getVassalStateById } from '../utils/territorialControl';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -89,6 +90,7 @@ interface DiplomacyViewProps {
   onNavigateToWar?: () => void;
   foreignAidPackages?: Record<string, ForeignAidPackage>;
   onUpdateForeignAid?: (updater: any) => void;
+  foreignLeaders?: Record<string, { leader: string; rulingParty: string; ideology: string; portrait?: string }>;
 }
 
 const getScenarioBg = (scenarioId: string) => {
@@ -123,6 +125,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
   onNavigateToWar,
   foreignAidPackages = {},
   onUpdateForeignAid,
+  foreignLeaders = {},
 }) => {
   const [mapMode, setMapMode] = useState<'RELATIONS' | 'WARS' | 'IDEOLOGY' | 'FREEDOM' | 'INFLUENCE'>('RELATIONS');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -189,6 +192,36 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const activeCid = isCountryActive(rawCid, scenario) ? rawCid : getSuccessorCountryId(rawCid, scenario);
     const cid = isCountryActive(activeCid, scenario) ? activeCid : rawCid;
     const isSelf = cid === country.id;
+
+    // 0. Check if target is a registered Vassal State / Buffer State (Requirement 2)
+    const vassal = getVassalStateById(cid) || getVassalStates().find(v => v.id === cid);
+    if (vassal) {
+      const isOurVassal = vassal.suzerainId === country.id;
+      return {
+        id: vassal.id,
+        name: vassal.name,
+        flag: vassal.flag || '🛡️',
+        governmentType: `Autonomous Buffer / Puppet State (${vassal.suzerainName})`,
+        rulingParty: vassal.rulingParty || `${vassal.name} Council`,
+        ideology: vassal.ideology || 'Aligned Protectorate',
+        leader: vassal.leader || `High Commissioner (${vassal.suzerainName})`,
+        portrait: undefined,
+        population: `${(vassal.provinces.length * 1.5).toFixed(1)}M`,
+        gdp: `$${(vassal.provinces.length * 6.5).toFixed(1)} Billion`,
+        militaryStrength: `Protectorate Garrison (${vassal.suzerainName})`,
+        stability: 88,
+        stabilityLabel: 'Loyal & Protected',
+        relationScore: isOurVassal ? 100 : 50,
+        relationStatus: isOurVassal ? 'Alliance' : 'Neutral',
+        activeWars: [],
+        isVassal: true,
+        vassalOf: vassal.suzerainName,
+        suzerainId: vassal.suzerainId,
+        color: vassal.color,
+        provinces: vassal.provinces
+      };
+    }
+
     const scenarioCountries = getPlayableCountriesForScenario((scenario as ScenarioYear) || '2026');
     const matchedCountry = scenarioCountries.find(c => c.id === cid) || PLAYABLE_COUNTRIES.find(c => c.id === cid);
 
@@ -536,7 +569,8 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
         activeWars.push('Israel ⚔️ Palestine (Regional Conflict)');
       }
     } else if (scenario === '1950') {
-      if (['KR', 'CN', 'US'].includes(cid) && !activeWars.some(w => w.includes('Korea'))) {
+      const isKoreanWarActive = diplomaticRelations?.['KP']?.status === 'At War' || diplomaticRelations?.['KR']?.status === 'At War';
+      if (isKoreanWarActive && ['KR', 'CN', 'US', 'KP'].includes(cid) && !activeWars.some(w => w.includes('Korea'))) {
         activeWars.push('Korean War (UN vs. DPRK/China)');
       }
     } else if (scenario === '1936') {
@@ -553,14 +587,21 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       }
     }
 
+    const customLeader = foreignLeaders?.[cid];
+    const finalLeader = customLeader?.leader || leader;
+    const finalRulingParty = customLeader?.rulingParty || rulingParty;
+    const finalIdeology = customLeader?.ideology || countryIdeologies[cid] || ideology;
+    const finalPortrait = customLeader?.portrait;
+
     return {
       id: cid,
       name,
       flag,
       governmentType,
-      rulingParty,
-      ideology,
-      leader,
+      rulingParty: finalRulingParty,
+      ideology: finalIdeology,
+      leader: finalLeader,
+      portrait: finalPortrait,
       population,
       gdp,
       militaryStrength,
@@ -568,7 +609,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       stabilityLabel,
       relationScore,
       relationStatus: rel.status,
-      activeWars
+      activeWars,
+      isVassal: Boolean(rel.isVassal),
+      vassalOf: rel.vassalOf
     };
   };
 
@@ -1682,6 +1725,13 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     const currentRelation = diplomaticRelations[targetId] || { status: 'Neutral', opinion: 50 };
 
     if (action === 'Declare War') {
+      const vassal = getVassalStateById(targetId);
+      if (vassal && vassal.suzerainId === country.id) {
+        playSound('error');
+        setErrorMessage(`CANNOT ATTACK A VASSAL STATE! ${vassal.name} is a designated Vassal of ${country.name} and cannot be attacked.`);
+        return;
+      }
+
       if (currentRelation.status === 'Allies' || currentRelation.status === 'Alliance') {
         playSound('error');
         setErrorMessage(`CANNOT ATTACK AN ALLY! You must break the Alliance with ${getCountryName(targetId)} before declaring war.`);
@@ -2068,20 +2118,26 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                             <h4 className="font-black text-sm tracking-tight leading-tight truncate">
                               {details.name}
                             </h4>
-                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${
-                              rel.status === 'At War' ? 'bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse' :
-                              rel.status === 'Alliance' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
-                              rel.status === 'Defensive Pact' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' :
-                              rel.status === 'Sanctioned' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
-                              rel.status === 'Non-Aggression' ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30' :
-                              'bg-slate-500/15 text-slate-400 border border-slate-500/20'
-                            }`}>
-                              {rel.status === 'At War' ? 'At War' : 
-                               rel.status === 'Alliance' ? 'Alliance' :
-                               rel.status === 'Defensive Pact' ? 'Defense Pact' :
-                               rel.status === 'Sanctioned' ? 'Sanctioned' :
-                               rel.status === 'Non-Aggression' ? 'Non-Aggression' : 'Neutral'}
-                            </span>
+                            {details.isVassal ? (
+                              <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                                🛡️ Vassal of {details.vassalOf || country.name}
+                              </span>
+                            ) : (
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                                rel.status === 'At War' ? 'bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse' :
+                                rel.status === 'Alliance' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
+                                rel.status === 'Defensive Pact' ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' :
+                                rel.status === 'Sanctioned' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                                rel.status === 'Non-Aggression' ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30' :
+                                'bg-slate-500/15 text-slate-400 border border-slate-500/20'
+                              }`}>
+                                {rel.status === 'At War' ? 'At War' : 
+                                 rel.status === 'Alliance' ? 'Alliance' :
+                                 rel.status === 'Defensive Pact' ? 'Defense Pact' :
+                                 rel.status === 'Sanctioned' ? 'Sanctioned' :
+                                 rel.status === 'Non-Aggression' ? 'Non-Aggression' : 'Neutral'}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                             Code: <strong className="text-slate-300">{details.id}</strong> {isSelf && '• (Your Country)'}
@@ -2379,6 +2435,14 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
                               <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                               <span>Break Alliance</span>
                             </button>
+                          ) : details.isVassal ? (
+                            <button
+                              disabled
+                              title="Loyal vassal state: bound by treaty to never attack or declare war on suzerain."
+                              className="py-2 px-2.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all border opacity-60 bg-amber-500/10 text-amber-300 border-amber-500/30 cursor-not-allowed"
+                            >
+                              <span>🛡️ Vassal (Cannot Attack)</span>
+                            </button>
                           ) : (
                             <button
                               onClick={() => handleHostileAction(selectedMapCountryId, 'Declare War')}
@@ -2428,6 +2492,62 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Vassal States & Buffer Zones Card (Requirement 2) */}
+        {getVassalStates().length > 0 && (
+          <div className={`p-5 rounded-3xl border flex flex-col gap-3.5 mb-4 ${
+            darkMode ? 'bg-slate-900/60 border-amber-500/30' : 'bg-white border-amber-500/40 shadow-sm'
+          }`}>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-500/10">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛡️</span>
+                <div>
+                  <h3 className="text-xs font-bold tracking-wider font-mono uppercase text-amber-300">
+                    Vassal States & Buffer Protectorates
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Sovereign buffer states created via peace deals. Bound to follow our foreign relations and forbidden from attacking us.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                {getVassalStates().length} Active Vassals
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {getVassalStates().map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => {
+                    setSelectedMapCountryId(v.id);
+                    playSound('click');
+                  }}
+                  className="p-3.5 rounded-2xl bg-black/25 border border-slate-700/60 hover:border-amber-400/60 transition-all text-left flex flex-col gap-2 cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{v.flag || '🛡️'}</span>
+                      <div>
+                        <span className="font-black text-xs text-white group-hover:text-amber-300 transition-colors block">
+                          {v.name}
+                        </span>
+                        <span className="text-[10px] text-amber-400 font-mono font-bold">
+                          Vassal of {v.suzerainName}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="w-3.5 h-3.5 rounded-full border border-black/50" style={{ backgroundColor: v.color }} />
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono flex items-center justify-between pt-1 border-t border-slate-700/40">
+                    <span>{v.provinces?.length || 0} Provinces</span>
+                    <span className="text-emerald-400 font-bold">100% Loyal</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Global Blocs & Supranational Integration (Right) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

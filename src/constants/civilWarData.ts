@@ -507,7 +507,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     factions: [
       {
         id: 'SO_FGS',
-        name: 'Federal Government of Somalia (FGS / SNA)',
+        name: 'Federal Government + AU forces',
         leader: 'Hassan Sheikh Mohamud',
         ideology: 'Federal Democratic Republic / UN-Recognized',
         color: '#2563eb',
@@ -519,7 +519,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
       },
       {
         id: 'SO_SHA',
-        name: 'Al-Shabaab Militias (Jaysh al-Usra)',
+        name: 'al-Shabaab',
         leader: 'Ahmed Diriye ("Abu Ubaidah")',
         ideology: 'Salafi-Jihadist Insurgency',
         color: '#dc2626',
@@ -530,18 +530,18 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
       },
       {
         id: 'SO_SOM',
-        name: 'Republic of Somaliland (Hargeisa)',
+        name: 'Somaliland (separate de facto state)',
         leader: 'Abdirahman Mohamed Abdullahi ("Cirro")',
         ideology: 'De Facto Constitutional Republic',
         color: '#059669',
         strength: 20,
-        controlledRegions: ['Awdal', 'WoqooyiGalbeed', 'Togdheer'],
+        controlledRegions: ['Awdal', 'WoqooyiGalbeed', 'Togdheer', 'Sool', 'Sanaag'],
         foreignBacker: 'Ethiopia (MoU Partner) / UAE (Berbera Port)',
         description: 'Maintains thirty years of de facto independent statehood, Berbera deep-water trade hub, and army corps.'
       },
       {
         id: 'SO_PUNT',
-        name: 'Puntland State Forces (Dervish Command)',
+        name: 'Puntland',
         leader: 'Said Abdullahi Deni',
         ideology: 'Federal Autonomy / Maritime State Defense',
         color: '#d97706',
@@ -552,7 +552,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
       },
       {
         id: 'SO_JUBA',
-        name: 'Jubaland Regional Security Forces (Kismayo)',
+        name: 'Jubaland',
         leader: 'Ahmed Madobe',
         ideology: 'Southern Border Federal Defense',
         color: '#7c3aed',
@@ -567,7 +567,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     countryId: 'ML',
     countryName: 'Mali',
     flag: '🇲🇱',
-    conflictName: 'Sahel War & Azawad Tuareg Insurgency',
+    conflictName: 'Malian Civil War & Sahelian Insurgency',
     yearStarted: 2012,
     stability: 20,
     status: 'ACTIVE',
@@ -576,43 +576,79 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     playerStance: 'NEUTRAL',
     sides: [
       {
-        id: 'ML_SIDE_GOV',
-        name: 'FAMa (Armed Forces of Mali)',
-        leader: 'ML_FAMA',
-        members: ['ML_FAMA'],
+        id: 'ML_SIDE_JUNTA',
+        name: 'FAMa Junta & Africa Corps',
+        leader: 'ML_JUNTA',
+        members: ['ML_JUNTA'],
         color: '#15803d'
       },
       {
-        id: 'ML_SIDE_REBELS',
-        name: 'Northern Rebel Front & Jihadist Networks',
-        leader: 'ML_CMA_JNIM',
-        members: ['ML_CMA_JNIM'],
-        color: '#ca8a04'
+        id: 'ML_SIDE_FLA',
+        name: 'FLA (Azawad Independence)',
+        leader: 'ML_FLA',
+        members: ['ML_FLA'],
+        color: '#2563eb'
+      },
+      {
+        id: 'ML_SIDE_JNIM',
+        name: 'JNIM (Sahelian Al-Qaeda)',
+        leader: 'ML_JNIM',
+        members: ['ML_JNIM'],
+        color: '#d97706'
+      },
+      {
+        id: 'ML_SIDE_ISSP',
+        name: 'ISSP (Islamic State Sahel)',
+        leader: 'ML_ISSP',
+        members: ['ML_ISSP'],
+        color: '#dc2626'
       }
     ],
     factions: [
       {
-        id: 'ML_FAMA',
-        name: 'Malian Armed Forces (FAMa Junta)',
-        leader: 'Col. Assimi Goïta',
-        ideology: 'Military Nationalist Junta',
+        id: 'ML_JUNTA',
+        name: 'Junta + Africa Corps',
+        leader: 'Col. Assimi Goïta & Gen. Sadio Camara',
+        ideology: 'Military Sovereignist Junta / AES Alliance',
         color: '#15803d',
-        strength: 55,
-        controlledRegions: ['Bamako', 'Kayes', 'Koulikoro', 'Sikasso', 'Ségou'],
+        strength: 45,
+        controlledRegions: ['Bamako', 'Koulikoro', 'Kayes', 'Sikasso', 'Ségou'],
         isGovernment: true,
-        foreignBacker: 'Russia (Africa Corps) / AES Alliance',
-        description: 'Military junta allied with Burkina Faso and Niger (AES), relying on Russian instructors and heavy drones.'
+        foreignBacker: 'Russia (Africa Corps) / Alliance of Sahel States (AES)',
+        description: 'Military junta allied with Burkina Faso and Niger (AES), relying on Russian instructors, Africa Corps assault detachments, and heavy drones.'
       },
       {
-        id: 'ML_CMA_JNIM',
-        name: 'CSP-DPA (Azawad) & JNIM Militants',
-        leader: 'Bilal Ag Acherif / Iyad Ag Ghaly',
-        ideology: 'Tuareg Separatist / Sahelian Jihadist Fronts',
-        color: '#ca8a04',
-        strength: 45,
-        controlledRegions: ['Kidal', 'Gao', 'Timbuktu', 'Mopti'],
-        foreignBacker: 'Northern Saharan Trade Routes / Local Extraction',
-        description: 'Mobile desert guerrilla confederation controlling northern trade frontiers and Sahara dune corridors.'
+        id: 'ML_FLA',
+        name: 'FLA (Azawad)',
+        leader: 'Bilal Ag Acherif & Alghabass Ag Intalla',
+        ideology: 'Tuareg Self-Determination / Azawad Independence',
+        color: '#2563eb',
+        strength: 22,
+        controlledRegions: ['Kidal'],
+        foreignBacker: 'Tuareg Regional Diaspora / Trans-Saharan Defense Networks',
+        description: 'Secular Tuareg and Arab rebel alliance defending their historic northern desert homeland of Azawad, commanding highly mobile technical desert columns around Kidal.'
+      },
+      {
+        id: 'ML_JNIM',
+        name: 'JNIM',
+        leader: 'Iyad Ag Ghaly & Amadou Koufa',
+        ideology: 'Salafi-Jihadist Insurgency (Al-Qaeda in the Sahel)',
+        color: '#d97706',
+        strength: 20,
+        controlledRegions: ['Mopti', 'Timbuktu'],
+        foreignBacker: 'Al-Qaeda Central / Sahel Gold & Cattle Smuggling',
+        description: 'Vast jihadist alliance dominating central rural Mali and the Macina floodplains, applying local sharia, laying IED ambushes, and besieging Timbuktu roads.'
+      },
+      {
+        id: 'ML_ISSP',
+        name: 'ISSP',
+        leader: 'Abu al-Bara al-Sahrawi',
+        ideology: 'Islamic State Caliphate Province',
+        color: '#dc2626',
+        strength: 13,
+        controlledRegions: ['Gao'],
+        foreignBacker: 'Global ISIS Network / Menaka Border Extraction',
+        description: 'Brutal Islamic State affiliate active in eastern Mali and the tri-border Liptako-Gourma zone, controlling Gao trade corridors and fighting both FAMa and JNIM.'
       }
     ]
   },
@@ -679,7 +715,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     countryId: 'ET',
     countryName: 'Ethiopia',
     flag: '🇪🇹',
-    conflictName: 'Amhara Fano & Oromo Regional Insurgencies',
+    conflictName: 'Ethiopian Multi-Front Civil War & Regional Insurgencies',
     yearStarted: 2020,
     stability: 27,
     status: 'ACTIVE',
@@ -690,41 +726,77 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
       {
         id: 'ET_SIDE_GOV',
         name: 'Federal Democratic Republic & ENDF',
-        leader: 'ET_ENDF',
-        members: ['ET_ENDF'],
+        leader: 'ET_GOV',
+        members: ['ET_GOV'],
         color: '#15803d'
       },
       {
-        id: 'ET_SIDE_REBELS',
-        name: 'Fano Militias & OLA Rebels',
-        leader: 'ET_FANO_OLA',
-        members: ['ET_FANO_OLA'],
-        color: '#b45309'
+        id: 'ET_SIDE_TPLF',
+        name: 'Tigray Forces (TPLF / TDF)',
+        leader: 'ET_TPLF',
+        members: ['ET_TPLF'],
+        color: '#dc2626'
+      },
+      {
+        id: 'ET_SIDE_FANO',
+        name: 'Amhara Fano Resistance',
+        leader: 'ET_FANO',
+        members: ['ET_FANO'],
+        color: '#2563eb'
+      },
+      {
+        id: 'ET_SIDE_OLA',
+        name: 'Oromo Liberation Army (OLA)',
+        leader: 'ET_OLA',
+        members: ['ET_OLA'],
+        color: '#d97706'
       }
     ],
     factions: [
       {
-        id: 'ET_ENDF',
-        name: 'Federal Democratic Republic & ENDF',
+        id: 'ET_GOV',
+        name: 'Federal Government',
         leader: 'Abiy Ahmed',
         ideology: 'Prosperity Party / Centralized Developmentalism',
         color: '#15803d',
-        strength: 65,
-        controlledRegions: ['AddisAbeba', 'DireDawa', 'HarariPeople', 'Afar', 'Somali', 'Tigray', 'Benshangul-Gumaz', 'GambelaPeoples'],
+        strength: 45,
+        controlledRegions: ['AddisAbeba', 'DireDawa', 'HarariPeople', 'Afar', 'Somali', 'Benshangul-Gumaz', 'GambelaPeoples', 'SouthernNations,Nationalities'],
         isGovernment: true,
         foreignBacker: 'UAE / Turkey / China',
-        description: 'Maintains national institutions, air force, Grand Ethiopian Renaissance Dam, and Addis Ababa metropolis.'
+        description: 'UN-recognized federal government commanding the Ethiopian National Defense Force (ENDF), holding the capital Addis Ababa, key logistical transit corridors to Djibouti, and federal regional capitals.'
       },
       {
-        id: 'ET_FANO_OLA',
-        name: 'Fano Militias & OLA Rebels',
-        leader: 'Regional Fano Commanders / Jaal Marroo',
-        ideology: 'Ethno-Regional Defense & Autonomy',
-        color: '#b45309',
-        strength: 35,
-        controlledRegions: ['Amhara', 'Oromia'],
-        foreignBacker: 'Diaspora Networks',
-        description: 'Dispersed regional militias resisting federal disarmament and demanding constitutional revision.'
+        id: 'ET_TPLF',
+        name: 'TPLF/Tigray forces',
+        leader: 'Debretsion Gebremichael',
+        ideology: 'Democratic Nationalism / Tigray Autonomy',
+        color: '#dc2626',
+        strength: 22,
+        controlledRegions: ['Tigray'],
+        foreignBacker: 'Tigrayan Diaspora / Pretoria Agreement Monitoring',
+        description: 'Hardened northern regional army holding Tigray highland trenches, Mekelle capital, and preserving organized mechanized brigades following the Pretoria Cessation of Hostilities.'
+      },
+      {
+        id: 'ET_FANO',
+        name: 'Fano (Amhara)',
+        leader: 'Zemene Kassie',
+        ideology: 'Amhara Ethno-Nationalist Resistance',
+        color: '#2563eb',
+        strength: 20,
+        controlledRegions: ['Amhara'],
+        foreignBacker: 'Amhara Civic & Diaspora Coalitions',
+        description: 'Decentralized popular militia waging widespread guerrilla resistance against federal demobilization across the mountainous Amhara region and historic Gondar-Wollo axes.'
+      },
+      {
+        id: 'ET_OLA',
+        name: 'OLA (Oromo)',
+        leader: 'Jaal Marroo (Kumsa Diriba)',
+        ideology: 'Oromo Self-Determination & Federal Autonomy',
+        color: '#d97706',
+        strength: 13,
+        controlledRegions: ['Oromia'],
+        foreignBacker: 'Oromo Diaspora & Regional Border Networks',
+        description: 'Armed wing of the Oromo national movement fighting for regional autonomy and rural control across western and southern Oromia farmlands.'
       }
     ]
   },
@@ -732,7 +804,7 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     countryId: 'HT',
     countryName: 'Haiti',
     flag: '🇭🇹',
-    conflictName: 'Port-au-Prince Gang Coalition War & Security Crisis',
+    conflictName: 'Port-au-Prince Gang War & Security Mission Crisis',
     yearStarted: 2021,
     stability: 12,
     status: 'ACTIVE',
@@ -741,8 +813,8 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     playerStance: 'NEUTRAL',
     sides: [
       {
-        id: 'HT_SIDE_TRANSITION',
-        name: 'Transitional Presidential Council & MSS Mission',
+        id: 'HT_SIDE_GOV',
+        name: 'Transitional Gov & Kenya MSS',
         leader: 'HT_TRANSITION',
         members: ['HT_TRANSITION'],
         color: '#1e3a8a'
@@ -752,32 +824,32 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
         name: 'Viv Ansanm Gang Coalition',
         leader: 'HT_VIV_ANSANM',
         members: ['HT_VIV_ANSANM'],
-        color: '#7f1d1d'
+        color: '#dc2626'
       }
     ],
     factions: [
       {
         id: 'HT_TRANSITION',
-        name: 'Transitional Presidential Council & MSS Mission',
-        leader: 'Leslie Voltaire / Alix Didier Fils-Aimé',
-        ideology: 'Transitional Government / MSS Force',
+        name: 'Transitional Government + Kenya-led Security Mission',
+        leader: 'Leslie Voltaire & Alix Didier Fils-Aimé',
+        ideology: 'Transitional Governance / UN Security Support',
         color: '#1e3a8a',
-        strength: 40,
+        strength: 48,
         controlledRegions: ['Nord', 'Nord-Est', 'Nord-Ouest', 'Sud', 'Sud-Est', 'Nippes', "Grand'Anse", 'Centre'],
         isGovernment: true,
-        foreignBacker: 'Kenya (MSS) / USA / CARICOM / UN',
-        description: 'Transitional council supported by Kenyan-led international security forces, holding northern hubs and provincial departments.'
+        foreignBacker: 'Kenya (MSS Mission) / USA / CARICOM / UN',
+        description: 'Transitional presidential council supported by Kenyan-led international security police, holding provincial departments and sea routes.'
       },
       {
         id: 'HT_VIV_ANSANM',
         name: 'Viv Ansanm Gang Coalition',
-        leader: 'Jimmy Chérizier ("Barbecue")',
-        ideology: 'Armed Criminal Confederation / Populist Guerrilla',
-        color: '#7f1d1d',
-        strength: 60,
+        leader: 'Jimmy Chérizier ("Barbecue") & Johnson André ("Izo")',
+        ideology: 'Armed Criminal Confederation / Populist Militia',
+        color: '#dc2626',
+        strength: 52,
         controlledRegions: ['Ouest', "L'Artibonite"],
-        foreignBacker: 'Illicit Firearms Trafficking Networks',
-        description: 'Heavily armed coalition controlling ~80% of the metropolitan capital Ouest department, fuel ports, and highway choke points.'
+        foreignBacker: 'Illicit Firearms Trafficking / Extortion Networks',
+        description: 'Heavily armed coalition controlling ~80% of Port-au-Prince metropolitan department, petroleum wharves, and Artibonite agrarian corridors.'
       }
     ]
   },
@@ -794,72 +866,188 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
     playerStance: 'NEUTRAL',
     sides: [
       {
-        id: 'AF_SIDE_RESISTANCE',
-        name: 'United Democratic & National Resistance',
-        leader: 'AF_NRF',
-        members: ['AF_NRF', 'AF_AFF'],
-        color: '#059669'
-      },
-      {
         id: 'AF_SIDE_TALIBAN',
-        name: 'Islamic Emirate of Afghanistan (Taliban)',
+        name: 'Taliban Government (IEA)',
         leader: 'AF_TAL',
         members: ['AF_TAL'],
         color: '#1e293b'
       },
       {
+        id: 'AF_SIDE_RESISTANCE',
+        name: 'National Resistance Front (NRF)',
+        leader: 'AF_NRF',
+        members: ['AF_NRF'],
+        color: '#059669'
+      },
+      {
         id: 'AF_SIDE_ISKP',
-        name: 'Islamic State Khorasan Province (ISKP)',
+        name: 'ISIS-K (Islamic State Khorasan)',
         leader: 'AF_ISKP',
         members: ['AF_ISKP'],
-        color: '#b91c1c'
+        color: '#dc2626'
       }
     ],
     factions: [
       {
         id: 'AF_TAL',
-        name: 'Islamic Emirate of Afghanistan (Taliban)',
-        leader: 'Hibatullah Akhundzada / Sirajuddin Haqqani',
+        name: 'Taliban Government',
+        leader: 'Hibatullah Akhundzada & Sirajuddin Haqqani',
         ideology: 'Theocratic Authoritarianism / De Facto Regime',
         color: '#1e293b',
-        strength: 55,
-        controlledRegions: ['Kabul', 'Kandahar', 'Hirat', 'Balkh', 'Hilmand', 'Kunduz', 'Ghazni', 'Faryab'],
+        strength: 65,
+        controlledRegions: ['Kabul', 'Kandahar', 'Hirat', 'Balkh', 'Hilmand', 'Kunduz', 'Ghazni', 'Faryab', 'Jawzjan', 'Samangan', 'SariPul', 'Ghor', 'Daykundi', 'Bamyan', 'Farah', 'Nimroz', 'Uruzgan', 'Zabul', 'Paktya', 'Paktika', 'Khost', 'Logar', 'Wardak', 'Parwan', 'Kapisa', 'Laghman', 'Badghis'],
         isGovernment: true,
         foreignBacker: 'Regional Trade Ties / Seized Military Arsenals',
         description: 'Controls state apparatus, major provincial capitals, border crossings, and national infrastructure.'
       },
       {
         id: 'AF_NRF',
-        name: 'National Resistance Front (NRF / Massoud)',
+        name: 'National Resistance Front',
         leader: 'Ahmad Massoud',
         ideology: 'Democratic Republican / Anti-Taliban Front',
         color: '#059669',
-        strength: 20,
-        controlledRegions: ['Panjshir', 'Badakhshan', 'Takhar'],
+        strength: 22,
+        controlledRegions: ['Panjshir', 'Badakhshan', 'Takhar', 'Baghlan'],
         foreignBacker: 'Afghan Diaspora / European Sympathizers / Tajikistan',
         description: 'Guerrilla insurgent front operating from high Hindu Kush valleys, mounting asymmetric ambushes against Taliban garrisons.'
       },
       {
-        id: 'AF_AFF',
-        name: 'Afghanistan Freedom Front (AFF / Veterans)',
-        leader: 'Lt. Gen. Yasin Zia',
-        ideology: 'Secular Republican / Former Afghan Special Forces',
-        color: '#2563eb',
-        strength: 15,
-        controlledRegions: ['Baghlan', 'Parwan', 'Kapisa'],
-        foreignBacker: 'Former Afghan National Security Veterans Network',
-        description: 'Urban hit-and-run commandos targeting Taliban checkpoints, logistics hubs, and military garrisons.'
-      },
-      {
         id: 'AF_ISKP',
-        name: 'Islamic State Khorasan Province (ISKP)',
+        name: 'ISIS-K',
         leader: 'Sanaullah Ghafari ("Shahab al-Muhajir")',
-        ideology: 'Salafi-Jihadist Caliphate',
-        color: '#b91c1c',
-        strength: 10,
-        controlledRegions: ['Nangarhar', 'Kunar'],
+        ideology: 'Transnational Salafi-Jihadist Caliphate',
+        color: '#dc2626',
+        strength: 13,
+        controlledRegions: ['Nangarhar', 'Kunar', 'Nuristan'],
         foreignBacker: 'Global Salafi-Jihadist Underground Networks',
         description: 'Hardline militant wing conducting suicide bombings and insurgent ambushes in eastern mountain sectors.'
+      }
+    ]
+  },
+  CN: {
+    countryId: 'CN',
+    countryName: 'China',
+    flag: '🇨🇳',
+    conflictName: 'Chinese Civil War (PRC vs. ROC 1950)',
+    yearStarted: 1946,
+    stability: 30,
+    status: 'ACTIVE',
+    refugeePressure: 60,
+    monthlyCasualties: 850,
+    playerStance: 'NEUTRAL',
+    sides: [
+      {
+        id: 'CN_SIDE_PRC',
+        name: 'People\'s Republic of China (PRC)',
+        leader: 'CN_PRC',
+        members: ['CN_PRC'],
+        color: '#dc2626'
+      },
+      {
+        id: 'CN_SIDE_ROC',
+        name: 'Republic of China (ROC / Taiwan)',
+        leader: 'CN_ROC',
+        members: ['CN_ROC'],
+        color: '#2563eb'
+      }
+    ],
+    factions: [
+      {
+        id: 'CN_PRC',
+        name: 'People\'s Republic of China (PRC / PLA)',
+        leader: 'Mao Zedong & Zhou Enlai',
+        ideology: 'Socialist / People\'s Democratic Dictatorship',
+        color: '#dc2626',
+        strength: 82,
+        controlledRegions: [
+          'Anhui', 'Beijing', 'Chongqing', 'Gansu', 'Guangdong', 'Guangxi', 
+          'Guizhou', 'Hebei', 'Heilongjiang', 'Henan', 'Hubei', 'Hunan', 
+          'Jiangsu', 'Jiangxi', 'Jilin', 'Liaoning', 'NeiMongol', 'NingxiaHui', 
+          'Qinghai', 'Shaanxi', 'Shandong', 'Shanghai', 'Shanxi', 'Sichuan', 
+          'Tianjin', 'XinjiangUygur', 'Xizang', 'Yunnan', 'Zhejiang'
+        ],
+        isGovernment: true,
+        foreignBacker: 'Soviet Union (USSR)',
+        description: 'Controls the entirety of mainland China following the founding of the PRC in Beijing, organizing agrarian revolution and mass mobilizations.'
+      },
+      {
+        id: 'CN_ROC',
+        name: 'Republic of China (ROC / Taiwan)',
+        leader: 'Chiang Kai-shek & Chen Cheng',
+        ideology: 'Three Principles of the People / Nationalist',
+        color: '#2563eb',
+        strength: 18,
+        controlledRegions: ['Taiwan', 'Kinmen', 'Hainan', 'Fujian', 'HongKong', 'Macau'],
+        isGovernment: false,
+        foreignBacker: 'United States (US Seventh Fleet & MAAG)',
+        description: 'Holding Taiwan, the Pescadores, Hainan, Kinmen, and Matsu, maintaining naval superiority and preparing defense against PLA amphibious assaults.'
+      }
+    ]
+  },
+  VN: {
+    countryId: 'VN',
+    countryName: 'Vietnam',
+    flag: '🇻🇳',
+    conflictName: 'First Indochina War (Viet Minh vs. French Union)',
+    yearStarted: 1946,
+    stability: 22,
+    status: 'ACTIVE',
+    refugeePressure: 70,
+    monthlyCasualties: 600,
+    playerStance: 'NEUTRAL',
+    sides: [
+      {
+        id: 'VN_SIDE_VIETMINH',
+        name: 'Viet Minh (Democratic Republic of Vietnam)',
+        leader: 'VN_VIETMINH',
+        members: ['VN_VIETMINH'],
+        color: '#dc2626'
+      },
+      {
+        id: 'VN_SIDE_FRENCH',
+        name: 'French Union & State of Vietnam',
+        leader: 'VN_FRENCH_STATE',
+        members: ['VN_FRENCH_STATE'],
+        color: '#2563eb'
+      }
+    ],
+    factions: [
+      {
+        id: 'VN_VIETMINH',
+        name: 'Viet Minh (Democratic Republic of Vietnam)',
+        leader: 'Hồ Chí Minh & Võ Nguyên Giáp',
+        ideology: 'Anti-Colonial National Liberation / Communist',
+        color: '#dc2626',
+        strength: 52,
+        controlledRegions: [
+          'CaoBằng', 'LạngSơn', 'BắcKạn', 'HàGiang', 'TuyênQuang', 'TháiNguyên', 
+          'LàoCai', 'YênBái', 'PhúThọ', 'ĐiệnBiên', 'LaiChâu', 'SơnLa', 
+          'HoàBình', 'QuảngNinh', 'BắcGiang', 'NghệAn', 'HàTĩnh', 'QuảngBình', 'ThanhHóa'
+        ],
+        isGovernment: false,
+        foreignBacker: 'People\'s Republic of China & Soviet Union',
+        description: 'National liberation forces based in northern Viet Bac mountains and rural strongholds, conducting guerrilla and mobile warfare.'
+      },
+      {
+        id: 'VN_FRENCH_STATE',
+        name: 'French Union & State of Vietnam',
+        leader: 'Bảo Đại & Gen. Jean de Lattre de Tassigny',
+        ideology: 'Associated State / French Union',
+        color: '#2563eb',
+        strength: 48,
+        controlledRegions: [
+          'HàNội', 'HảiPhòng', 'HảiDương', 'NamĐịnh', 'TháiBình', 'HưngYên', 
+          'HàNam', 'NinhBình', 'ThừaThiênHuế', 'ĐàNẵng', 'QuảngNam', 'QuảngNgãi', 
+          'BìnhĐịnh', 'PhúYên', 'KhánhHòa', 'NinhThuận', 'BìnhThuận', 'HồChíMinh', 
+          'ĐồngNai', 'BàRịa-VũngTàu', 'BìnhDương', 'BìnhPhước', 'TâyNinh', 
+          'LongAn', 'TiềnGiang', 'BếnTre', 'TràVinh', 'VĩnhLong', 'ĐồngTháp', 
+          'AnGiang', 'KiênGiang', 'CầnThơ', 'HậuGiang', 'SócTrăng', 'BạcLiêu', 
+          'CàMau', 'KonTum', 'GiaLai', 'ĐắkLắk', 'ĐắkNông', 'LâmĐồng', 
+          'QuảngTrị', 'VĩnhPhúc', 'BắcNinh'
+        ],
+        isGovernment: true,
+        foreignBacker: 'French Republic & United States',
+        description: 'French Expeditionary Corps (CEFEO) and Vietnamese National Army holding urban centers, major seaports, and the southern delta.'
       }
     ]
   }
@@ -867,6 +1055,18 @@ export const INITIAL_CIVIL_WARS: Record<string, CivilWarState> = {
 
 // Aliases for 3-letter ISO codes where needed
 INITIAL_CIVIL_WARS.COD = INITIAL_CIVIL_WARS.CD;
+INITIAL_CIVIL_WARS.ETH = INITIAL_CIVIL_WARS.ET;
+INITIAL_CIVIL_WARS.SOM = INITIAL_CIVIL_WARS.SO;
+INITIAL_CIVIL_WARS.AFG = INITIAL_CIVIL_WARS.AF;
+INITIAL_CIVIL_WARS.HTI = INITIAL_CIVIL_WARS.HT;
+INITIAL_CIVIL_WARS.MLI = INITIAL_CIVIL_WARS.ML;
+INITIAL_CIVIL_WARS.CHN = INITIAL_CIVIL_WARS.CN;
+INITIAL_CIVIL_WARS.VNM = INITIAL_CIVIL_WARS.VN;
+INITIAL_CIVIL_WARS.LBY = INITIAL_CIVIL_WARS.LY;
+INITIAL_CIVIL_WARS.SYR = INITIAL_CIVIL_WARS.SY;
+INITIAL_CIVIL_WARS.SDN = INITIAL_CIVIL_WARS.SD;
+INITIAL_CIVIL_WARS.MMR = INITIAL_CIVIL_WARS.MM;
+INITIAL_CIVIL_WARS.YEM = INITIAL_CIVIL_WARS.YE;
 
 /**
  * Checks if a country code is currently in an active civil war state

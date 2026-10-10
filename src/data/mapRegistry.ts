@@ -472,11 +472,99 @@ export const COUNTRY_MAP_REGISTRY: Record<string, CountryMapConfig> = {
     countryNameProperty: 'GID_0',
     fallbackUrls: ['/world_admin0_50m.geojson']
   },
+  SOM: {
+    iso2: 'SO',
+    iso3: 'SOM',
+    name: 'Somalia',
+    url: '/geo/som.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
   ML: {
     iso2: 'ML',
     iso3: 'MLI',
     name: 'Mali',
     url: '/geo/mli.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  MLI: {
+    iso2: 'ML',
+    iso3: 'MLI',
+    name: 'Mali',
+    url: '/geo/mli.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  AF: {
+    iso2: 'AF',
+    iso3: 'AFG',
+    name: 'Afghanistan',
+    url: '/geo/afg.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  AFG: {
+    iso2: 'AF',
+    iso3: 'AFG',
+    name: 'Afghanistan',
+    url: '/geo/afg.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  CN: {
+    iso2: 'CN',
+    iso3: 'CHN',
+    name: 'China',
+    url: '/geo/chn.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  CHN: {
+    iso2: 'CN',
+    iso3: 'CHN',
+    name: 'China',
+    url: '/geo/chn.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  VN: {
+    iso2: 'VN',
+    iso3: 'VNM',
+    name: 'Vietnam',
+    url: '/geo/vnm.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  VNM: {
+    iso2: 'VN',
+    iso3: 'VNM',
+    name: 'Vietnam',
+    url: '/geo/vnm.geojson',
     regionLevel: 'admin1',
     nameProperty: 'NAME_1',
     altNameProperties: DEFAULT_ALT_NAME_PROPS,
@@ -538,7 +626,29 @@ export const COUNTRY_MAP_REGISTRY: Record<string, CountryMapConfig> = {
     countryNameProperty: 'GID_0',
     fallbackUrls: ['/world_admin0_50m.geojson']
   },
+  ETH: {
+    iso2: 'ET',
+    iso3: 'ETH',
+    name: 'Ethiopia',
+    url: '/geo/eth.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
   HT: {
+    iso2: 'HT',
+    iso3: 'HTI',
+    name: 'Haiti',
+    url: '/geo/hti.geojson',
+    regionLevel: 'admin1',
+    nameProperty: 'NAME_1',
+    altNameProperties: DEFAULT_ALT_NAME_PROPS,
+    countryNameProperty: 'GID_0',
+    fallbackUrls: ['/world_admin0_50m.geojson']
+  },
+  HTI: {
     iso2: 'HT',
     iso3: 'HTI',
     name: 'Haiti',

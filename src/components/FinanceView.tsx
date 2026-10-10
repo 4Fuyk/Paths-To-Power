@@ -22,7 +22,8 @@ import {
   HandCoins, 
   FileText,
   TrendingUp,
-  ArrowUpRight
+  ArrowUpRight,
+  Ship
 } from 'lucide-react';
 
 interface FinanceViewProps {
@@ -112,6 +113,21 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const saved = localStorage.getItem(`cw_debt_${country.id}_${party.id}`);
     return saved ? parseInt(saved, 10) : 0;
   });
+  const [transportShips, setTransportShips] = useState<number>(() => {
+    const saved = localStorage.getItem(`cw_transports_${country.id}_${party.id}`);
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  // Listen for real-time changes to transport ship fleet
+  React.useEffect(() => {
+    const handleTransports = (e: any) => {
+      if (e?.detail?.count !== undefined) {
+        setTransportShips(e.detail.count);
+      }
+    };
+    window.addEventListener('transport_ships_updated', handleTransports);
+    return () => window.removeEventListener('transport_ships_updated', handleTransports);
+  }, []);
 
   const updateBalance = (newVal: number) => {
     if (isRulingActive) {
@@ -261,6 +277,27 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     updateBalance(currentBalance + bondYield);
     playSound('success');
     setSuccessMessage(`Emergency War Bonds Issued: Secured +${currency}${bondYield.toLocaleString()} in immediate liquid capital for military operations. Incurred ${currency}${bondYield.toLocaleString()} in sovereign wartime debt obligations (Total Debt: ${currency}${nextDebt.toLocaleString()}).`);
+    setErrorMessage(null);
+  };
+
+  // 7) Naval Fleet: Build Transport Ships (Requirement 4)
+  const handleBuildTransportShips = () => {
+    const fee = 35000;
+    if (currentBalance < fee) {
+      playSound('error');
+      setErrorMessage(`Insufficient War Chest: You need at least ${currency}${fee.toLocaleString()} to commission naval transport vessels.`);
+      setSuccessMessage(null);
+      return;
+    }
+
+    const nextShips = transportShips + 2;
+    setTransportShips(nextShips);
+    localStorage.setItem(`cw_transports_${country.id}_${party.id}`, nextShips.toString());
+    window.dispatchEvent(new CustomEvent('transport_ships_updated', { detail: { count: nextShips } }));
+
+    updateBalance(currentBalance - fee);
+    playSound('success');
+    setSuccessMessage(`Transport Fleet Commissioned: Built +2 Amphibious Transport Ships for ${currency}${fee.toLocaleString()} (Fleet Total: ${nextShips} ships). Sealift capability is operational for maritime crossings.`);
     setErrorMessage(null);
   };
 
@@ -449,7 +486,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       {isCivilWarMode ? (
         <div className="flex flex-col gap-6">
           {/* Wartime Readiness Dashboard Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {/* Manpower */}
             <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
               darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
@@ -495,6 +532,22 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   {supplyEfficiency}%
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5 font-mono">Attrition resistance</div>
+              </div>
+            </div>
+
+            {/* Transport Ships (Requirement 4) */}
+            <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+              darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between text-slate-400 text-xs">
+                <span className="font-bold text-[10px] uppercase font-mono">Transport Ships</span>
+                <Ship className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div className="mt-2">
+                <div className="text-xl font-black font-mono text-cyan-400">
+                  {transportShips}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5 font-mono">Amphibious sealift fleet</div>
               </div>
             </div>
 
@@ -725,6 +778,42 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow hover:shadow-amber-600/10"
                 >
                   Issue War Bonds
+                </button>
+              </div>
+            </div>
+
+            {/* 7. Naval Fleet: Build Transport Ships (Requirement 4) */}
+            <div className={`p-5 rounded-3xl border flex flex-col justify-between gap-4 transition-all md:col-span-2 ${
+              darkMode ? 'bg-slate-900/40 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 hover:shadow-md'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-500/10">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-cyan-500/10 text-cyan-400 rounded-lg"><Ship className="w-4 h-4" /></span>
+                    <h3 className="font-extrabold text-sm tracking-tight text-slate-100">Naval Fleet: Build Transport Ships</h3>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full uppercase">
+                    Amphibious Sealift
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+                  Commission heavy roll-on/roll-off amphibious transport vessels and logistics sealift craft at coastal dockyards. Any military troop movement that crosses sea sectors requires available transport vessels; without ships, sea crossings are blocked.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-500/10">
+                <div className="text-left font-mono text-[10px] text-slate-400 flex flex-col">
+                  <span>Cost: <strong className="text-rose-400">-{currency}35,000</strong></span>
+                  <span>Fleet Yield: <strong className="text-cyan-400">+2 Transport Ships</strong> (Current Total: {transportShips})</span>
+                </div>
+                <button
+                  id="action-build-transport-ship"
+                  type="button"
+                  onClick={handleBuildTransportShips}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow hover:shadow-cyan-600/10 flex items-center gap-1.5"
+                >
+                  <Ship className="w-3.5 h-3.5" />
+                  <span>Build Transport Ships</span>
                 </button>
               </div>
             </div>

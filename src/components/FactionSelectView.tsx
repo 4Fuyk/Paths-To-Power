@@ -25,7 +25,15 @@ export const FactionSelectView: React.FC<FactionSelectViewProps> = ({
   onSelectFaction,
   onBack
 }) => {
-  const civilWar = INITIAL_CIVIL_WARS[country.id] || INITIAL_CIVIL_WARS[country.id === 'COD' ? 'CD' : country.id] || {
+  const civilWar = INITIAL_CIVIL_WARS[country.id] || 
+    INITIAL_CIVIL_WARS[country.id === 'COD' ? 'CD' : country.id] || 
+    INITIAL_CIVIL_WARS[country.id === 'ETH' ? 'ET' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'SOM' ? 'SO' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'AFG' ? 'AF' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'HTI' ? 'HT' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'MLI' ? 'ML' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'CHN' ? 'CN' : country.id] ||
+    INITIAL_CIVIL_WARS[country.id === 'VNM' ? 'VN' : country.id] || {
     countryId: country.id,
     countryName: country.name,
     flag: country.flag,

@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Country, Party, Bill, VoterGroup, Coalition, RivalParty } from '../types';
 import { playSound } from '../lib/sounds';
+import { getRealPartiesForCountry } from '../data/civilWarCountries';
 import { 
   Landmark, AlertCircle, CheckCircle2, XCircle, 
   ChevronRight, Vote, Sparkles, Coins, RefreshCw 
@@ -54,12 +55,51 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
 
   const currency = getCurrency(country.id);
 
+  // 1. Post-war parliament safety enforcement (Requirement 1):
+  // When a civil war is won, parliament must show REAL political parties for that country, NOT armed factions.
+  // Example Yemen: Houthis and Presidential Leadership Council must NOT appear as parties.
+  const rawPostWar = country.postWarParties || getRealPartiesForCountry(country.id);
+  const isPostWarCivilState = Boolean(rawPostWar && rawPostWar.length > 0);
+  const hasArmedFactionRival = country.rivals.some(r => 
+    /HOU|PLC|JUNTA|RSF|SAF|SAA|SDF|M23|LNA|GNU|SHABAAB|TALIBAN|FANO|OLA|GANG/i.test(r.id) ||
+    /Houthi|Leadership Council|Junta|Militia|Armed Forces|Armed Wing|Rebel|Transition Council/i.test(r.name)
+  );
+
+  const effectiveParty: Party = useMemo(() => {
+    if (isPostWarCivilState) {
+      if (/PLC/i.test(party.id) || /Leadership Council/i.test(party.name)) {
+        const gpc = rawPostWar!.find(p => p.id === 'GPC');
+        if (gpc) return { ...party, id: gpc.id, name: gpc.name, leader: gpc.leader, ideology: gpc.ideology, color: gpc.color };
+      }
+      if (/STC|HIRAK/i.test(party.id) || /Southern Movement/i.test(party.name)) {
+        const hirak = rawPostWar!.find(p => p.id === 'HIRAK');
+        if (hirak) return { ...party, id: hirak.id, name: hirak.name, leader: hirak.leader, ideology: hirak.ideology, color: hirak.color };
+      }
+      if (/HOU/i.test(party.id) || /Houthi/i.test(party.name)) {
+        const islah = rawPostWar!.find(p => p.id === 'ISLAH') || rawPostWar![0];
+        if (islah) return { ...party, id: islah.id, name: islah.name, leader: islah.leader, ideology: islah.ideology, color: islah.color };
+      }
+      if (/JUNTA|RSF|SAF|SAA|SDF|M23|LNA|GNU/i.test(party.id)) {
+        const rep = rawPostWar![0];
+        return { ...party, id: rep.id, name: rep.name, leader: rep.leader, ideology: rep.ideology, color: rep.color };
+      }
+    }
+    return party;
+  }, [party, isPostWarCivilState, rawPostWar]);
+
+  const effectiveRivals: RivalParty[] = useMemo(() => {
+    if (isPostWarCivilState && (hasArmedFactionRival || country.countryMode !== 'civilwar')) {
+      return rawPostWar!.filter(p => p.id !== effectiveParty.id && !/HOU|PLC/i.test(p.id));
+    }
+    return country.rivals;
+  }, [country.rivals, rawPostWar, isPostWarCivilState, hasArmedFactionRival, effectiveParty.id, country.countryMode]);
+
   // Calculate global support estimates for player in the country
   const countRegions = country.regions.length;
-  const averagePlayerSupport = country.regions.reduce((acc, r) => acc + (r.supports[party.id] || 0), 0) / countRegions;
+  const averagePlayerSupport = country.regions.reduce((acc, r) => acc + (r.supports[effectiveParty.id] || r.supports[party.id] || 0), 0) / countRegions;
 
   // Parliament Seats Distribution based on current global support averages (with election results override if present)
-  let playerSeatsCount = electionSeats ? (electionSeats[party.id] || 0) : Math.round((averagePlayerSupport / 100) * country.seats);
+  let playerSeatsCount = electionSeats ? (electionSeats[effectiveParty.id] || electionSeats[party.id] || 0) : Math.round((averagePlayerSupport / 100) * country.seats);
   if (!electionSeats) {
     if (country.id === 'DE') {
       if (averagePlayerSupport < 5.0) {
@@ -72,12 +112,12 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   let remainingSeats = country.seats - playerSeatsCount;
 
   // Allocate seats among rivals based on startingSeats if defined, otherwise baseSupport
-  const hasStartingSeats = country.rivals.some(r => r.startingSeats !== undefined);
-  const totalRivalBase = country.rivals.reduce((acc, r) => {
+  const hasStartingSeats = effectiveRivals.some(r => r.startingSeats !== undefined);
+  const totalRivalBase = effectiveRivals.reduce((acc, r) => {
     return acc + (hasStartingSeats ? (r.startingSeats || 0) : r.baseSupport);
   }, 0);
 
-  const rivalsSeatsData = country.rivals.map((rival) => {
+  const rivalsSeatsData = effectiveRivals.map((rival) => {
     if (electionSeats && electionSeats[rival.id] !== undefined) {
       return { ...rival, seats: electionSeats[rival.id] };
     }
@@ -88,7 +128,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
   });
 
   const handleTogglePartner = (partnerName: string) => {
-    const partner = country.rivals.find(r => r.name === partnerName);
+    const partner = effectiveRivals.find(r => r.name === partnerName || r.id === partnerName);
     if (!partner) return;
 
     setSelectedPartners(prev => {
@@ -529,8 +569,8 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
           {/* Assembly party legends box */}
           <div className="w-full grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-500/10 text-[10px]">
             <div className="flex items-center gap-1.5 p-1.5 rounded bg-slate-500/5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: party.color }}></span>
-              <span className="font-semibold truncate">{party.name}:</span>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: effectiveParty.color }}></span>
+              <span className="font-semibold truncate">{effectiveParty.name}:</span>
               <strong className="font-mono">{playerSeatsCount} Seats</strong>
             </div>
 
@@ -884,7 +924,7 @@ export const ParliamentView: React.FC<ParliamentViewProps> = ({
                 </p>
 
                 <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                  {country.rivals.map((rival) => {
+                  {effectiveRivals.map((rival) => {
                     const partnerSeats = rivalsSeatsData.find(r => r.id === rival.id)?.seats || 0;
                     const isAdded = selectedPartners.some(p => p.id === rival.id);
                     const existingCoalition = (coalitions || []).find(c => c.parties.includes(rival.name) || c.parties.includes(rival.id));

@@ -12,10 +12,15 @@ import { playSound } from '../lib/sounds';
 import { 
   Shield, Swords, AlertTriangle, Ship, ChevronRight, RotateCcw, 
   Target, Users, Zap, CheckCircle2, XCircle, Trophy, Flag, Crosshair,
-  Plus, X, Handshake, ShieldAlert, ShieldCheck
+  Plus, X, Handshake, ShieldAlert, ShieldCheck, Plane, Award
 } from 'lucide-react';
 import { CivilWarPeaceModal, PeaceAgreement } from './CivilWarPeaceModal';
 import { PeaceTerritorialSettlementModal } from './PeaceTerritorialSettlementModal';
+import { WarGeneral, getGeneralsForCountryAndYear } from '../data/warGenerals';
+import { AirSquadron, AirMissionType, AirMissionResult, getInitialAirSquadrons, executeAirMission } from '../data/warAirForce';
+import { WarFrontPanelModal } from './WarFrontPanelModal';
+import { WarAirForceModal } from './WarAirForceModal';
+import { WarBlocLegend } from './WarBlocLegend';
 
 export type DivisionType = 'infantry' | 'armor' | 'mechanized' | 'artillery';
 
@@ -48,7 +53,8 @@ export interface ActiveFront {
   hostileBorderRegions: string[];
   borderPairs: Array<{ friendly: string; hostile: string }>;
   assignedDivisionIds: string[];
-  stance: 'HOLD' | 'ADVANCE';
+  stance: 'HOLD' | 'ADVANCE' | 'FALL_BACK';
+  assignedGeneral?: WarGeneral;
 }
 
 export interface FactionData {
@@ -269,6 +275,8 @@ interface DivisionCounterProps {
   coalitionColor: string;
   factionColor: string;
   factionShortName: string;
+  factionFlag?: string;
+  isDimmed?: boolean;
   hasActedThisTurn: boolean;
   onPointerDown: (e: React.PointerEvent, div: CivilWarDivision) => void;
   onClick: (e: React.MouseEvent, div: CivilWarDivision) => void;
@@ -285,6 +293,8 @@ export const DivisionCounter = React.memo<DivisionCounterProps>(({
   coalitionColor,
   factionColor,
   factionShortName,
+  factionFlag,
+  isDimmed = false,
   hasActedThisTurn,
   onPointerDown,
   onClick
@@ -295,7 +305,11 @@ export const DivisionCounter = React.memo<DivisionCounterProps>(({
   return (
     <g
       transform={`translate(${posX - counterWidth / 2}, ${posY - counterHeight / 2})`}
-      className={`cursor-pointer transition-transform ${isShaking ? 'animate-pulse' : ''}`}
+      className={`cursor-pointer transition-all duration-200 ${isShaking ? 'animate-pulse' : ''}`}
+      style={{
+        opacity: isDimmed ? 0.16 : 1,
+        filter: isDimmed ? 'grayscale(80%)' : undefined
+      }}
       onPointerDown={(e) => onPointerDown(e, division)}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -343,15 +357,24 @@ export const DivisionCounter = React.memo<DivisionCounterProps>(({
         </text>
       </g>
 
-      {/* Foreign Supporter Flag if Expeditionary Battalion */}
+      {/* Member Flag or Foreign Supporter Flag on the unit counter (Requirement 2) */}
       {division.isExpeditionary && division.supporterFlag ? (
         <text
-          x={counterWidth - 8}
+          x={counterWidth - 7}
           y={6}
           textAnchor="middle"
           className="text-[7px] pointer-events-none select-none"
         >
           {division.supporterFlag}
+        </text>
+      ) : factionFlag ? (
+        <text
+          x={counterWidth - 7}
+          y={6}
+          textAnchor="middle"
+          className="text-[6.5px] pointer-events-none select-none"
+        >
+          {factionFlag}
         </text>
       ) : (
         /* NATO Echelon 'XX' (Division) */
@@ -466,6 +489,13 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
     YE: 'YEM',
     SD: 'SDN',
     MM: 'MMR',
+    SO: 'SOM',
+    AF: 'AFG',
+    ET: 'ETH',
+    HT: 'HTI',
+    ML: 'MLI',
+    CN: 'CHN',
+    VN: 'VNM',
     US: 'USA',
     UA: 'UKR',
     RU: 'RUS',
@@ -546,8 +576,55 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
   );
   const [foreignAidLog, setForeignAidLog] = useState<Array<{ factionId: string; factionName: string; backer: string; summary: string }>>([]);
 
-  // Naval transport ships
-  const [navalTransports, setNavalTransports] = useState<number>(5);
+  // Naval transport ships (Requirement 4)
+  const [navalTransports, setNavalTransports] = useState<number>(() => {
+    const saved = localStorage.getItem(`cw_transports_${country.id}_${playerParty?.id || 'default'}`);
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  // Real-time synchronization of transport fleet
+  useEffect(() => {
+    const handleTransports = (e: any) => {
+      if (e?.detail?.count !== undefined) {
+        setNavalTransports(e.detail.count);
+      }
+    };
+    window.addEventListener('transport_ships_updated', handleTransports);
+    return () => window.removeEventListener('transport_ships_updated', handleTransports);
+  }, []);
+
+  // Build Transport Ship (Requirement 4)
+  const handleBuildTransportShips = () => {
+    const fee = 35000;
+    const currentBal = playerParty?.budget ?? 100000;
+    if (currentBal < fee) {
+      playSound('error');
+      setToastMessage({ text: `Insufficient War Chest: You need at least $${fee.toLocaleString()} to commission transport ships.`, type: 'error' });
+      return;
+    }
+    const nextCount = navalTransports + 2;
+    setNavalTransports(nextCount);
+    localStorage.setItem(`cw_transports_${country.id}_${playerParty?.id || 'default'}`, nextCount.toString());
+    window.dispatchEvent(new CustomEvent('transport_ships_updated', { detail: { count: nextCount } }));
+    playSound('success');
+    setToastMessage({ text: `⚓ Shipyard Order: Built +2 Transport Ships! Fleet Total: ${nextCount} vessels.`, type: 'success' });
+  };
+
+  // Requirement 1 & 2: Alliance Bloc Filter & Distinct Colors
+  const [selectedBlocId, setSelectedBlocId] = useState<string | null>(null);
+
+  // Requirement 3: Interactive Fronts, Generals & Casualties
+  const [selectedFrontForPanel, setSelectedFrontForPanel] = useState<ActiveFront | null>(null);
+  const [frontGenerals, setFrontGenerals] = useState<Record<string, WarGeneral>>({});
+  const [frontCasualties, setFrontCasualties] = useState<Record<string, number>>({});
+
+  // Requirement 5: Air Force Squadrons & Missions
+  const [airSuperiority, setAirSuperiority] = useState<number>(75);
+  const [airSquadrons, setAirSquadrons] = useState<AirSquadron[]>(() => {
+    return getInitialAirSquadrons(country.id, playerParty?.id);
+  });
+  const [showAirForceModal, setShowAirForceModal] = useState<boolean>(false);
+  const [activeAirSupportRegion, setActiveAirSupportRegion] = useState<string | null>(null);
 
   // Casualties tracking per faction
   const [casualtyStats, setCasualtyStats] = useState<Record<string, FactionStats>>({});
@@ -558,8 +635,8 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
   const [shakingDivisionId, setShakingDivisionId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' } | null>(null);
 
-  // Front Stances ('HOLD' | 'ADVANCE')
-  const [frontStances, setFrontStances] = useState<Record<string, 'HOLD' | 'ADVANCE'>>({});
+  // Front Stances ('HOLD' | 'ADVANCE' | 'FALL_BACK') (Requirement 3)
+  const [frontStances, setFrontStances] = useState<Record<string, 'HOLD' | 'ADVANCE' | 'FALL_BACK'>>({});
 
   // Performance RAF throttling refs
   const pendingPointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
@@ -612,10 +689,107 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
     return gov ? gov.id : (factions[0]?.id || 'LY_GNU');
   }, [factions, playerParty]);
 
-  // Structured War Sides & Alliances (Side A vs Side B)
+  // Distinct High-Contrast Bloc Palette (Requirement 2: Never give two enemy blocs similar colours)
+  const DISTINCT_BLOC_COLORS = useMemo(() => [
+    '#2563eb', // Strong Royal Blue (e.g. Tripoli / Gov / Western Coalition)
+    '#dc2626', // Strong Crimson Red (e.g. Eastern Command LNA / Primary Rival)
+    '#16a34a', // Strong Emerald Green (e.g. Southern Fezzan / Neutral Third Front)
+    '#d97706', // Strong Golden Amber (e.g. Regional Tribal Alliances)
+    '#06b6d4', // Strong Sky Cyan (e.g. Coastal / Maritime Blocs)
+    '#ea580c'  // Strong Bright Orange (e.g. Insurgent Axis)
+  ], []);
+
+  const adjustHexBrightness = useCallback((hex: string, percent: number): string => {
+    const cleanHex = hex.replace('#', '');
+    const num = parseInt(cleanHex.length === 3 ? cleanHex.split('').map(c => c + c).join('') : cleanHex, 16);
+    let r = (num >> 16) + Math.round((255 * percent) / 100);
+    let g = ((num >> 8) & 0x00ff) + Math.round((255 * percent) / 100);
+    let b = (num & 0x0000ff) + Math.round((255 * percent) / 100);
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }, []);
+
+  // Structured War Sides & Alliances with Guaranteed Distinct Colours (Requirement 2)
   const conflictSides: ConflictSide[] = useMemo(() => {
-    return getConflictSides(country.id);
-  }, [country.id]);
+    const rawSides = getConflictSides(country.id);
+    if (!rawSides || rawSides.length === 0) {
+      const govFactions = factions.filter(f => f.isGovernment).map(f => f.id);
+      const rebelFactions = factions.filter(f => !f.isGovernment).map(f => f.id);
+      return [
+        {
+          id: 'BLOC_GOV',
+          name: `${country.name} Sovereign Alliance`,
+          leader: govFactions[0] || 'GOV',
+          members: govFactions.length > 0 ? govFactions : [factions[0]?.id || 'GOV'],
+          color: DISTINCT_BLOC_COLORS[0]
+        },
+        {
+          id: 'BLOC_REBEL',
+          name: 'Opposition & Resistance Command',
+          leader: rebelFactions[0] || 'REB',
+          members: rebelFactions.length > 0 ? rebelFactions : [factions[1]?.id || 'REB'],
+          color: DISTINCT_BLOC_COLORS[1]
+        }
+      ];
+    }
+    return rawSides.map((side, idx) => ({
+      ...side,
+      color: DISTINCT_BLOC_COLORS[idx % DISTINCT_BLOC_COLORS.length]
+    }));
+  }, [country.id, country.name, factions, DISTINCT_BLOC_COLORS]);
+
+  // Selected Bloc active filtering (Requirement 1)
+  const activeSelectedBloc = useMemo(() => {
+    if (!selectedBlocId) return null;
+    return conflictSides.find(s => s.id === selectedBlocId) || null;
+  }, [conflictSides, selectedBlocId]);
+
+  const selectedBlocFactionIds = useMemo(() => {
+    return new Set(activeSelectedBloc ? activeSelectedBloc.members : []);
+  }, [activeSelectedBloc]);
+
+  // Members use shades of their bloc colour (Requirement 2)
+  const factionColorMap = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    conflictSides.forEach((side) => {
+      side.members.forEach((mId, mIdx) => {
+        if (mIdx === 0) {
+          map[mId] = side.color;
+        } else if (mIdx === 1) {
+          map[mId] = adjustHexBrightness(side.color, 24);
+        } else if (mIdx === 2) {
+          map[mId] = adjustHexBrightness(side.color, -20);
+        } else {
+          map[mId] = adjustHexBrightness(side.color, 45);
+        }
+      });
+    });
+    factions.forEach((f, fIdx) => {
+      if (!map[f.id]) {
+        map[f.id] = f.color || DISTINCT_BLOC_COLORS[fIdx % DISTINCT_BLOC_COLORS.length];
+      }
+    });
+    return map;
+  }, [conflictSides, factions, adjustHexBrightness, DISTINCT_BLOC_COLORS]);
+
+  // Flag or emblem badge for each faction counter
+  const getFactionFlag = useCallback((fId: string): string => {
+    const fac = factions.find(f => f.id === fId);
+    if (!fac) return country.flag || '🏳️';
+    if (fId.includes('GNU') || fId.includes('SAF') || fId.includes('SAA') || fId.includes('ZSU') || fId.includes('FARDC') || fId.includes('FAMA') || fac.isGovernment) {
+      return country.flag || '🏛️';
+    }
+    if (fId.includes('LNA')) return '⭐';
+    if (fId.includes('RSF')) return '⚔️';
+    if (fId.includes('M23')) return '🟢';
+    if (fId.includes('SDF')) return '🟡';
+    if (fId.includes('HTS') || fId.includes('SNA')) return '🏴';
+    if (fId.includes('SOUTH') || fId.includes('DARFUR')) return '🏜️';
+    if (fId.includes('KIA') || fId.includes('AA') || fId.includes('KNU')) return '🦅';
+    return country.flag || '🛡️';
+  }, [factions, country.flag]);
 
   // Player Coalition (Side A)
   const playerCoalition = useMemo(() => {
@@ -1082,114 +1256,111 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
 
         { id: 'div_mm_7', name: 'Karen National Liberation Army', type: 'mechanized', strength: 7500, maxStrength: 8000, morale: 88, supply: 82, ownerFaction: 'MM_KNU', regionName: 'Kayin' }
       ];
-    } else if (country.id === 'SO') {
-      // Somalia (FGS vs Al-Shabaab vs Somaliland vs Puntland vs Jubaland)
-      const somalilandControlled = ['Awdal', 'WoqooyiGalbeed', 'Togdheer', 'Sanaag', 'Sool'];
-      const puntlandControlled = ['Bari', 'Nugaal', 'Mudug'];
-      const shabaabControlled = ['JubbadaDhexe', 'Bay', 'Bakool'];
-      const jubalandControlled = ['JubbadaHoose', 'Gedo'];
-      const fgsControlled = ['Banaadir', 'ShabeellahaHoose', 'ShabeellahaDhexe', 'Hiiraan', 'Galguduud'];
+    } else if (['SO', 'SOM', 'AF', 'AFG', 'ML', 'MLI', 'CD', 'COD', 'ET', 'ETH', 'HT', 'HTI', 'CN', 'CHN', 'VN', 'VNM'].includes(country.id.toUpperCase())) {
+      const cId = country.id.toUpperCase();
+      const cw = INITIAL_CIVIL_WARS[cId] || 
+        INITIAL_CIVIL_WARS[ISO2_TO_ISO3[cId] || cId] || 
+        INITIAL_CIVIL_WARS[cId === 'ETH' ? 'ET' : cId === 'SOM' ? 'SO' : cId === 'AFG' ? 'AF' : cId === 'HTI' ? 'HT' : cId === 'MLI' ? 'ML' : cId === 'CHN' ? 'CN' : cId === 'VNM' ? 'VN' : cId];
 
-      initialFactions = [
-        { id: 'SO_FGS', name: 'Federal Government of Somalia (Mogadishu)', color: '#2563eb', controlledRegions: fgsControlled, isGovernment: true },
-        { id: 'SO_SHA', name: 'Al-Shabaab Militant Insurgents', color: '#dc2626', controlledRegions: shabaabControlled, isGovernment: false },
-        { id: 'SO_SOM', name: 'Republic of Somaliland (Hargeisa)', color: '#059669', controlledRegions: somalilandControlled, isGovernment: false },
-        { id: 'SO_PNT', name: 'Puntland State Dervish Security Forces', color: '#0891b2', controlledRegions: puntlandControlled, isGovernment: false },
-        { id: 'SO_JUB', name: 'Jubaland Regional Forces (Kismayo)', color: '#d97706', controlledRegions: jubalandControlled, isGovernment: false }
-      ];
+      if (cw) {
+        initialFactions = cw.factions.map(f => {
+          const matched = allRegionNames.filter(r => 
+            (f.controlledRegions || []).some(cr => normalizeGeoName(cr) === normalizeGeoName(r))
+          );
+          return {
+            id: f.id,
+            name: f.name,
+            color: f.color,
+            controlledRegions: matched.length > 0 ? matched : f.controlledRegions,
+            isGovernment: Boolean(f.isGovernment)
+          };
+        });
 
-      initialDivisions = [
-        { id: 'div_so_1', name: 'Danab Advanced Commando Brigade', type: 'mechanized', strength: 8500, maxStrength: 9000, morale: 92, supply: 88, ownerFaction: 'SO_FGS', regionName: 'Banaadir' },
-        { id: 'div_so_2', name: 'Gorgor Elite Strike Command', type: 'infantry', strength: 7500, maxStrength: 8000, morale: 85, supply: 85, ownerFaction: 'SO_FGS', regionName: 'Hiiraan' },
+        // Ensure every region in allRegionNames is assigned to a faction
+        const assignedSet = new Set(initialFactions.flatMap(f => f.controlledRegions.map(normalizeGeoName)));
+        const unassigned = allRegionNames.filter(r => !assignedSet.has(normalizeGeoName(r)));
+        if (unassigned.length > 0) {
+          const gov = initialFactions.find(f => f.isGovernment) || initialFactions[0];
+          if (gov) {
+            gov.controlledRegions = [...gov.controlledRegions, ...unassigned];
+          }
+        }
 
-        { id: 'div_so_3', name: 'Jaysh al-Usra Heavy Assault Brigade', type: 'armor', strength: 8500, maxStrength: 9000, morale: 90, supply: 80, ownerFaction: 'SO_SHA', regionName: 'JubbadaDhexe' },
-        { id: 'div_so_4', name: 'Bay & Bakool Guerrilla Front', type: 'infantry', strength: 7500, maxStrength: 8000, morale: 88, supply: 78, ownerFaction: 'SO_SHA', regionName: 'Bay' },
+        // Generate starting divisions for each faction stationed in their territories
+        initialDivisions = [];
+        initialFactions.forEach(f => {
+          const regs = f.controlledRegions;
+          if (regs.length === 0) return;
+          
+          initialDivisions.push({
+            id: `div_${f.id.toLowerCase()}_1`,
+            name: `${f.name.split('(')[0].trim()} 1st Armored Division`,
+            type: 'armor',
+            strength: Math.min(10000, Math.max(6000, Math.round(f.isGovernment ? 9500 : 8500))),
+            maxStrength: 10000,
+            morale: 92,
+            supply: 90,
+            ownerFaction: f.id,
+            regionName: regs[0]
+          });
 
-        { id: 'div_so_5', name: 'Somaliland 1st Armored Division', type: 'armor', strength: 8000, maxStrength: 8500, morale: 88, supply: 85, ownerFaction: 'SO_SOM', regionName: 'WoqooyiGalbeed' },
+          if (regs.length > 1) {
+            initialDivisions.push({
+              id: `div_${f.id.toLowerCase()}_2`,
+              name: `${f.name.split('(')[0].trim()} Mechanized Brigade`,
+              type: 'mechanized',
+              strength: Math.min(9000, Math.max(5500, Math.round(f.isGovernment ? 8500 : 7800))),
+              maxStrength: 9000,
+              morale: 88,
+              supply: 85,
+              ownerFaction: f.id,
+              regionName: regs[1]
+            });
+          }
 
-        { id: 'div_so_6', name: 'Puntland Dervish Rapid Reaction', type: 'mechanized', strength: 7500, maxStrength: 8000, morale: 86, supply: 82, ownerFaction: 'SO_PNT', regionName: 'Bari' },
+          if (regs.length > 2) {
+            initialDivisions.push({
+              id: `div_${f.id.toLowerCase()}_3`,
+              name: `${f.name.split('(')[0].trim()} Infantry Vanguard`,
+              type: 'infantry',
+              strength: Math.min(8500, Math.max(5000, Math.round(f.isGovernment ? 8000 : 7200))),
+              maxStrength: 8500,
+              morale: 85,
+              supply: 82,
+              ownerFaction: f.id,
+              regionName: regs[2]
+            });
+          }
 
-        { id: 'div_so_7', name: 'Jubaland Marine & Port Security', type: 'infantry', strength: 7000, maxStrength: 7500, morale: 84, supply: 80, ownerFaction: 'SO_JUB', regionName: 'JubbadaHoose' }
-      ];
-    } else if (country.id === 'AF') {
-      // Afghanistan (Taliban vs NRF vs AFF vs ISKP)
-      const nrfControlled = ['Panjshir', 'Badakhshan', 'Takhar', 'Kapisa', 'Parwan'];
-      const affControlled = ['Baghlan', 'Samangan'];
-      const iskpControlled = ['Nangarhar', 'Kunar'];
-      const talibanControlled = allRegionNames.filter(r => {
-        const norm = normalizeGeoName(r);
-        return !nrfControlled.some(s => normalizeGeoName(s) === norm) &&
-               !affControlled.some(s => normalizeGeoName(s) === norm) &&
-               !iskpControlled.some(s => normalizeGeoName(s) === norm);
-      });
+          if (regs.length > 3) {
+            initialDivisions.push({
+              id: `div_${f.id.toLowerCase()}_4`,
+              name: `${f.name.split('(')[0].trim()} Artillery Corps`,
+              type: 'artillery',
+              strength: Math.min(8000, Math.max(4500, Math.round(f.isGovernment ? 7500 : 6800))),
+              maxStrength: 8000,
+              morale: 86,
+              supply: 85,
+              ownerFaction: f.id,
+              regionName: regs[3]
+            });
+          }
 
-      initialFactions = [
-        { id: 'AF_TAL', name: 'Taliban (Islamic Emirate of Afghanistan)', color: '#dc2626', controlledRegions: talibanControlled, isGovernment: true },
-        { id: 'AF_NRF', name: 'National Resistance Front (NRF / Massoud)', color: '#059669', controlledRegions: nrfControlled, isGovernment: false },
-        { id: 'AF_AFF', name: 'Afghanistan Freedom Front (AFF / Veterans)', color: '#2563eb', controlledRegions: affControlled, isGovernment: false },
-        { id: 'AF_ISKP', name: 'ISKP (Islamic State Khorasan Province)', color: '#1e293b', controlledRegions: iskpControlled, isGovernment: false }
-      ];
-
-      initialDivisions = [
-        { id: 'div_af_1', name: 'Badri 313 Special Commando Corps', type: 'armor', strength: 9500, maxStrength: 10000, morale: 92, supply: 90, ownerFaction: 'AF_TAL', regionName: 'Kabul' },
-        { id: 'div_af_2', name: 'Kandahar Heavy Mechanized Division', type: 'mechanized', strength: 8500, maxStrength: 9000, morale: 88, supply: 88, ownerFaction: 'AF_TAL', regionName: 'Kandahar' },
-        { id: 'div_af_3', name: 'Mansoori Corps Border Division', type: 'infantry', strength: 7500, maxStrength: 8000, morale: 82, supply: 82, ownerFaction: 'AF_TAL', regionName: 'Herat' },
-
-        { id: 'div_af_4', name: 'Panjshir Valley Defense Brigade', type: 'infantry', strength: 8500, maxStrength: 9000, morale: 94, supply: 85, ownerFaction: 'AF_NRF', regionName: 'Panjshir' },
-        { id: 'div_af_5', name: 'Hindu Kush Mountain Vanguard', type: 'mechanized', strength: 7500, maxStrength: 8000, morale: 90, supply: 80, ownerFaction: 'AF_NRF', regionName: 'Badakhshan' },
-
-        { id: 'div_af_6', name: 'AFF Northern Freedom Commandos', type: 'infantry', strength: 7000, maxStrength: 7500, morale: 88, supply: 80, ownerFaction: 'AF_AFF', regionName: 'Baghlan' },
-
-        { id: 'div_af_7', name: 'ISKP Eastern Insurgent Wing', type: 'infantry', strength: 6000, maxStrength: 6500, morale: 85, supply: 75, ownerFaction: 'AF_ISKP', regionName: 'Nangarhar' }
-      ];
-    } else if (country.id === 'ML') {
-      // Mali (FAMa vs Azawad CSP-DPA vs JNIM)
-      const azawadControlled = ['Kidal', 'Taoudenit', 'Tombouctou'];
-      const jnimControlled = ['Mopti', 'Gao'];
-      const famaControlled = allRegionNames.filter(r => {
-        const norm = normalizeGeoName(r);
-        return !azawadControlled.some(s => normalizeGeoName(s) === norm) &&
-               !jnimControlled.some(s => normalizeGeoName(s) === norm);
-      });
-
-      initialFactions = [
-        { id: 'ML_GOV', name: 'FAMa (Forces Armées Maliennes)', color: '#3b82f6', controlledRegions: famaControlled, isGovernment: true },
-        { id: 'ML_CSP', name: 'CSP-DPA (Azawad Liberation Coalition)', color: '#10b981', controlledRegions: azawadControlled, isGovernment: false },
-        { id: 'ML_JNI', name: 'JNIM (Sahel Insurgent Network)', color: '#dc2626', controlledRegions: jnimControlled, isGovernment: false }
-      ];
-
-      initialDivisions = [
-        { id: 'div_ml_1', name: 'FAMa 1st Armored Division', type: 'armor', strength: 8500, maxStrength: 9000, morale: 88, supply: 90, ownerFaction: 'ML_GOV', regionName: 'Bamako' },
-        { id: 'div_ml_2', name: 'Airborne Commando Battalion', type: 'mechanized', strength: 7500, maxStrength: 8000, morale: 85, supply: 85, ownerFaction: 'ML_GOV', regionName: 'Segou' },
-        { id: 'div_ml_3', name: 'Koulikoro Artillery Brigade', type: 'artillery', strength: 6000, maxStrength: 7000, morale: 82, supply: 82, ownerFaction: 'ML_GOV', regionName: 'Koulikoro' },
-
-        { id: 'div_ml_4', name: 'Azawad Liberation Motorized Units', type: 'mechanized', strength: 8000, maxStrength: 8500, morale: 92, supply: 80, ownerFaction: 'ML_CSP', regionName: 'Kidal' },
-        { id: 'div_ml_5', name: 'CSP Desert Recon Brigade', type: 'infantry', strength: 7000, maxStrength: 7500, morale: 88, supply: 78, ownerFaction: 'ML_CSP', regionName: 'Tombouctou' },
-
-        { id: 'div_ml_6', name: 'Katiba Macina Guerrilla Brigade', type: 'infantry', strength: 7500, maxStrength: 8000, morale: 86, supply: 75, ownerFaction: 'ML_JNI', regionName: 'Mopti' }
-      ];
-    } else if (country.id === 'CD') {
-      // DR Congo (FARDC vs M23/AFC Coalition)
-      const m23Controlled = ['Nord-Kivu', 'Sud-Kivu', 'Ituri'];
-      const fardcControlled = allRegionNames.filter(r => {
-        const norm = normalizeGeoName(r);
-        return !m23Controlled.some(s => normalizeGeoName(s) === norm);
-      });
-
-      initialFactions = [
-        { id: 'CD_GOV', name: 'FARDC (Forces Armées de la RDC)', color: '#3b82f6', controlledRegions: fardcControlled, isGovernment: true },
-        { id: 'CD_M23', name: 'M23 / AFC Coalition', color: '#ef4444', controlledRegions: m23Controlled, isGovernment: false }
-      ];
-
-      initialDivisions = [
-        { id: 'div_cd_1', name: 'Republican Guard Division', type: 'armor', strength: 9000, maxStrength: 10000, morale: 86, supply: 90, ownerFaction: 'CD_GOV', regionName: 'Kinshasa' },
-        { id: 'div_cd_2', name: '34th Military Region Command', type: 'infantry', strength: 8000, maxStrength: 8500, morale: 80, supply: 82, ownerFaction: 'CD_GOV', regionName: 'Tshopo' },
-        { id: 'div_cd_3', name: 'Katanga Heavy Armored Corps', type: 'mechanized', strength: 7500, maxStrength: 8000, morale: 84, supply: 85, ownerFaction: 'CD_GOV', regionName: 'Haut-Katanga' },
-
-        { id: 'div_cd_4', name: 'M23 Arc Strike Brigade', type: 'armor', strength: 9000, maxStrength: 9500, morale: 92, supply: 85, ownerFaction: 'CD_M23', regionName: 'Nord-Kivu' },
-        { id: 'div_cd_5', name: 'AFC Mobile Eastern Commandos', type: 'mechanized', strength: 8000, maxStrength: 8500, morale: 90, supply: 80, ownerFaction: 'CD_M23', regionName: 'Sud-Kivu' },
-        { id: 'div_cd_6', name: 'Ituri Frontline Combatants', type: 'infantry', strength: 7000, maxStrength: 7500, morale: 84, supply: 78, ownerFaction: 'CD_M23', regionName: 'Ituri' }
-      ];
+          for (let i = 4; i < Math.min(regs.length, 12); i += 2) {
+            initialDivisions.push({
+              id: `div_${f.id.toLowerCase()}_${i + 1}`,
+              name: `${f.name.split('(')[0].trim()} ${regs[i]} Defense Garrison`,
+              type: i % 4 === 0 ? 'mechanized' : 'infantry',
+              strength: 7000,
+              maxStrength: 8000,
+              morale: 82,
+              supply: 80,
+              ownerFaction: f.id,
+              regionName: regs[i]
+            });
+          }
+        });
+      }
     } else if (country.id === 'UA') {
       // Ukraine Frontline Setup (ZSU vs Russian Armed Forces)
       const ruOccupied = ['Crimea', "Sevastopol'", "Donets'k", "Luhans'k", 'Zaporizhia', 'Kherson'];
@@ -1575,6 +1746,20 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
       .filter(Boolean);
   }, [geoData]);
 
+  // Friendly regions list for air missions
+  const friendlyRegionsList = useMemo(() => {
+    return factions
+      .filter(f => f.id === playerFactionId || areAllied(f.id, playerFactionId))
+      .flatMap(f => f.controlledRegions);
+  }, [factions, playerFactionId, areAllied]);
+
+  // Hostile regions list for air missions
+  const hostileRegionsList = useMemo(() => {
+    return factions
+      .filter(f => areHostile(f.id, playerFactionId))
+      .flatMap(f => f.controlledRegions);
+  }, [factions, playerFactionId, areHostile]);
+
   // Divisions count by faction
   const divisionsByFaction = useMemo(() => {
     const res: Record<string, number> = {};
@@ -1883,6 +2068,19 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
       totalAttackerStrength += att.strength;
     });
 
+    // Assigned General bonuses (Requirement 3: real generals give attack, defence or supply bonuses)
+    const attackerFrontId = attackers.find(a => a.assignedFrontId)?.assignedFrontId;
+    const attackerGeneral = attackerFrontId ? frontGenerals[attackerFrontId] : null;
+    if (attackerGeneral) {
+      totalAttackerPower *= (1 + attackerGeneral.bonuses.attackBonus);
+    }
+
+    // Close Air Support / Air Superiority Bonus (Requirement 5: Support Attack bonus to friendly attack)
+    const hasAirSupport = activeAirSupportRegion && normalizeGeoName(activeAirSupportRegion) === normTarget;
+    if (hasAirSupport) {
+      totalAttackerPower *= 1.35; // +35% attack bonus from Close Air Support
+    }
+
     let defenderPower = 0;
     let totalDefenderStrength = 0;
     if (defenders.length > 0) {
@@ -1891,6 +2089,13 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
     } else {
       defenderPower = 1200 * 0.5 * 0.5 * terrainDefenseBonus;
       totalDefenderStrength = 1200;
+    }
+
+    // Defender general defense bonus (Requirement 3)
+    const defenderFrontId = defenders.find(d => d.assignedFrontId)?.assignedFrontId;
+    const defenderGeneral = defenderFrontId ? frontGenerals[defenderFrontId] : null;
+    if (defenderGeneral) {
+      defenderPower *= (1 + defenderGeneral.bonuses.defenseBonus);
     }
 
     const powerRatio = totalAttackerPower / (totalAttackerPower + defenderPower + 1);
@@ -1904,6 +2109,14 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
       totalDefenderStrength,
       Math.round(powerRatio * totalDefenderStrength * 0.48) + 100
     );
+
+    // Track casualties on front (Requirement 3)
+    if (attackerFrontId) {
+      setFrontCasualties(prev => ({
+        ...prev,
+        [attackerFrontId]: (prev[attackerFrontId] || 0) + totalAttackerLosses + defenderLosses
+      }));
+    }
 
     const defendersSurvive = totalDefenderStrength - defenderLosses > 500 && powerRatio < 0.65;
     const attackerIds = new Set(attackers.map(a => a.id));
@@ -2079,17 +2292,30 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
     });
 
     if (neededNaval > 0) {
-      if (navalTransports < neededNaval) {
+      if (navalTransports === 0) {
+        playSound('error');
         setToastMessage({
-          text: `Amphibious Operation: Requires ${neededNaval} transport ships (you have ${navalTransports}).`,
+          text: `Sea Crossing Blocked: You have 0 transport ships! Commission transport vessels in the War HUD or Finance view to cross sea routes.`,
           type: 'error'
         });
         triggerShake(movingDivision.id);
         return;
       }
-      setNavalTransports(prev => Math.max(0, prev - neededNaval));
+      if (navalTransports < neededNaval) {
+        playSound('error');
+        setToastMessage({
+          text: `Sea Crossing Blocked: Operation requires ${neededNaval} transport ships, but you only have ${navalTransports}. Build additional transport ships to proceed.`,
+          type: 'error'
+        });
+        triggerShake(movingDivision.id);
+        return;
+      }
+      const nextTransports = Math.max(0, navalTransports - neededNaval);
+      setNavalTransports(nextTransports);
+      localStorage.setItem(`cw_transports_${country.id}_${playerParty?.id || 'default'}`, nextTransports.toString());
+      window.dispatchEvent(new CustomEvent('transport_ships_updated', { detail: { count: nextTransports } }));
       setToastMessage({
-        text: `⚓ Sealift Assault: Deployed ${neededNaval} Transport Ships for amphibious landing!`,
+        text: `⚓ Sealift Assault: Deployed ${neededNaval} Transport Ships for amphibious landing! (${nextTransports} remaining)`,
         type: 'info'
       });
     }
@@ -2822,8 +3048,54 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
         </div>
       </div>
 
+      {/* TOP ALLIANCE BLOC SELECTOR (Requirement 1 & 2) */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950/95 backdrop-blur-md border border-slate-700/80 shadow-2xl pointer-events-auto max-w-[95vw] overflow-x-auto">
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2 flex items-center gap-1 shrink-0">
+          <Flag className="w-3.5 h-3.5 text-blue-400" />
+          <span>Alliance Bloc:</span>
+        </span>
+        <button
+          id="btn-bloc-all"
+          onClick={() => {
+            setSelectedBlocId(null);
+            playSound('click');
+          }}
+          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            selectedBlocId === null
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-white/40'
+              : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800'
+          }`}
+        >
+          All Blocs
+        </button>
+        {conflictSides.map(side => {
+          const isSelected = selectedBlocId === side.id;
+          return (
+            <button
+              key={side.id}
+              id={`btn-bloc-${side.id}`}
+              onClick={() => {
+                setSelectedBlocId(isSelected ? null : side.id);
+                playSound('click');
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                isSelected
+                  ? 'text-white shadow-lg ring-2 ring-white/70'
+                  : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+              style={{
+                backgroundColor: isSelected ? side.color : undefined
+              }}
+            >
+              <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: side.color }} />
+              <span>{side.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* TOP-CENTER 90% COALITION HEGEMONY & COMMAND CONTROLS (Requirement 1 & 2) */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-2xl min-w-[380px] max-w-lg pointer-events-auto flex flex-col items-center">
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 shadow-2xl min-w-[380px] max-w-lg pointer-events-auto flex flex-col items-center">
         <div className="w-full flex items-center justify-between mb-1 text-[11px] font-bold">
           <div className="flex items-center gap-1.5 text-slate-200 truncate">
             <Trophy className={`w-3.5 h-3.5 shrink-0 ${coalitionTerritoryPercent >= 90 ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
@@ -3140,21 +3412,20 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
               // Check if contested: multiple opposing divisions present or hostile forces in province
               const isContested = contestedRegions.has(norm);
 
-              // Controlling faction coloring: GNU blue, LNA red, contested striped
+              // Controlling faction coloring: GNU blue, LNA red, contested striped, or members use shades of bloc color
               let fillColor = '#334155';
               if (isContested) {
                 fillColor = 'url(#contested-stripes)';
               } else if (controller) {
-                if (controller.id === 'LY_GNU' || controller.id.includes('GNU') || controller.isGovernment) {
-                  fillColor = '#2563eb'; // GNU blue
-                } else if (controller.id === 'LY_LNA' || controller.id.includes('LNA')) {
-                  fillColor = '#dc2626'; // LNA red
-                } else {
-                  fillColor = controller.color || '#3b82f6';
-                }
+                fillColor = factionColorMap[controller.id] || controller.color || '#3b82f6';
               }
 
+              // Dimming and highlight based on selected bloc (Requirement 1 & 2)
+              const isInSelectedBloc = !selectedBlocId || (controller && selectedBlocFactionIds.has(controller.id));
               let fillOpacity = isHovered ? 0.95 : isReachable ? 0.85 : 0.72;
+              if (selectedBlocId && !isInSelectedBloc) {
+                fillOpacity = 0.18;
+              }
 
               return (
                 <path
@@ -3162,9 +3433,10 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                   d={pathStr}
                   fill={fillColor}
                   fillOpacity={fillOpacity}
-                  stroke="#ffffff"
-                  strokeWidth={isHovered ? 1.5 : 0.5}
-                  className="transition-colors duration-150 cursor-pointer"
+                  stroke={selectedBlocId && isInSelectedBloc ? '#f8fafc' : '#ffffff'}
+                  strokeWidth={selectedBlocId && isInSelectedBloc ? 1.8 : isHovered ? 1.5 : 0.5}
+                  strokeOpacity={selectedBlocId && !isInSelectedBloc ? 0.25 : 1}
+                  className="transition-all duration-200 cursor-pointer"
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     if (e.button === 2) {
@@ -3276,8 +3548,14 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
               const pairs = front.borderPairs;
               if (pairs.length === 0) return null;
 
+              const isFrontInSelectedBloc = !selectedBlocId || (
+                selectedBlocFactionIds.has(front.hostileFactionId) ||
+                playerCoalition.members.some(m => selectedBlocFactionIds.has(m))
+              );
+              const frontOpacity = selectedBlocId ? (isFrontInSelectedBloc ? 1 : 0.15) : 1;
+
               return (
-                <g key={front.id} className="front-group">
+                <g key={front.id} className="front-group" opacity={frontOpacity}>
                   {/* Border Frontline Segments */}
                   {pairs.map((pair, pIdx) => {
                     const featF = findFeatureByName(pair.friendly);
@@ -3325,7 +3603,7 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                     );
                   })}
 
-                  {/* Frontline Center Command Tag / Stance Badge */}
+                  {/* Frontline Center Command Tag / Stance Badge (Requirement 3: click opens front panel) */}
                   {(() => {
                     const midPair = pairs[Math.floor(pairs.length / 2)];
                     const cF = centroids[midPair?.friendly] || centroids[normalizeGeoName(midPair?.friendly)];
@@ -3340,7 +3618,8 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                         transform={`translate(${tagX}, ${tagY})`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleFrontStance(front.id);
+                          setSelectedFrontForPanel(front);
+                          playSound('click');
                         }}
                       >
                         <rect
@@ -3412,8 +3691,10 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                     const posY = center[1] + offsetY;
 
                     const faction = factions.find(f => f.id === div.ownerFaction);
-                    const factionColor = faction?.color || (div.ownerFaction === 'LY_GNU' ? '#2563eb' : '#dc2626');
+                    const factionColor = factionColorMap[div.ownerFaction] || faction?.color || (div.ownerFaction === 'LY_GNU' ? '#2563eb' : '#dc2626');
                     const factionShortName = getFactionShortName(div.ownerFaction, faction?.name || div.ownerFaction);
+                    const factionFlag = getFactionFlag(div.ownerFaction);
+                    const isDimmed = Boolean(selectedBlocId && !selectedBlocFactionIds.has(div.ownerFaction));
 
                     return (
                       <DivisionCounter
@@ -3428,6 +3709,8 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                         coalitionColor={playerCoalition.color}
                         factionColor={factionColor}
                         factionShortName={factionShortName}
+                        factionFlag={factionFlag}
+                        isDimmed={isDimmed}
                         hasActedThisTurn={Boolean(div.hasActedThisTurn)}
                         onPointerDown={handlePointerDownCounter}
                         onClick={handleCounterClick}
@@ -3487,6 +3770,22 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
           ))}
         </g>
       </svg>
+
+      {/* Floating Alliance Bloc Colour Legend (Requirement 2) */}
+      <div className="absolute bottom-4 left-4 z-20 pointer-events-auto">
+        <WarBlocLegend
+          blocs={conflictSides}
+          factions={factions}
+          divisions={divisions}
+          selectedBlocId={selectedBlocId}
+          factionColorMap={factionColorMap}
+          getFactionFlag={getFactionFlag}
+          onSelectBloc={(blocId) => {
+            setSelectedBlocId(blocId);
+            playSound('click');
+          }}
+        />
+      </div>
 
       {/* Floating Zoom & Pan Controls (Requirement 6) */}
       <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-xl p-1 shadow-2xl pointer-events-auto">
@@ -3674,12 +3973,41 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
           )}
         </div>
 
-        {/* Naval Transports & End Turn Trigger */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Air Force, Naval Transports & End Turn Trigger (Requirements 4 & 5) */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {/* Air Force Command Button */}
+          <button
+            id="btn-air-force-hud"
+            onClick={() => {
+              setShowAirForceModal(true);
+              playSound('click');
+            }}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-sky-500/30 flex items-center gap-2 text-xs font-bold text-slate-200 transition-colors cursor-pointer shadow-sm"
+            title="Open Air Force Command Center (Fighter, Bomber, CAS Squadrons)"
+          >
+            <Plane className="w-4 h-4 text-sky-400" />
+            <span>Air Force:</span>
+            <span className="text-sky-300 font-mono font-extrabold">
+              {airSquadrons.reduce((s, sq) => s + sq.aircraftCount, 0)} Aircraft
+            </span>
+            <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 text-[9px] font-mono font-bold">
+              {airSuperiority}% Sup.
+            </span>
+          </button>
+
+          {/* Transport Ships Count + Build Transport Ship Button (Requirement 4) */}
           <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 text-xs font-bold text-slate-300">
             <Ship className="w-4 h-4 text-cyan-400" />
-            <span>Transports:</span>
-            <span className="text-cyan-300 font-mono font-extrabold">{navalTransports} Ships</span>
+            <span>Transport Ships:</span>
+            <span className="text-cyan-300 font-mono font-extrabold">{navalTransports}</span>
+            <button
+              id="btn-build-transports-hud"
+              onClick={handleBuildTransportShips}
+              className="ml-1 px-2 py-0.5 rounded bg-cyan-950/90 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 text-[10px] font-bold cursor-pointer transition-colors shadow-sm"
+              title="Build Transport Ships (+2 Vessels for $35,000)"
+            >
+              + Build
+            </button>
           </div>
 
           <button
@@ -4042,6 +4370,165 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* 9. INTERACTIVE FRONTLINE COMMAND PANEL MODAL (Requirement 3) */}
+      {selectedFrontForPanel && (
+        <WarFrontPanelModal
+          front={selectedFrontForPanel}
+          allDivisions={divisions}
+          playerFactionId={playerFactionId}
+          countryId={country.id}
+          scenarioYear={scenario || '2026'}
+          assignedGeneral={frontGenerals[selectedFrontForPanel.id]}
+          frontCasualties={frontCasualties[selectedFrontForPanel.id] || 0}
+          onClose={() => setSelectedFrontForPanel(null)}
+          onSetStance={(frontId, stance) => {
+            setFrontStances(prev => ({ ...prev, [frontId]: stance }));
+            setSelectedFrontForPanel(prev => prev && prev.id === frontId ? { ...prev, stance } : prev);
+            playSound('click');
+            setToastMessage({
+              text: `Front Order: Set ${selectedFrontForPanel?.name || 'Front'} stance to ${
+                stance === 'ADVANCE' ? '⚔️ ADVANCE (Assault Ready)' : stance === 'FALL_BACK' ? '↩️ FALL BACK (Strategic Retreat)' : '🛡️ HOLD (Dig In Defense)'
+              }.`,
+              type: 'info'
+            });
+          }}
+          onAssignGeneral={(frontId, general) => {
+            setFrontGenerals(prev => ({ ...prev, [frontId]: general }));
+            playSound('success');
+            setToastMessage({
+              text: `🎖️ General Appointed: ${general.name} assigned to command ${selectedFrontForPanel?.name}! (+${Math.round(general.bonuses.attackBonus * 100)}% Atk, +${Math.round(general.bonuses.defenseBonus * 100)}% Def, +${Math.round(general.bonuses.supplyBonus * 100)}% Supply)`,
+              type: 'success'
+            });
+          }}
+          onSendReinforcements={(frontId, divisionsToSend) => {
+            const front = activeFronts.find(f => f.id === frontId) || selectedFrontForPanel;
+            if (!front || front.friendlyBorderRegions.length === 0 || divisionsToSend.length === 0) return;
+            const borderRegions = front.friendlyBorderRegions;
+            const divIdsToMove = new Set(divisionsToSend.map(d => d.id));
+            let divIdx = 0;
+            setDivisions(prev => prev.map(d => {
+              if (divIdsToMove.has(d.id)) {
+                const targetBorder = borderRegions[divIdx % borderRegions.length];
+                divIdx++;
+                return {
+                  ...d,
+                  assignedFrontId: frontId,
+                  regionName: targetBorder
+                };
+              }
+              return d;
+            }));
+            playSound('success');
+            setToastMessage({
+              text: `🎖️ Front Reinforcements: ${divisionsToSend.length} division(s) deployed to ${front.name} and spread across ${borderRegions.length} border region(s).`,
+              type: 'success'
+            });
+          }}
+          onExecuteFallback={(frontId) => {
+            const front = activeFronts.find(f => f.id === frontId) || selectedFrontForPanel;
+            if (!front) return;
+            const playerControlled = factions.find(f => f.id === playerFactionId)?.controlledRegions || [];
+            const nonBorder = playerControlled.filter(r => !front.friendlyBorderRegions.includes(r));
+            const safeRegion = nonBorder[0] || playerControlled[0] || 'Capital';
+            setDivisions(prev => prev.map(d => {
+              if (d.assignedFrontId === frontId && d.ownerFaction === playerFactionId) {
+                return {
+                  ...d,
+                  regionName: safeRegion,
+                  morale: Math.min(100, d.morale + 10)
+                };
+              }
+              return d;
+            }));
+            setToastMessage({
+              text: `↩️ Strategic Fallback: Divisions on ${front.name} ordered to fall back to fortified rear sector (${safeRegion}) to regroup and reduce casualties.`,
+              type: 'info'
+            });
+          }}
+        />
+      )}
+
+      {/* 10. AIR FORCE COMMAND CENTER MODAL (Requirement 5) */}
+      {showAirForceModal && (
+        <WarAirForceModal
+          squadrons={airSquadrons}
+          availableTargetRegions={allCountryRegions}
+          hostileRegions={hostileRegionsList}
+          friendlyRegions={friendlyRegionsList}
+          airSuperiority={airSuperiority}
+          playerBudget={playerParty?.budget ?? 100000}
+          currency={country.currency || '$'}
+          onClose={() => setShowAirForceModal(false)}
+          onExecuteMission={(squadronId, targetRegion, missionType) => {
+            const sq = airSquadrons.find(s => s.id === squadronId);
+            if (!sq) return;
+            const { updatedSquadron, result } = executeAirMission(sq, targetRegion, missionType);
+            setAirSquadrons(prev => prev.map(s => s.id === squadronId ? updatedSquadron : s));
+            
+            if (result.airSuperiorityGained > 0) {
+              setAirSuperiority(prev => Math.min(100, prev + result.airSuperiorityGained));
+            }
+            
+            if (missionType === 'support_attack') {
+              setActiveAirSupportRegion(targetRegion);
+            }
+            
+            // If bombing mission, directly reduce enemy units' strength & supply in that region!
+            if (missionType === 'bombing' && (result.enemyStrengthDamage > 0 || result.enemySupplyDamage > 0)) {
+              setDivisions(prev => prev.map(d => {
+                if (normalizeGeoName(d.regionName) === normalizeGeoName(targetRegion) && areHostile(d.ownerFaction, playerFactionId)) {
+                  const strLoss = Math.round(d.strength * (result.enemyStrengthDamage / 100));
+                  const supLoss = Math.round(d.supply * (result.enemySupplyDamage / 100));
+                  return {
+                    ...d,
+                    strength: Math.max(100, d.strength - strLoss),
+                    supply: Math.max(10, d.supply - supLoss),
+                    morale: Math.max(10, d.morale - 15)
+                  };
+                }
+                return d;
+              }));
+            }
+
+            setToastMessage({
+              text: result.message,
+              type: 'success'
+            });
+            playSound('battle');
+          }}
+          onProcureAircraft={(type) => {
+            const cost = type === 'fighter' ? 45000 : type === 'bomber' ? 65000 : 35000;
+            const currentBal = playerParty?.budget ?? 100000;
+            if (currentBal < cost) {
+              playSound('error');
+              setToastMessage({
+                text: `Insufficient Funds: Procurement costs $${cost.toLocaleString()}.`,
+                type: 'error'
+              });
+              return;
+            }
+            const newSq: AirSquadron = {
+              id: `sq_${playerFactionId}_${type}_${Date.now()}`,
+              name: `${airSquadrons.length + 1}th Tactical ${type === 'fighter' ? 'Fighter' : type === 'bomber' ? 'Bomber' : 'Strike CAS'} Wing`,
+              type,
+              aircraftCount: type === 'bomber' ? 12 : 20,
+              maxAircraft: type === 'bomber' ? 12 : 20,
+              readiness: 100,
+              rangeKm: type === 'bomber' ? 900 : type === 'fighter' ? 650 : 450,
+              rangeHops: type === 'bomber' ? 5 : 3,
+              lossesThisTurn: 0,
+              assignedMission: null
+            };
+            setAirSquadrons(prev => [...prev, newSq]);
+            playSound('success');
+            setToastMessage({
+              text: `✈️ Air Wing Commissioned: Deployed ${newSq.name}!`,
+              type: 'success'
+            });
+          }}
+        />
       )}
     </div>
   );

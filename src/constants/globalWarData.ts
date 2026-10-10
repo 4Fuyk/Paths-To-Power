@@ -171,7 +171,7 @@ export const INITIAL_GLOBAL_WARS: GlobalWar[] = [
     belligerentsB: ['KP', 'CN', 'SU'],
     namesA: ['Republic of Korea & UN Command'],
     namesB: ['DPRK & Chinese People’s Volunteers'],
-    startDate: 'June 1950',
+    startDate: '25 June 1950',
     status: 'ACTIVE',
     intensity: 'Critical',
     description: 'Intense ideological and conventional conflict along the 38th Parallel and the Korean Peninsula.',
@@ -341,12 +341,23 @@ export const INITIAL_GLOBAL_WARS: GlobalWar[] = [
   }
 ];
 
+export const KOREAN_WAR_TRIGGER_DATE = new Date(1950, 5, 25); // June 25, 1950
+
 /**
- * Returns active global wars matching the specified scenario
+ * Returns active global wars matching the specified scenario.
+ * In 1950, the Korean War does NOT start on 1 January; it triggers on 25 June 1950.
  */
-export function getInitialGlobalWars(scenario: string): GlobalWar[] {
+export function getInitialGlobalWars(scenario: string, currentDate?: Date | string): GlobalWar[] {
   const s = scenario || '2026';
-  return INITIAL_GLOBAL_WARS.filter(w => w.scenario === s || w.scenario === 'ANY');
+  return INITIAL_GLOBAL_WARS.filter(w => {
+    if (w.scenario !== s && w.scenario !== 'ANY') return false;
+    if (w.id === 'WAR_KOREA_1950') {
+      if (!currentDate) return false; // Korean War is not active on Jan 1, 1950
+      const d = typeof currentDate === 'string' ? new Date(currentDate) : currentDate;
+      return d >= KOREAN_WAR_TRIGGER_DATE;
+    }
+    return true;
+  });
 }
 
 /**
@@ -498,14 +509,22 @@ export function getInitialDiplomaticRelations(
   // SCENARIO 1950 CONFLICTS
   // ==========================================
   if (baseScenario === '1950') {
-    if (['KR', 'US', 'GB', 'TR', 'AU', 'CA'].includes(cId)) {
-      defaultRelations.KP = { status: 'At War', opinion: 0 };
-      defaultRelations.CN = { status: 'At War', opinion: 0 };
-      defaultRelations.SU = { status: 'Sanctioned', opinion: 15 };
-    } else if (['CN', 'KP'].includes(cId)) {
-      defaultRelations.KR = { status: 'At War', opinion: 0 };
-      defaultRelations.US = { status: 'At War', opinion: 0 };
-      defaultRelations.GB = { status: 'At War', opinion: 0 };
+    // Before 25 June 1950: Korea is divided and at peace along the 38th parallel
+    if (['KR', 'KP'].includes(cId)) {
+      defaultRelations.KR = { status: 'Neutral', opinion: 35 };
+      defaultRelations.KP = { status: 'Neutral', opinion: 35 };
+      defaultRelations.US = { status: cId === 'KR' ? 'Allies' : 'Neutral', opinion: cId === 'KR' ? 88 : 25 };
+      defaultRelations.SU = { status: cId === 'KP' ? 'Alliance' : 'Neutral', opinion: cId === 'KP' ? 90 : 25 };
+      defaultRelations.CN = { status: cId === 'KP' ? 'Alliance' : 'Neutral', opinion: cId === 'KP' ? 85 : 35 };
+    } else if (['US', 'GB', 'TR', 'AU', 'CA'].includes(cId)) {
+      defaultRelations.KR = { status: 'Allies', opinion: 85 };
+      defaultRelations.KP = { status: 'Neutral', opinion: 25 };
+      defaultRelations.CN = { status: 'Neutral', opinion: 30 };
+      defaultRelations.SU = { status: 'Sanctioned', opinion: 20 };
+    } else if (cId === 'CN') {
+      defaultRelations.KP = { status: 'Alliance', opinion: 85 };
+      defaultRelations.KR = { status: 'Neutral', opinion: 30 };
+      defaultRelations.US = { status: 'Neutral', opinion: 30 };
       defaultRelations.SU = { status: 'Alliance', opinion: 90 };
     } else if (cId === 'FR') {
       defaultRelations.VN = { status: 'At War', opinion: 0 };
