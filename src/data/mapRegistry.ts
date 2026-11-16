@@ -854,7 +854,8 @@ export async function loadCountryMapData(
   countryName?: string
 ): Promise<MapLoadResult> {
   const config = getCountryMapConfig(countryId, countryName);
-  const cacheKey = config.iso3;
+  // Önbellek anahtarı ISO3 + harita dosyası: aynı ISO3'ü paylaşan ama farklı dosya kullanan kimlikler (RU/SU) birbirinin verisini almasın.
+  const cacheKey = `${config.iso3}|${config.url}`;
 
   if (geoJsonCache[cacheKey]) {
     if (validateAdmin1Features(geoJsonCache[cacheKey], config.iso3)) {

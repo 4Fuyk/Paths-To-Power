@@ -2,7 +2,7 @@
  * Komşu ülkelerdeki seçimler: gerçek seçim günlerinde (oyun tarihi o güne gelince) sonuç olayı üretir.
  */
 import { COUNTRY_NEIGHBORS } from '../data/countryNeighbors';
-import { ELECTIONS_2026, Election2026, GovInfo, GovResult } from '../data/elections2026';
+import { ELECTIONS_2026, Election2026, GovInfo, GovResult, ResultStatus } from '../data/elections2026';
 
 export interface GovChangeEvent {
   id: string;
@@ -15,6 +15,7 @@ export interface GovChangeEvent {
   after: GovResult;
   changed: boolean;
   simulated: boolean;
+  resultStatus: ResultStatus;   // 'unverified' ise arayüzde "Doğrulanmamış" etiketi gösterilir
   note?: string;
 }
 
@@ -30,9 +31,12 @@ export function neighborElectionsFor(countryId: string): Election2026[] {
 /** Seçimi sonuçlandırır: gerçek sonuç varsa onu, yoksa olasılığa göre simülasyon. */
 export function resolveElection(e: Election2026): GovChangeEvent {
   let after: GovResult, changed = e.changed, simulated = false;
+  let resultStatus: ResultStatus = e.resultStatus;
   if (e.after) after = e.after;
+  else if (!e.simulated || e.simulated.length === 0) { after = { ...e.before, voteShare: null }; changed = false; resultStatus = 'unverified'; }   // ne gerçek sonuç ne olasılık var: çökmek yerine 'değişiklik yok' say
   else {
     simulated = true;
+    resultStatus = 'unverified';   // simülasyon sonucu hiçbir zaman kesin sonuç değildir
     const opts = e.simulated || [];
     let r = Math.random() * opts.reduce((s, o) => s + o.p, 0);
     let pick = opts[opts.length - 1];
@@ -41,7 +45,7 @@ export function resolveElection(e: Election2026): GovChangeEvent {
     after = res;
     changed = res.leader !== e.before.leader;
   }
-  return { id: e.id, iso: e.iso, country: e.country, flag: e.flag, date: e.date, kind: e.kind, before: e.before, after, changed, simulated, note: e.note };
+  return { id: e.id, iso: e.iso, country: e.country, flag: e.flag, date: e.date, kind: e.kind, before: e.before, after, changed, simulated, resultStatus, note: e.note };
 }
 
 /** Oyun tarihi (kampanya: haftalık, yönetim: aylık) */

@@ -9,7 +9,7 @@ import { dayNightPreference } from './utils/createFxMap';
 import { neighborElectionsFor, resolveElection, gameDateOf, GovChangeEvent } from './utils/neighborElections';
 import { KOREA_PVA_ENTRY_DATE_ISO } from './constants/globalWarData';
 import { tickLiveWars } from './utils/liveWar';
-import { startRebellionCivilWar } from './utils/rebellion';
+import { startRebellionCivilWar, clearRebellionCivilWars } from './utils/rebellion';
 import { resetTerritorialState } from './utils/territorialControl';
 import { hasNoFreeElections } from './utils/regime';
 import React, { useState, useEffect, useRef } from 'react';
@@ -501,7 +501,7 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   useEffect(() => {
     processedElections.current = new Set(); setNeighborEvents([]); setToasts([]);
-    if (selectedCountry) resetTerritorialState();   // yeni oyun: eski oyundan kalan bölge kontrolü ve bağlı devletler silinsin
+    if (selectedCountry) { resetTerritorialState(); clearRebellionCivilWars(); }   // yeni oyun: eski oyundan kalan bölge kontrolü, bağlı devletler ve isyan savaşı tanımları silinsin
   }, [selectedCountry?.id, selectedScenario]);
   useEffect(() => {
     if (!selectedCountry || !playerParty || selectedScenario !== '2026') return;
@@ -521,7 +521,7 @@ export default function App() {
         category: 'Elections', icon: '🗳️', countryName: ev.country,
         chosenOptionText: `${ev.after.leader} (${ev.after.party})`,
         outcomeNarrative: `${ev.kind}${ev.note ? ': ' + ev.note : ''}`,
-        consequencesSummary: `Ideology: ${ev.after.ideology}; Vote share: ${ev.after.voteShare != null ? +ev.after.voteShare.toFixed(2) + '%' : 'n/a'}`
+        consequencesSummary: `Ideology: ${ev.after.ideology}; Vote share: ${ev.after.voteShare != null ? +ev.after.voteShare.toFixed(2) + '%' : 'n/a'}${ev.resultStatus === 'unverified' ? ' (unverified, not officially certified)' : ''}`
       })),
       ...prev
     ]);
@@ -533,7 +533,10 @@ export default function App() {
     const baseYear = selectedScenario === '1950' ? 1950 : 2026;
     const dateISO = gameDateOf(baseYear, isRuling, campaignTurn, rulingMonthsCount).toISOString().slice(0, 10);
     const ups = tickLiveWars({ scenario: selectedScenario, playerCountryId: selectedCountry.id, dateISO });
-    if (!ups.length || Math.random() > 0.05) return;   // haritalar her seferinde değişir; bildirim/geçmiş kaydı yalnızca ~%30'unda (olay yağmuru olmasın)
+    // Haritalar her tikte değişir; bildirim ve geçmiş kaydı yalnızca %5 olasılıkla yapılır (olay yağmuru olmasın).
+    // Ölçüm: 3x hızda ortalama ~1-1,5 dakikada bir cephe bildirimi (2026: ~68 sn, 1950: ~101 sn).
+    const WAR_NOTIFY_CHANCE = 0.05;
+    if (!ups.length || Math.random() > WAR_NOTIFY_CHANCE) return;
     const items: ToastItem[] = ups.slice(0, 1).map(u2 => ({ key: `war_${u2.warKey}_${Date.now()}`,
       custom: { icon: '⚔️', title: u2.title, subtitle: `Front update · ${u2.date}`, body: u2.body } }));
     setToasts(prev => [...prev, ...items]);

@@ -27,6 +27,8 @@ export const UI: Record<string, Entry> = {
   election: E('Election', 'Elección', 'Élection', 'Wahl', 'Seçim'),
   simulatedTag: E('Simulated', 'Simulado', 'Simulé', 'Simuliert', 'Simüle'),
   noData: E('n/a', 'n/d', 'n/d', 'k. A.', 'yok'),
+  unverifiedTag: E('Unverified', 'Sin verificar', 'Non vérifié', 'Unbestätigt', 'Doğrulanmamış'),
+  unverifiedHint: E('Result not officially certified (media-reported)', 'Resultado no certificado oficialmente (según medios)', 'Résultat non certifié officiellement (selon les médias)', 'Ergebnis nicht amtlich bestätigt (laut Medien)', 'Resmî olarak onaylanmamış sonuç (basın kaynaklı)'),
   noElectionsYet: E('No neighbor elections yet', 'Aún no hay elecciones vecinas', 'Pas encore d\'élections voisines', 'Noch keine Nachbarwahlen', 'Henüz komşu seçimi yok'),
   // Başlangıç ekranı ve genel
   settings: E('Settings', 'Ajustes', 'Paramètres', 'Einstellungen', 'Ayarlar'),
