@@ -194,28 +194,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {t.gameplayFlowMode}
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Turn-by-Turn Button */}
-                  <button
-                    type="button"
-                    onClick={() => { playSound('click'); onChangeGameFlowMode('TURN_BY_TURN'); }}
-                    className={`p-4 rounded-2xl border text-left transition-all flex flex-col gap-1.5 cursor-pointer ${
-                      gameFlowMode === 'TURN_BY_TURN'
-                        ? darkMode
-                          ? 'bg-[#c9a26a]/15 border-[#c9a26a] text-[#dab97c] ring-1 ring-[#c9a26a]/40 shadow'
-                          : 'bg-amber-50 border-amber-500 text-amber-950 ring-1 ring-amber-400/40 shadow'
-                        : darkMode
-                        ? 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs uppercase tracking-wider">{t.turnByTurn}</span>
-                      {gameFlowMode === 'TURN_BY_TURN' && <Check className="w-4 h-4 text-[#c9a26a]" />}
-                    </div>
-                    <p className="text-[11px] leading-relaxed opacity-80">{t.turnByTurnDesc}</p>
-                  </button>
-
+                <div className="grid grid-cols-1 gap-3">
                   {/* Pausable Real-Time Button */}
                   <button
                     type="button"

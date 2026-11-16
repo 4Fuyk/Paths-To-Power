@@ -53,16 +53,16 @@ export function evaluateEventTrigger(params: {
   // 1. Never fire if there is already an unhandled/pending event modal
   if (hasPendingEvent) return null;
 
-  // 2. Cooldown enforcement: at least 2 turns must pass after any event before a new one can fire
-  if (!forceType && turnsSinceLastEvent < 2) {
+  // 2. Cooldown: gerçek zamanlı akışta olaylar art arda gelmesin (kampanya: en az 14 hafta, yönetim: en az 9 ay)
+  if (!forceType && turnsSinceLastEvent < (isRuling ? 9 : 14)) {
     return null;
   }
 
   // 3. Weighted roll: base chance 25% per week/turn, +15% if stability < 40 (40% total)
   if (!forceType) {
-    let triggerChance = 0.25;
+    let triggerChance = 0.07;
     if (stability < 40) {
-      triggerChance += 0.15; // 40% if stability is critical / fragile
+      triggerChance += 0.05; // kritik istikrarsızlıkta biraz daha sık
     }
     const roll = Math.random();
     if (roll > triggerChance) {
@@ -126,7 +126,29 @@ export function evaluateEventTrigger(params: {
 
   // Return a random candidate from the filtered pool
   const selected = candidates[Math.floor(Math.random() * candidates.length)];
-  return selected || null;
+  return selected ? balanceEvent(selected) : null;
+}
+
+/** Pozitif etkiler (buff) çok yüksekti: yarıya indirilir; olumsuz etkiler ve maliyetler değişmez. Özet metindeki "+N" değerleri de güncellenir. */
+const BUFF_SCALE = 0.5;
+const half = (v: number) => (v >= 10 ? Math.round(v * BUFF_SCALE) : Math.round(v * BUFF_SCALE * 10) / 10);
+function balanceEvent(e: DynamicGameEvent): DynamicGameEvent {
+  return {
+    ...e,
+    choices: e.choices.map(c => {
+      const ef: any = { ...c.effects };
+      for (const k of ['treasuryDelta', 'reputationDelta', 'confidenceDelta', 'freedomDelta', 'approvalDelta', 'tradeModifierDelta']) {
+        if (typeof ef[k] === 'number' && ef[k] > 0) ef[k] = half(ef[k]);
+      }
+      if (ef.voterApprovalDelta) ef.voterApprovalDelta = Object.fromEntries(Object.entries(ef.voterApprovalDelta).map(([g, v]: any) => [g, v > 0 ? half(v) : v]));
+      if (ef.relationDeltas) ef.relationDeltas = Object.fromEntries(Object.entries(ef.relationDeltas).map(([g, v]: any) => [g, v > 0 ? half(v) : v]));
+      const summary = (c.expectedEffectsSummary || '').replace(/\+(\W?)(\d[\d,]*(?:\.\d+)?)/g, (_m, cur, num) => {
+        const n = parseFloat(num.replace(/,/g, '')) * BUFF_SCALE;
+        return `+${cur}${n >= 1000 ? Math.round(n).toLocaleString('en-US') : (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10)}`;
+      });
+      return { ...c, effects: ef, expectedEffectsSummary: summary };
+    })
+  };
 }
 
 /**

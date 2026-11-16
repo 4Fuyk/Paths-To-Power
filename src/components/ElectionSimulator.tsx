@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { hasNoFreeElections } from '../utils/regime';
 import React, { useState, useEffect } from 'react';
 import { Country, Party, Region, Coalition } from '../types';
 import { playSound } from '../lib/sounds';
@@ -47,8 +48,7 @@ export const ElectionSimulator: React.FC<ElectionSimulatorProps> = ({
   const [operationExecuting, setOperationExecuting] = useState<boolean>(false);
   const [operationResult, setOperationResult] = useState<{ success: boolean; title: string; message: string; details: string[] } | null>(null);
 
-  const isOnePartyOrCommunist = ['SU', 'DDR', 'CN', 'CS'].includes(country.id) || 
-    (country.system && (country.system.includes('One-Party') || country.system.includes('Tek Parti') || country.system.includes('Communist') || country.system.includes('Socialist State')));
+  const isOnePartyOrCommunist = hasNoFreeElections(country);   // tek parti, otokrasi, mutlak monarşi, cunta vb.
   
   const isAuthoritarian = ['RU', 'BY', 'TR', 'EG'].includes(country.id) || 
     (country.freedomScore !== undefined && country.freedomScore < 45);

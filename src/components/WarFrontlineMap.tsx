@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { createFxMap } from '../utils/createFxMap';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -68,7 +69,9 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
   canCommandMilitary = true
 }) => {
   // Check if this is a civil-war country or civil-war theater
-  const isCivilWarCountry = country.countryMode === 'civilwar' || theaterKey === 'CIVIL_WAR' || Boolean(INITIAL_CIVIL_WARS[country.id]);
+  // Başka bir devletle (ör. Kore) cephe açıksa iç savaş haritası değil, o cephe gösterilir
+  const isInterstateFront = theaterKey !== 'CIVIL_WAR' && Boolean(enemyCountryId) && enemyCountryId !== country.id;
+  const isCivilWarCountry = !country.civilWarResolved && !isInterstateFront && (country.countryMode === 'civilwar' || theaterKey === 'CIVIL_WAR' || Boolean(INITIAL_CIVIL_WARS[country.id]));
 
   if (isCivilWarCountry) {
     return (
@@ -90,8 +93,8 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
 
   // 1. Theater Setup & Data
   const theaterData = useMemo(() => {
-    return getTheaterRegions(country.id, enemyCountryId, country);
-  }, [country.id, enemyCountryId, country]);
+    return getTheaterRegions(country.id, enemyCountryId, country, scenario);
+  }, [country.id, enemyCountryId, country, scenario]);
 
   const [regions, setRegions] = useState<TheaterRegion[]>(theaterData.regions);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
@@ -196,7 +199,7 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
 
   const [turnCounter, setTurnCounter] = useState<number>(1);
   const [isResolvingTurn, setIsResolvingTurn] = useState<boolean>(false);
-  const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(false);
+  const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(true);   // varsayılan kapalı: haritanın sağını kapatmasın
 
   // Map Refs
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -256,7 +259,7 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
       mapInstanceRef.current = null;
     }
 
-    const map = L.map(mapContainerRef.current, {
+    const map = createFxMap(L, mapContainerRef.current, {
       center: theaterData.center,
       zoom: theaterData.zoom,
       minZoom: 4,
@@ -903,7 +906,7 @@ export const WarFrontlineMap: React.FC<WarFrontlineMapProps> = ({
         )}
 
         {/* Leaflet Map Div */}
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+        <div ref={mapContainerRef} className="absolute inset-0 z-0" />
 
         {/* Selected Unit Guidance Tooltip Overlay (Bottom Left) */}
         {selectedDivision && (

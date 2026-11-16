@@ -1220,7 +1220,7 @@ const COUNTRIES_1950: Country[] = [
   {
     id: 'CN',
     name: 'China - Civil War (PRC vs. ROC 1950)',
-    description: 'In 1950, Chairman Mao\'s PRC controls the mainland while Chiang Kai-shek\'s ROC holds Taiwan and offshore islands, with fighting continuing across Hainan and Kinmen.',
+    description: 'In 1950, Chairman Mao\'s PRC controls the mainland while Chiang Kai-shek\'s ROC holds Taiwan, Kinmen and Matsu. The PLA takes Hainan (April-May 1950) and the Wanshan and Zhoushan islands, enters Tibet in October, and the Korean War begins on 25 June.',
     flag: '🇨🇳',
     seats: 600,
     parliamentName: 'Chinese People\'s Political Consultative Conference',

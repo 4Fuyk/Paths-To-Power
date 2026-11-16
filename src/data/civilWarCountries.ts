@@ -591,7 +591,7 @@ export function resolvePostWarTransition(
   const postWar = country.postWarParties || getRealPartiesForCountry(country.id) || [];
   if (postWar.length === 0) {
     return {
-      updatedCountry: { ...country, countryMode: 'electoral' },
+      updatedCountry: { ...country, countryMode: 'electoral', civilWarResolved: true },
       updatedPlayerParty: country.rivals[0] ? ({ ...country.rivals[0], influence: 50 } as unknown as Party) : {
         id: `${country.id}_DEM`,
         name: `${country.name} Democratic Coalition`,
@@ -700,6 +700,7 @@ export function resolvePostWarTransition(
   const updatedCountry: Country = {
     ...country,
     countryMode: 'electoral',
+    civilWarResolved: true,
     system: 'Constitutional Parliamentary Democracy',
     parliamentName: country.id === 'YE' 
       ? 'House of Representatives (مجلس النواب)' 

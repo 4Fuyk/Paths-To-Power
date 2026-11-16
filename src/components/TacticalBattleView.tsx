@@ -1,3 +1,5 @@
+import { registerAnnexation } from '../utils/territorialControl';
+import { createFxMap } from '../utils/createFxMap';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Crosshair, Swords, Users, Trophy, AlertTriangle, Compass, Heart, Award, 
@@ -426,7 +428,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
   const processedConflictIds = new Set<string>();
 
   // A) Civil War Front (Triggered in civilwar mode or unrecognized civil war countries until resolved)
-  const isCivilWarResolved = finishedFrontIds.has('CIVIL_WAR') || finishedFrontIds.has(`CIVIL_WAR_${country.id}`) || finishedFrontIds.has(country.id);
+  const isCivilWarResolved = country.civilWarResolved === true || finishedFrontIds.has('CIVIL_WAR') || finishedFrontIds.has(`CIVIL_WAR_${country.id}`) || finishedFrontIds.has(country.id);
   const isCivilWarActive = !isCivilWarResolved && (country.countryMode === 'civilwar' || Boolean(INITIAL_CIVIL_WARS[country.id]));
   if (isCivilWarActive) {
     const conflictId = `${country.id}-CIVIL_WAR`;
@@ -744,7 +746,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
+      const map = createFxMap(L, mapContainerRef.current, {
         center: [30, 10],
         zoom: 4,
         zoomControl: false,
@@ -1639,8 +1641,8 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
           
           {/* LEAFLET TACTICAL GIS MAP */}
-          <div className="flex-1 relative h-[50vh] lg:h-full bg-slate-900">
-            <div ref={mapContainerRef} className="w-full h-full" />
+          <div className="flex-1 relative h-[50vh] lg:h-full min-h-[420px] bg-slate-900">
+            <div ref={mapContainerRef} className="absolute inset-0" />
 
             {mapError && (
               <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm p-6 text-center">
@@ -1839,7 +1841,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
 
           </div>
         </div>
-      ) : isCivilWarCountry ? (
+      ) : (isCivilWarCountry && !(currentFront && currentFront.id !== 'CIVIL_WAR')) ? (   // başka bir cephe (ör. Kore) seçiliyse iç savaş haritası değil, o cephe açılır
         <div className="relative flex-1 min-h-0 h-[60vh] lg:h-full flex flex-col overflow-hidden p-2">
           <CivilWarBattleMap
             country={country}
@@ -2002,6 +2004,9 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                 setRegionController(pName, country.id);
               });
               if (onAnnexProvinces) {
+                if ((terms as any).annexedFeatures?.length) {   // ele geçirilen toprak haritada sahibinin rengiyle kalıcı çizilir
+                  registerAnnexation({ ownerId: country.id, ownerName: country.name, color: (country as any).primaryColor || '#16a34a', features: (terms as any).annexedFeatures });
+                }
                 onAnnexProvinces(terms.annexedProvinces, terms.targetCountryId, repAmount);
               }
             }
@@ -2019,6 +2024,7 @@ export const TacticalBattleView: React.FC<TacticalBattleViewProps> = ({
                 suzerainId: country.id,
                 suzerainName: country.name,
                 provinces: bState.provinces,
+                features: (bState as any).features,
                 rulingParty: `${bState.name} Provisional Authority`,
                 leader: `Governor (${country.name})`,
                 ideology: terms.newIdeology || 'Aligned Satellite'

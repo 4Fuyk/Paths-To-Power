@@ -141,6 +141,8 @@ export interface Country {
   parentCountryId?: string; // e.g. 'SY', 'LY', 'SD', 'MM', 'YE', 'CD'
   activeConflictId?: string; // Associated ongoing conflict ID
   countryMode?: CountryMode; // 'electoral' | 'civilwar' | 'hybrid'
+  /** İç savaş kazanılıp anayasal düzen geri gelince true: sonraki isyanlar eski iç savaş sayılmaz. */
+  civilWarResolved?: boolean;
   capitalRegionId?: string; // e.g. 'Tripoli', 'Damascus', 'Khartoum'
   validFrom?: number; // Earliest historical year country existed
   validUntil?: number; // Latest historical year country existed before dissolution/succession
@@ -157,6 +159,8 @@ export interface VassalState {
   rulingParty?: string;
   leader?: string;
   ideology?: string;
+  /** Haritada çizmek için bölge geometrileri (sadeleştirilmiş GeoJSON Feature listesi) */
+  features?: any[];
 }
 
 /**
@@ -192,7 +196,9 @@ export interface PeaceTreatyTerms {
     color: string;
     flag?: string;
     provinces: string[];
+    features?: any[];            // tampon devletin harita şekilleri (PeaceConferenceModal üretir)
   };
+  annexedFeatures?: any[];       // ilhak edilen bölgelerin harita şekilleri
   newGovernmentType?: string;
   newIdeology?: string;
   newReligion?: string;

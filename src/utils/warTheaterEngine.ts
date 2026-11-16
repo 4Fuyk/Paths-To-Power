@@ -928,7 +928,8 @@ export const THEATER_NEIGHBORS: Record<string, string[]> = {
 export function getTheaterRegions(
   countryId: string, 
   enemyCountryId?: string, 
-  customCountry?: Country
+  customCountry?: Country,
+  scenarioYear?: string
 ): {
   conflictName: string;
   center: [number, number];
@@ -960,7 +961,11 @@ export function getTheaterRegions(
   }
 
   // 2. Interstate Theaters (e.g. Korea, Ukraine vs Russia, Turkey vs Greece, etc.)
-  const isKoreanWar = (countryId === 'KR') || 
+  // 1950: Çin/Sovyet tarafı ile BM Komutanlığı tarafı arasındaki her cephe Kore cephesidir
+  const KOR_UN = ['KR', 'US', 'GB', 'TR', 'AU', 'CA'], KOR_COMM = ['KP', 'CN', 'SU'];
+  const isKoreanProxy = scenarioYear === '1950' && Boolean(enemyCountryId) && (
+    (KOR_UN.includes(countryId) && KOR_COMM.includes(enemyCountryId!)) || (KOR_COMM.includes(countryId) && KOR_UN.includes(enemyCountryId!)));
+  const isKoreanWar = isKoreanProxy || (countryId === 'KR') || 
                       (enemyCountryId === 'KP' || enemyCountryId === 'KR') ||
                       (countryId === 'KP') ||
                       (enemyCountryId && ['KR', 'KP'].includes(enemyCountryId));

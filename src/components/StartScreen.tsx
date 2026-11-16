@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useUi } from '../i18n/ui';
 import React, { useEffect, useState } from 'react';
 import { 
   Play, Settings, Globe, Zap, Shield, Flame, X, ChevronRight, 
@@ -106,6 +107,8 @@ function featurePaths(feature: any, stride: number): string[] {
 }
 
 export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: StartScreenProps) {
+  const u = useUi();
+  const [dn, setDn] = useState<boolean>(() => { try { return localStorage.getItem('ptp_daynight') !== '0'; } catch (e) { return true; } });
   const [capitalScene, setCapitalScene] = useState(0);
   const [worldPaths, setWorldPaths] = useState<string[]>(CONTINENTS);
   
@@ -283,7 +286,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
             className="group w-full px-12 py-5 bg-gradient-to-b from-[#dab97c] to-[#b8925a] hover:from-[#e6c78d] hover:to-[#c49f68] text-[#1a1206] font-black rounded-lg shadow-xl shadow-black/40 transition-all text-xl uppercase tracking-widest border border-[#8a6a3a] hover:scale-[1.02] flex items-center justify-center gap-3 cursor-pointer"
           >
             <Play className="w-5 h-5 fill-current" />
-            Play
+            {u('playWord')}
           </button>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -295,7 +298,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
               }`}
             >
               <Settings className="w-4 h-4" />
-              Settings
+              {u('settings')}
             </button>
             <button
               onClick={onLanguages}
@@ -306,7 +309,7 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
               }`}
             >
               <Globe className="w-4 h-4" />
-              Languages
+              {u('languages')}
             </button>
           </div>
         </div>
@@ -703,6 +706,10 @@ export function StartScreen({ darkMode, onPlay, onSettings, onLanguages }: Start
                   >
                     Cancel Setup
                   </button>
+                  <label className={`flex items-center gap-2 text-xs font-semibold cursor-pointer select-none ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    <input type="checkbox" checked={dn} onChange={e => { setDn(e.target.checked); try { localStorage.setItem('ptp_daynight', e.target.checked ? '1' : '0'); } catch (err) {} window.dispatchEvent(new CustomEvent('ptp-daynight', { detail: e.target.checked })); }} />
+                    🌙 {u('dayNightCycle')}
+                  </label>
                   <button
                     type="button"
                     onClick={handleProceedToDifficulty}

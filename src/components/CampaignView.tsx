@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { createFxMap } from '../utils/createFxMap';
 import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import { Country, Region, Party, VoterGroup, SpeechCard, SpeechChoice, ScenarioYear } from '../types';
@@ -1799,7 +1800,7 @@ const getPolygonCenter = (feat: any) => {
         maxBounds: [[-85, -180], [85, 180]],
         worldCopyJump: false,
       };
-      const map = L.map(turkeyMapRef.current, mapOptions);
+      const map = createFxMap(L, turkeyMapRef.current, mapOptions);
 
       const tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 
@@ -2785,12 +2786,7 @@ const getPolygonCenter = (feat: any) => {
           <h2 className="text-xl font-black text-white">Campaign & Operations</h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">Strategize, manage budget, and increase your local support.</p>
         </div>
-        <button
-          onClick={onSpendTurn}
-          className="px-6 py-3 rounded-2xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all uppercase tracking-wide"
-        >
-          Advance Turn ⏩
-        </button>
+        <div className="px-4 py-2 rounded-2xl text-[11px] font-mono font-bold uppercase tracking-wider bg-indigo-600/20 border border-indigo-500/30 text-indigo-300">⏱️ Real-Time</div>
       </div>
       <style>{`
         /* Remove browser default focus outline rectangles on interactive SVG layers in Leaflet */
