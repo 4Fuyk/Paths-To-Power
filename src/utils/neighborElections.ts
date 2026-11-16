@@ -31,6 +31,7 @@ export function neighborElectionsFor(countryId: string): Election2026[] {
 export function resolveElection(e: Election2026): GovChangeEvent {
   let after: GovResult, changed = e.changed, simulated = false;
   if (e.after) after = e.after;
+  else if (!e.simulated || e.simulated.length === 0) { after = { ...e.before, voteShare: null }; changed = false; }   // ne gerçek sonuç ne olasılık var: çökmek yerine 'değişiklik yok' say
   else {
     simulated = true;
     const opts = e.simulated || [];
