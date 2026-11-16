@@ -14,7 +14,7 @@ import { Country, ScenarioYear, PeaceTreatyTerms } from '../types';
 export type { PeaceTreatyTerms };
 import { loadCountryMapData, getFeatureRegionName } from '../data/mapRegistry';
 import { getCountryMilitaryBaselines } from './TacticalBattleView';
-import { setRegionController, getTerritoryControlMap } from '../utils/territorialControl';
+import { setRegionController, getTerritoryControlMap, simplifyFeature } from '../utils/territorialControl';
 import { playSound } from '../lib/sounds';
 
 interface PeaceConferenceModalProps {
@@ -50,6 +50,7 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
 
   // Provinces selection: 'ANNEX' | 'BUFFER' | 'RETAIN'
   const [provinceStatusMap, setProvinceStatusMap] = useState<Record<string, 'ANNEX' | 'BUFFER' | 'RETAIN'>>({});
+  const occupiedRef = useRef<Set<string>>(new Set());   // savaşta zaten ele geçirilmiş bölgeler
   const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
 
   // Buffer State / Vassal State Configuration (Requirement 2)
@@ -105,6 +106,7 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
             const name = getFeatureRegionName(feat, targetCountryId);
             if (name) {
               const currentCtrl = controlMap[name];
+              if (currentCtrl === victorCountry.id) occupiedRef.current.add(name);
               initialMap[name] = (currentCtrl === 'BUFFER_ZONE' || currentCtrl?.startsWith('VASSAL_'))
                 ? 'BUFFER' 
                 : currentCtrl === victorCountry.id 
@@ -192,10 +194,7 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
         }
       }
 
-      // Requirement 2: Every term updates borders immediately on all maps!
-      const newControllerId = next === 'ANNEX' ? victorCountry.id : next === 'BUFFER' ? 'BUFFER_ZONE' : targetCountryId;
-      setRegionController(provName, newControllerId);
-
+      // Seçim yalnızca bu pencerede önizlenir; kalıcı harita yalnızca antlaşma onaylanınca değişir (rastgele bölge kalıntısı olmasın)
       return { ...prev, [provName]: next };
     });
   };
@@ -219,8 +218,12 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
   const demandsCost = useMemo(() => {
     let cost = 0;
     // Territory demands
-    cost += annexedCount * 18;
-    cost += bufferCount * 6;
+    // Savaşta zaten elde tutulan bölgeler ucuz; elde olmayan bölge talep etmek çok daha pahalı
+    for (const [pn, st] of Object.entries(provinceStatusMap)) {
+      const held = occupiedRef.current.has(pn);
+      if (st === 'ANNEX') cost += held ? 10 : 26;
+      else if (st === 'BUFFER') cost += held ? 4 : 11;
+    }
 
     // Reparations
     if (reparationsPreset === 'MODERATE') cost += 10;
@@ -239,7 +242,7 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
     }
 
     return cost;
-  }, [annexedCount, bufferCount, reparationsPreset, confiscateFleet, confiscateTanks, confiscateAircraft, fullDisarmament, selectedIdeology]);
+  }, [provinceStatusMap, annexedCount, bufferCount, reparationsPreset, confiscateFleet, confiscateTanks, confiscateAircraft, fullDisarmament, selectedIdeology]);
 
   const isAcceptedByAI = demandsCost <= effectiveSuperiority;
 
@@ -263,13 +266,15 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
       targetCountryName,
       isUNCompliant,
       annexedProvinces: annexedList,
+      annexedFeatures: ((geoData?.features || []) as any[]).filter(f => annexedList.includes(f._regionName)).map(simplifyFeature).filter(Boolean),
       demilitarizedProvinces: bufferList,
       bufferState: bufferList.length > 0 ? {
         id: `VASSAL_${targetCountryId}_${Date.now().toString(36)}`,
         name: bufferStateName.trim() || `${targetCountryName} Buffer State`,
         color: bufferStateColor || '#f59e0b',
         flag: bufferStateFlag || '🛡️',
-        provinces: bufferList
+        provinces: bufferList,
+        features: ((geoData?.features || []) as any[]).filter(f => bufferList.includes(f._regionName)).map(simplifyFeature).filter(Boolean)
       } : undefined,
       newGovernmentType: selectedGovernment,
       newIdeology: selectedIdeology,
@@ -845,6 +850,12 @@ export const PeaceConferenceModal: React.FC<PeaceConferenceModalProps> = ({
               <span className="text-slate-400">New Regime:</span>
               <strong className="text-indigo-300 truncate max-w-[140px]">{selectedIdeology}</strong>
             </div>
+          </div>
+
+          <div className="hidden md:block max-w-[320px] text-[10px] leading-snug text-slate-400">
+            <div><b className="text-emerald-400">You receive:</b> {annexedCount} province{annexedCount === 1 ? '' : 's'}{annexedCount > 0 ? ` (${Object.entries(provinceStatusMap).filter(([, s]) => s === 'ANNEX').slice(0, 3).map(([n]) => n).join(', ')}${annexedCount > 3 ? '…' : ''})` : ''}</div>
+            <div><b className="text-amber-400">Client state:</b> {bufferCount > 0 ? `${bufferStateName.trim() || `${targetCountryName} Buffer State`} (${bufferCount} province${bufferCount === 1 ? '' : 's'}), ruled as a client of ${victorCountry.name}` : 'none'}</div>
+            <div className="opacity-70">Provinces you already hold cost less. Nothing changes on the map until you ratify.</div>
           </div>
 
           <div className="flex items-center gap-3">

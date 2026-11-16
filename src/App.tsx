@@ -3,6 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useUi } from './i18n/ui';
+import { EventToastStack, NeighborGovPanel, ToastItem, TimeHud } from './components/EventToast';
+import { dayNightPreference } from './utils/createFxMap';
+import { neighborElectionsFor, resolveElection, gameDateOf, GovChangeEvent } from './utils/neighborElections';
+import { KOREA_PVA_ENTRY_DATE_ISO } from './constants/globalWarData';
+import { tickLiveWars } from './utils/liveWar';
+import { startRebellionCivilWar } from './utils/rebellion';
+import { resetTerritorialState } from './utils/territorialControl';
+import { hasNoFreeElections } from './utils/regime';
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, Party, MinisterCandidate, Coalition, GameDifficulty, ScenarioYear, CivilWarFaction, getCountryMode } from './types';
 import { PLAYABLE_COUNTRIES } from './constants/countries';
@@ -325,9 +334,20 @@ export default function App() {
   const [internationalReputation, setInternationalReputation] = useState<number>(80);
 
   // Auto-play time progression & speed controls
-  const [isAutoPlayingTime, setIsAutoPlayingTime] = useState<boolean>(false);
-  const [timeSpeed, setTimeSpeed] = useState<'1x' | '2x' | '5x'>('1x');
-  const [timeAdvanceMode, setTimeAdvanceMode] = useState<'FLOW' | 'MANUAL'>('MANUAL');
+  const [isAutoPlayingTime, setIsAutoPlayingTime] = useState<boolean>(false);   // oyun duraklatılmış başlar: oyuncu başlatır
+  const [timeSpeed, setTimeSpeed] = useState<1 | 2 | 3 | 4 | 5>(3);   // 1: çok yavaş ... 5: çok hızlı (ayarlarla ortak)
+  const [hudDayNight, setHudDayNight] = useState<boolean>(() => dayNightPreference());
+  useEffect(() => {
+    const h = (e: any) => setHudDayNight(!!e.detail);
+    window.addEventListener('ptp-daynight', h);
+    return () => window.removeEventListener('ptp-daynight', h);
+  }, []);
+  useEffect(() => { setEventOpen(false); }, [activeDynamicEvent?.id]);
+  useEffect(() => { setIsAutoPlayingTime(false); }, [selectedCountry?.id, selectedScenario]);   // yeni oyun: zaman durmuş başlar
+  const [eventOpen, setEventOpen] = useState<boolean>(false);   // olay penceresi kendiliğinden açılmaz
+  const lastRebellionMonth = useRef<number>(-100);
+  useEffect(() => { lastRebellionMonth.current = -100; }, [selectedCountry?.id, selectedScenario]);
+  const [timeAdvanceMode, setTimeAdvanceMode] = useState<'FLOW' | 'MANUAL'>('FLOW');   // tur atlama kaldırıldı: yalnızca akış
   const [hasPromptedTimeMode, setHasPromptedTimeMode] = useState<boolean>(false);
   const [showTimeModeModal, setShowTimeModeModal] = useState<boolean>(false);
   const hasTriggeredColonialEvent = useRef<Record<number, boolean>>({});
@@ -468,6 +488,77 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Komşu ülkelerde gerçek seçim günleri: oyun tarihi o güne gelince olay oluşur (2026 senaryosu)
+  const u = useUi();
+  const processedElections = useRef<Set<string>>(new Set());
+  const [neighborEvents, setNeighborEvents] = useState<GovChangeEvent[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  useEffect(() => {
+    processedElections.current = new Set(); setNeighborEvents([]); setToasts([]);
+    if (selectedCountry) resetTerritorialState();   // yeni oyun: eski oyundan kalan bölge kontrolü ve bağlı devletler silinsin
+  }, [selectedCountry?.id, selectedScenario]);
+  useEffect(() => {
+    if (!selectedCountry || !playerParty || selectedScenario !== '2026') return;
+    const today = gameDateOf(2026, isRuling, campaignTurn, rulingMonthsCount).toISOString().slice(0, 10);
+    const due = neighborElectionsFor(selectedCountry.id).filter(e => e.date <= today && !processedElections.current.has(e.id));
+    if (!due.length) return;
+    const evs = due.map(e => { processedElections.current.add(e.id); return resolveElection(e); });
+    setNeighborEvents(prev => [...prev, ...evs]);
+    const items: ToastItem[] = evs.map(ev => ({ key: `${ev.id}_${Date.now()}`, ev }));
+    setToasts(prev => [...prev, ...items]);
+    playSound('battle');
+    items.forEach(it => setTimeout(() => setToasts(prev => prev.filter(x => x.key !== it.key)), 14000));
+    setEventHistory(prev => [
+      ...evs.map(ev => ({
+        id: `nbr_${ev.id}`, timestamp: ev.date, scope: 'GLOBAL' as const,
+        title: `${ev.flag} ${ev.country}: ${ev.changed ? 'New government' : 'Government continues'}`,
+        category: 'Elections', icon: '🗳️', countryName: ev.country,
+        chosenOptionText: `${ev.after.leader} (${ev.after.party})`,
+        outcomeNarrative: `${ev.kind}${ev.note ? ': ' + ev.note : ''}`,
+        consequencesSummary: `Ideology: ${ev.after.ideology}; Vote share: ${ev.after.voteShare != null ? ev.after.voteShare + '%' : 'n/a'}`
+      })),
+      ...prev
+    ]);
+  }, [campaignTurn, rulingMonthsCount, isRuling, selectedCountry?.id, playerParty?.id, selectedScenario]);
+
+  // Canlı savaş haritası: aktif savaşlarda cepheler zaman ilerledikçe kendiliğinden değişir
+  useEffect(() => {
+    if (!selectedCountry || !playerParty || (selectedScenario !== '2026' && selectedScenario !== '1950')) return;
+    const baseYear = selectedScenario === '1950' ? 1950 : 2026;
+    const dateISO = gameDateOf(baseYear, isRuling, campaignTurn, rulingMonthsCount).toISOString().slice(0, 10);
+    const ups = tickLiveWars({ scenario: selectedScenario, playerCountryId: selectedCountry.id, dateISO });
+    if (!ups.length || Math.random() > 0.05) return;   // haritalar her seferinde değişir; bildirim/geçmiş kaydı yalnızca ~%30'unda (olay yağmuru olmasın)
+    const items: ToastItem[] = ups.slice(0, 1).map(u2 => ({ key: `war_${u2.warKey}_${Date.now()}`,
+      custom: { icon: '⚔️', title: u2.title, subtitle: `Front update · ${u2.date}`, body: u2.body } }));
+    setToasts(prev => [...prev, ...items]);
+    items.forEach(it => setTimeout(() => setToasts(prev => prev.filter(x => x.key !== it.key)), 9000));
+    setEventHistory(prev => [...ups.map(u2 => ({
+      id: `war_${u2.warKey}_${u2.date}_${Math.random().toString(36).slice(2, 6)}`, timestamp: u2.date, scope: 'GLOBAL' as const,
+      title: `⚔️ ${u2.title}`, category: 'Military', icon: '⚔️', countryName: u2.title,
+      chosenOptionText: 'Front line shifted', outcomeNarrative: u2.body, consequencesSummary: 'Territorial control updated on war maps'
+    })), ...prev]);
+  }, [campaignTurn, rulingMonthsCount, isRuling, selectedCountry?.id, playerParty?.id, selectedScenario]);
+
+  // 1950: Çin Halk Gönüllüleri 19 Ekim 1950'de Yalu'yu geçip Kore Savaşı'na katılır
+  const pvaEntered = useRef(false);
+  useEffect(() => { pvaEntered.current = false; }, [selectedCountry?.id, selectedScenario]);
+  useEffect(() => {
+    if (selectedScenario !== '1950' || !playerParty || pvaEntered.current) return;
+    const today = gameDateOf(1950, isRuling, campaignTurn, rulingMonthsCount).toISOString().slice(0, 10);
+    if (today < KOREA_PVA_ENTRY_DATE_ISO) return;
+    pvaEntered.current = true;
+    if (selectedCountry?.id === 'CN') {   // Çin oyuncusu: Kore cephesi açılır
+      setDiplomaticRelations(prev => ({ ...prev, KR: { status: 'At War', opinion: 0 }, US: { status: 'At War', opinion: 0 }, GB: { status: 'At War', opinion: 0 } }));
+    }
+    setGlobalWars(prev => prev.map(w => (w.id === 'WAR_KOREA_1950' && !w.belligerentsB.includes('CN'))
+      ? { ...w, belligerentsB: [...w.belligerentsB, 'CN'], namesB: ['DPRK & Chinese People\u2019s Volunteers'] } : w));
+    const item: ToastItem = { key: `pva_${Date.now()}`, custom: { icon: '🇨🇳', title: 'China enters the Korean War',
+      subtitle: 'Korean War · 1950-10-19', body: 'The Chinese People\u2019s Volunteers, under Peng Dehuai, cross the Yalu River and join North Korea against the UN Command.' } };
+    setToasts(prev => [...prev, item]);
+    playSound('battle');
+    setTimeout(() => setToasts(prev => prev.filter(x => x.key !== item.key)), 14000);
+  }, [campaignTurn, rulingMonthsCount, isRuling, selectedScenario, playerParty?.id]);
+
   // Compute realistic historical / modern game date display string
   const getFormattedGameDate = () => {
     const baseYear = parseInt(selectedScenario) || 2026;
@@ -485,22 +576,23 @@ export default function App() {
     }
   };
 
-  // Automated time progression engine
+  // Automated time progression engine (gerçek zamanlı akış)
   useEffect(() => {
     if (!isAutoPlayingTime) return;
-    if (activeScreen !== 'MAIN_DASHBOARD' || currentEvent !== null || showPressConference) {
-      return;
+    if (activeScreen !== 'MAIN_DASHBOARD' || currentEvent !== null || showPressConference
+        || (activeDynamicEvent && eventOpen) || pendingCrisis || confirmModal) {
+      return;   // olay, kriz veya onay penceresi açıkken zaman durur
     }
-    const intervalMs = timeSpeed === '5x' ? 700 : timeSpeed === '2x' ? 1400 : 2200;
+    const intervalMs = ({ 1: 10000, 2: 5000, 3: 3000, 4: 1500, 5: 800 } as const)[timeSpeed];
     const timer = setInterval(() => {
-      if (isRuling) {
+      if (isRuling || isCivilWarMode) {
         handleNextMonth();
       } else {
         handleSpendTurn();
       }
     }, intervalMs);
     return () => clearInterval(timer);
-  }, [isAutoPlayingTime, timeSpeed, activeScreen, currentEvent, showPressConference, isRuling, campaignTurn, rulingMonthsCount, selectedCountry, playerParty]);
+  }, [isAutoPlayingTime, timeSpeed, activeScreen, currentEvent, showPressConference, activeDynamicEvent, eventOpen, pendingCrisis, confirmModal, isRuling, isCivilWarMode, campaignTurn, rulingMonthsCount, selectedCountry, playerParty]);
 
   // Settle country picker
   const handleSelectCountry = (country: Country) => {
@@ -747,6 +839,8 @@ export default function App() {
     setSelectedCountry(updatedCountry);
     setPlayerParty(updatedPlayerParty);
     setIsRuling(true);
+    // Bu iç savaş bitti: sonraki isyanlar eski iç savaş olarak açılmasın
+    setResolvedWarIds(prev => Array.from(new Set([...prev, 'CIVIL_WAR', `CIVIL_WAR_${selectedCountry.id}`, selectedCountry.id])));
     setConfirmModal({
       title: 'CONSTITUTIONAL SOVEREIGNTY RESTORED',
       message: `Strategic victory! By securing overwhelming territorial control over ${selectedCountry.name}, your administration has officially reconstituted constitutional democracy. Armed factions have been dissolved, "${updatedPlayerParty.name}" is registered as the governing political party, and nationwide democratic parliamentary elections are now unlocked!`,
@@ -1005,7 +1099,11 @@ export default function App() {
 
     // Check for Civil War / Revolt Risk Rebellion
     const rebellionRoll = Math.random() * 100;
-    if (civilWarRisk >= 100 || (civilWarRisk >= 40 && rebellionRoll < civilWarRisk)) {
+    // İsyan her ay çıkmasın: en fazla ~%35/ay (risk 100'de), iki isyan arası en az 18 ay, ilk 6 ayda yok, iç savaştayken yok
+    const rebellionChance = Math.max(0, (civilWarRisk - 40) / 60) * 35;
+    const canRebel = !isCivilWarMode && rulingMonthsCount >= 6 && (rulingMonthsCount - lastRebellionMonth.current) >= 18;
+    if (canRebel && (civilWarRisk >= 100 || (civilWarRisk >= 40 && rebellionRoll < rebellionChance))) {
+      lastRebellionMonth.current = rulingMonthsCount;
       // Trigger a dramatic Rebellion / Coup crisis!
       playSound('error');
       setCurrentEvent({
@@ -1025,8 +1123,15 @@ export default function App() {
           {
             text: "Enter Emergency Tactical Battle to defend the capital!",
             effect: () => {
-              setActiveScreen('TACTICAL_BATTLE');
               setCurrentEvent(null);
+              const c = selectedCountry;
+              if (!c) { setActiveScreen('TACTICAL_BATTLE'); return; }
+              // Gerçek bir isyan savaşı kur: bölgeler hükümet ve isyancılar arasında bölünür; eski (çözülmüş) iç savaş kullanılmaz
+              startRebellionCivilWar(c, parseInt(selectedScenario) || 2026).then(() => {
+                setSelectedCountry(prev => prev ? { ...prev, civilWarResolved: false } : prev);
+                setResolvedWarIds(prev => prev.filter(x => x !== 'CIVIL_WAR' && x !== `CIVIL_WAR_${c.id}` && x !== c.id));
+                setActiveScreen('TACTICAL_BATTLE');
+              });
             }
           },
           {
@@ -1223,7 +1328,7 @@ export default function App() {
       if (sitReputation !== 0) setInternationalReputation(prev => Math.min(100, Math.max(0, prev + sitReputation)));
       if (sitConfidence !== 0) setInvestorConfidence(prev => Math.min(100, Math.max(10, prev + sitConfidence)));
       if (sitFreedom !== 0) setFreedomIndex(prev => Math.min(100, Math.max(10, prev + sitFreedom)));
-      if (sitCivilWar !== 0) setCivilWarRisk(prev => Math.min(100, Math.max(0, prev + sitCivilWar)));
+      setCivilWarRisk(prev => Math.min(100, Math.max(0, prev + Math.max(-6, Math.min(2, sitCivilWar)) - (prev > 0 ? 0.5 : 0))));   // aylık artış en fazla +2, doğal sakinleşme -0.5
       if (sitApproval !== 0) adjustPublicApproval(sitApproval);
     }
 
@@ -1242,7 +1347,7 @@ export default function App() {
         (avgPlayerSupport * 0.2)
       )));
 
-      const triggered = evaluateEventTrigger({
+      const triggered = selectedScenario !== '2026' ? null : evaluateEventTrigger({   // olay havuzu moderndir: tarihi senaryolarda kullanılmaz
         isRuling: true,
         currentTurnOrMonth: nextMonths,
         country: selectedCountry,
@@ -1651,7 +1756,7 @@ export default function App() {
           (avgPlayerSupport * 0.2)
         )));
 
-        const triggered = evaluateEventTrigger({
+        const triggered = selectedScenario !== '2026' ? null : evaluateEventTrigger({
           isRuling: false,
           currentTurnOrMonth: next,
           country: selectedCountry,
@@ -1695,6 +1800,9 @@ export default function App() {
           const kw = INITIAL_GLOBAL_WARS.find(w => w.id === 'WAR_KOREA_1950');
           if (kw) {
             setGlobalWars(prev => prev.some(w => w.id === 'WAR_KOREA_1950') ? prev : [...prev, kw]);
+          }
+          if (selectedCountry.id === 'KP') {
+            setDiplomaticRelations(prev => ({ ...prev, KR: { status: 'At War', opinion: 0 }, US: { status: 'At War', opinion: 0 } }));
           }
           if (['KR', 'US', 'GB', 'TR', 'AU', 'CA'].includes(selectedCountry.id)) {
             setDiplomaticRelations(prev => ({
@@ -2159,7 +2267,7 @@ export default function App() {
                 }`}
                 title="Return to Main Menu"
               >
-                <Home className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">Main Menu</span>
+                <Home className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">{u('mainMenu')}</span>
               </button>
             )}
 
@@ -2206,7 +2314,7 @@ export default function App() {
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'
               }`}
             >
-              <Info className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">How to Play</span>
+              <Info className="w-4 h-4 text-indigo-400" /> <span className="hidden sm:inline">{u('howToPlay')}</span>
             </button>
 
             {/* Clear database progress */}
@@ -2273,6 +2381,7 @@ export default function App() {
             scenario={selectedScenario}
             countryIdeologies={customCountryIdeologies}
             countryFreedomScores={customCountryFreedomScores}
+            activeWarIds={globalWars.map(w => w.id)}
           />
         )}
 
@@ -2495,7 +2604,7 @@ export default function App() {
                       <span>{getFormattedGameDate()}</span>
                     </div>
                     <span className="text-[10px] text-slate-500 font-normal px-2 py-0.5 rounded bg-slate-800/40">
-                      {isRuling ? `Month ${rulingMonthsCount + 1}` : `Week ${campaignTurn} / ${selectedCountry.campaignTurns}`}
+                      {isRuling ? `${u('month')} ${rulingMonthsCount + 1}` : `${u('week')} ${campaignTurn} / ${selectedCountry.campaignTurns}`}
                     </span>
                   </div>
 
@@ -2505,21 +2614,8 @@ export default function App() {
                   }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                        {timeAdvanceMode === 'FLOW' ? '⏱️ Auto Flow Time' : '📅 Manual Turn Advance'}
+                        ⏱️ {u('realTimeFlow')}
                       </span>
-                      <button
-                        onClick={() => {
-                          const nextMode = timeAdvanceMode === 'FLOW' ? 'MANUAL' : 'FLOW';
-                          setTimeAdvanceMode(nextMode);
-                          if (nextMode === 'FLOW') setIsAutoPlayingTime(true);
-                          else setIsAutoPlayingTime(false);
-                          playSound('click');
-                        }}
-                        className="text-[9px] font-mono text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
-                        title="You can also adjust this anytime in settings"
-                      >
-                        {timeAdvanceMode === 'FLOW' ? 'Switch to Manual' : 'Switch to Flow'}
-                      </button>
                     </div>
 
                     {/* Controls Row */}
@@ -2538,16 +2634,16 @@ export default function App() {
                           }`}
                         >
                           {isAutoPlayingTime ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                          {isAutoPlayingTime ? 'Pause Time' : 'Start Time Flow'}
+                          {isAutoPlayingTime ? u('pauseTime') : u('startTime')}
                         </button>
 
                         {/* Speed Selector */}
                         <div className={`p-0.5 rounded-lg border flex gap-0.5 ${
                           darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-200 border-slate-300'
                         }`}>
-                          {(['1x', '2x', '5x'] as const).map(spd => (
+                          {([['1x', 3], ['2x', 4], ['5x', 5]] as const).map(([spdLabel, spd]) => (
                             <button
-                              key={spd}
+                              key={spdLabel}
                               onClick={() => { setTimeSpeed(spd); playSound('click'); }}
                               className={`px-1.5 py-0.5 text-[9px] font-mono font-black rounded cursor-pointer transition-all ${
                                 timeSpeed === spd
@@ -2555,7 +2651,7 @@ export default function App() {
                                   : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              {spd}
+                              {spdLabel}
                             </button>
                           ))}
                         </div>
@@ -2590,6 +2686,17 @@ export default function App() {
                       </div>
                     )}
                   </div>
+
+                  {!isRuling && !isCivilWarMode && hasNoFreeElections(selectedCountry) && (
+                    <button
+                      onClick={() => { playSound('click'); setActiveScreen('ELECTION_SIMULATOR'); }}
+                      title={u('uprisingHint')}
+                      className="w-full py-1.5 px-3 rounded-lg text-xs font-black bg-rose-700 hover:bg-rose-600 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Swords className="w-3.5 h-3.5" /> {u('launchUprising')}
+                    </button>
+                  )}
+                  {selectedScenario === '2026' && <NeighborGovPanel events={neighborEvents} darkMode={darkMode} />}
 
                   <button
                     onClick={() => {
@@ -2750,7 +2857,7 @@ export default function App() {
                         }`}
                       >
                         <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span>War Frontline</span>
+                        <span>{u('tabWarFrontline')}</span>
                       </button>
 
                       {/* 2. WARTIME FINANCE */}
@@ -2768,7 +2875,7 @@ export default function App() {
                         }`}
                       >
                         <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span>Finance</span>
+                        <span>{u('tabFinance')}</span>
                       </button>
 
                       {/* 3. WORLD DIPLOMACY */}
@@ -2964,7 +3071,7 @@ export default function App() {
                             }`}
                           >
                             <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                            <span>War Frontline</span>
+                            <span>{u('tabWarFrontline')}</span>
                             {!hasMilitaryAccess ? (
                               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                 PEACE
@@ -3159,7 +3266,7 @@ export default function App() {
                 country={selectedCountry}
                 party={playerParty}
                 onUpdateParty={setPlayerParty}
-                onSpendTurn={handleSpendTurn}
+                onSpendTurn={() => {}}
                 darkMode={darkMode}
                 isJuniorMember={isJuniorMember}
                 onWinLeadership={handleWinLeadership}
@@ -3331,6 +3438,7 @@ export default function App() {
                       const postWarCountry = {
                         ...selectedCountry,
                         countryMode: 'electoral' as const,
+                        civilWarResolved: true,
                         regions: unifiedRegions,
                       };
                       setSelectedCountry(postWarCountry);
@@ -3430,6 +3538,7 @@ export default function App() {
                   const updatedCountry: Country = {
                     ...selectedCountry,
                     countryMode: 'electoral',
+                    civilWarResolved: true,
                     system: 'Constitutional Parliamentary Democracy',
                     rivals: realParties
                   };
@@ -3792,7 +3901,7 @@ export default function App() {
       )}
 
       {/* TIME PROGRESSION MODE SELECTION MODAL */}
-      {showTimeModeModal && (
+      {false && showTimeModeModal && (   // tur atlama kaldırıldı: zaman modu seçimi yok, yalnızca gerçek zamanlı akış
         <div className="fixed inset-0 z-[140] h-full w-full bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className={`w-full max-w-lg rounded-3xl border p-7 flex flex-col gap-5 text-center animate-scale-up shadow-2xl ${
             darkMode ? 'bg-slate-950 border-indigo-500/30' : 'bg-white border-slate-200'
@@ -3903,7 +4012,7 @@ export default function App() {
       {/* Dynamic Local and Global Event Modal & Chronicle */}
       {selectedCountry && playerParty && (
         <EventModal
-          event={activeDynamicEvent}
+          event={eventOpen ? activeDynamicEvent : null}
           onChooseOption={handleResolveDynamicEvent}
           playerReputation={internationalReputation}
           playerParty={playerParty}
@@ -3926,7 +4035,23 @@ export default function App() {
         onToggleMute={handleToggleMute}
         onResetProgress={resetAllProgress}
         initialTab={settingsTab}
+        gameFlowMode="PAUSABLE_REALTIME"
+        onChangeGameFlowMode={() => {}}
+        simulationSpeed={timeSpeed}
+        onChangeSimulationSpeed={(lvl) => setTimeSpeed(lvl)}
       />
+
+      <EventToastStack toasts={toasts} onClose={(k) => setToasts(prev => prev.filter(x => x.key !== k))} darkMode={darkMode}
+        pendingEvent={activeDynamicEvent && !eventOpen ? { title: activeDynamicEvent.title, icon: activeDynamicEvent.icon, onOpen: () => setEventOpen(true) } : null} />
+      {selectedCountry && playerParty && activeScreen !== 'START_SCREEN' && activeScreen !== 'MAP' && activeScreen !== 'PARTY_CREATOR' && (
+        <TimeHud
+          dateLabel={gameDateOf(parseInt(selectedScenario) || 2026, isRuling, campaignTurn, rulingMonthsCount).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          periodLabel={isRuling ? `${u('month')} ${rulingMonthsCount + 1}` : `${u('week')} ${campaignTurn} / ${selectedCountry.campaignTurns}`}
+          playing={isAutoPlayingTime} onToggle={() => setIsAutoPlayingTime(v => !v)}
+          speed={timeSpeed} onSpeed={(lvl) => setTimeSpeed(lvl as 1 | 2 | 3 | 4 | 5)}
+          dayNight={hudDayNight} onDayNight={() => { const v = !hudDayNight; setHudDayNight(v); try { localStorage.setItem('ptp_daynight', v ? '1' : '0'); } catch (e) {} window.dispatchEvent(new CustomEvent('ptp-daynight', { detail: v })); }}
+          darkMode={darkMode} />
+      )}
 
       {/* Footer Copyright */}
       <footer className={`py-4 text-center text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>

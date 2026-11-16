@@ -342,6 +342,9 @@ export const INITIAL_GLOBAL_WARS: GlobalWar[] = [
 ];
 
 export const KOREAN_WAR_TRIGGER_DATE = new Date(1950, 5, 25); // June 25, 1950
+/** Çin Halk Gönüllüleri Yalu Nehri'ni 19 Ekim 1950'de geçti; o güne kadar savaşın tarafı değildi. */
+export const KOREA_PVA_ENTRY_DATE = new Date(1950, 9, 19);
+export const KOREA_PVA_ENTRY_DATE_ISO = '1950-10-19';
 
 /**
  * Returns active global wars matching the specified scenario.
@@ -357,6 +360,16 @@ export function getInitialGlobalWars(scenario: string, currentDate?: Date | stri
       return d >= KOREAN_WAR_TRIGGER_DATE;
     }
     return true;
+  }).map(w => {
+    // PVA 19 Ekim 1950'ye kadar savaşta değil
+    if (w.id === 'WAR_KOREA_1950') {
+      const d = currentDate ? (typeof currentDate === 'string' ? new Date(currentDate) : currentDate) : null;
+      if (d && d < KOREA_PVA_ENTRY_DATE) {
+        return { ...w, belligerentsB: w.belligerentsB.filter(id => id !== 'CN'), namesB: ['DPRK (Korean People\'s Army)'],
+          description: 'North Korea invades the South across the 38th Parallel. Chinese intervention follows on 19 October 1950.' };
+      }
+    }
+    return w;
   });
 }
 

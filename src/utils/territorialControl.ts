@@ -34,6 +34,52 @@ export interface FrontlineBattleResult {
 export const BUFFER_ZONE_ID = 'BUFFER_ZONE';
 const VASSAL_STORAGE_KEY = 'world_political_vassal_states';
 
+const ANNEX_STORAGE_KEY = 'ptp_annexed_territories';
+export interface AnnexedTerritory { ownerId: string; ownerName: string; color: string; features: any[]; }
+
+/** Barışla ele geçirilen (ilhak edilen) toprakların geometrisi: haritada sahibinin rengiyle çizilir. */
+export function getAnnexedTerritories(): AnnexedTerritory[] {
+  try { return JSON.parse(localStorage.getItem(ANNEX_STORAGE_KEY) || '[]'); } catch (e) { return []; }
+}
+export function registerAnnexation(t: AnnexedTerritory): void {
+  try {
+    const all = getAnnexedTerritories();
+    const cur = all.find(a => a.ownerId === t.ownerId);
+    if (cur) { cur.features = [...cur.features, ...t.features]; cur.color = t.color; } else all.push(t);
+    localStorage.setItem(ANNEX_STORAGE_KEY, JSON.stringify(all));
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('vassal_states_updated', { detail: {} }));
+  } catch (e) { /* yoksay */ }
+}
+
+/** Yeni oyun başlarken önceki oyundan kalan bölge kontrolü ve bağlı devletleri temizler. */
+export function resetTerritorialState(): void {
+  try {
+    localStorage.removeItem(ANNEX_STORAGE_KEY);
+    localStorage.removeItem(VASSAL_STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vassal_states_updated', { detail: { allVassals: [] } }));
+    }
+  } catch (e) { /* yoksay */ }
+}
+
+/** Geometriyi küçültür: 2 ondalık, yakın noktaları atar (localStorage'a sığsın) */
+export function simplifyFeature(feat: any): any {
+  const rnd = (r: number[][]) => {
+    const out: number[][] = []; let last: number[] | null = null;
+    for (const [x, y] of r) {
+      const p = [Math.round(x * 100) / 100, Math.round(y * 100) / 100];
+      if (!last || Math.abs(p[0] - last[0]) + Math.abs(p[1] - last[1]) >= 0.04) { out.push(p); last = p; }
+    }
+    return out.length >= 4 ? out : r.slice(0, 4);
+  };
+  const g = feat.geometry;
+  if (!g) return null;
+  const geometry = g.type === 'Polygon' ? { type: 'Polygon', coordinates: g.coordinates.map(rnd) }
+    : g.type === 'MultiPolygon' ? { type: 'MultiPolygon', coordinates: g.coordinates.map((p: number[][][]) => p.map(rnd)) } : g;
+  return { type: 'Feature', properties: { name: feat._regionName || feat.properties?.name || '' }, geometry };
+}
+
 /**
  * Retrieves all registered puppet / buffer vassal states
  */

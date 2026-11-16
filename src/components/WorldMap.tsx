@@ -13,10 +13,31 @@ import {
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon,
-  Calendar, ShieldAlert
+  Calendar, ShieldAlert, Sun, Moon, FastForward
 } from 'lucide-react';
-import { getVassalStates, getVassalStateForRegion } from '../utils/territorialControl';
+import { getVassalStates, getVassalStateForRegion, getTerritoryControlMap, getAnnexedTerritories } from '../utils/territorialControl';
+import { loadWarShapes } from '../utils/warShapes';
+import { getTheaterRegions, PREDEFINED_CIVIL_WAR_THEATERS } from '../utils/warTheaterEngine';
 import L from 'leaflet';
+import { TerrainWaterLayer } from '../utils/mapFxLayer';
+import { DayNightLayer } from '../utils/dayNightLayer';
+
+/** Çok parçalı ülkelerde (ör. ABD, Fransa) en büyük ana kara parçasının sınırlarını verir. */
+function mainLandBounds(feature: any): any {
+  const g = feature?.geometry;
+  if (!g) return null;
+  const polys: number[][][][] = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+  let best: any = null, bestArea = -1;
+  for (const p of polys) {
+    const ring = p[0] || [];
+    if (ring.length < 3) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const [x, y] of ring) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const area = (x1 - x0) * (y1 - y0);
+    if (area > bestArea) { bestArea = area; best = [[y0, x0], [y1, x1]]; }
+  }
+  return best;
+}
 
 interface WorldMapProps {
   completedCountries: string[];
@@ -26,6 +47,8 @@ interface WorldMapProps {
   scenario?: ScenarioYear;
   countryIdeologies?: Record<string, string>;
   countryFreedomScores?: Record<string, number>;
+  /** Aktif küresel savaşların kimlikleri (canlı cephe katmanı için) */
+  activeWarIds?: string[];
 }
 
 const countryCoords: Record<string, [number, number]> = {
@@ -244,6 +267,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   scenario = '2026',
   countryIdeologies = {},
   countryFreedomScores = {},
+  activeWarIds = [],
 }) => {
   const activeScenarioId: ScenarioYear = (scenario as ScenarioYear) || '2026';
   const activeCountries = getPlayableCountriesForScenario(activeScenarioId);
@@ -252,7 +276,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const [mapMode, setMapMode] = useState<MapFilterMode>('POLITICAL');
   const [selectedPreview, setSelectedPreview] = useState<Country | null>(activeCountries[0] || null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [cursorCoords, setCursorCoords] = useState({ lat: 0.0, lng: 0.0 });
+  const coordsRef = useRef<HTMLSpanElement | null>(null);   // fare koordinatı: state değil, doğrudan DOM (render tetiklemez)
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [germanStatesData, setGermanStatesData] = useState<any>(null);
   const [isLoadingGeoJson, setIsLoadingGeoJson] = useState<boolean>(true);
@@ -314,6 +338,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const terrainLayerRef = useRef<L.TileLayer | null>(null);
+  const fxLayerRef = useRef<TerrainWaterLayer | null>(null);
+  const nightLayerRef = useRef<DayNightLayer | null>(null);
+  const [dayNight, setDayNight] = useState<boolean>(() => { try { return localStorage.getItem('ptp_daynight') !== '0'; } catch (e) { return true; } });
+  const [fastTime, setFastTime] = useState(false);
   const oceanLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<any[]>([]);
 
@@ -633,14 +661,31 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     }).addTo(map);
     terrainLayerRef.current = terrain;
 
+    // Yakınlaşınca dalgalanan su ve karadaki dağ/ağaç katmanı
+    fxLayerRef.current = new TerrainWaterLayer({
+      landUrl: '/world_admin0_50m.geojson',
+      darkMode,
+    }).addTo(map);
+
+    // Gece/gündüz: başkentler gece tarafında ışık olarak parlar
+    nightLayerRef.current = new DayNightLayer({
+      enabled: dayNight,
+      lights: Object.values(countryCoords).map((c: any) => [c[1], c[0]] as [number, number]),
+    }).addTo(map);
+
     mapInstanceRef.current = map;
 
     // Capture coordinates under cursor on move over map
+    let coordRaf = 0, lastLL: any = null;
     map.on('mousemove', (e: any) => {
-      const latlng = e.latlng;
-      if (latlng) {
-        setCursorCoords({ lat: latlng.lat, lng: latlng.lng });
-      }
+      lastLL = e.latlng;
+      if (coordRaf) return;                         // kare başına en fazla bir güncelleme
+      coordRaf = requestAnimationFrame(() => {
+        coordRaf = 0;
+        if (!lastLL || !coordsRef.current) return;
+        const { lat, lng } = lastLL;
+        coordsRef.current.textContent = `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(4)}°${lng >= 0 ? 'E' : 'W'}`;
+      });
     });
 
     // Invalidate size to guarantee perfect layout inside container bounds
@@ -651,11 +696,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       mapInstanceRef.current = null;
       tileLayerRef.current = null;
       terrainLayerRef.current = null;
+      fxLayerRef.current = null;
+      nightLayerRef.current = null;
     };
   }, []);
 
   // Update Map Tilings when DarkMode is toggled
   useEffect(() => {
+    fxLayerRef.current?.setDarkMode(darkMode);
     if (tileLayerRef.current) {
       tileLayerRef.current.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}');
     }
@@ -880,7 +928,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         style: (feature) => {
           const featName = String(feature?.properties?.name || feature?.properties?.NAME || '').trim();
           const featId = String(feature?.id || feature?.properties?.id || '').trim();
-          const vassal = getVassalStateForRegion(featName) || getVassalStateForRegion(featId);
+          const vassal = (null as ReturnType<typeof getVassalStateForRegion>);
           if (vassal) {
             return {
               fillColor: vassal.color,
@@ -926,7 +974,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         onEachFeature: (feature, layer) => {
           const featName = String(feature?.properties?.name || feature?.properties?.NAME || '').trim();
           const featId = String(feature?.id || feature?.properties?.id || '').trim();
-          const vassal = getVassalStateForRegion(featName) || getVassalStateForRegion(featId);
+          const vassal = (null as ReturnType<typeof getVassalStateForRegion>);
           if (vassal) {
             const tooltipHtml = `
               <div style="font-family: sans-serif; padding: 4px 6px; min-width: 140px;">
@@ -971,13 +1019,27 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             className: `custom-map-tooltip ${darkMode ? 'dark' : 'light'}`
           });
 
+          // Ülke -> katmanlar önbelleği (hover'da tüm poligonları taramayı önler)
+          const getGroup = (id: string): any[] => {
+            if (!(geoLayer as any).__groups) {
+              const m = new Map<string, any[]>();
+              geoLayer.eachLayer((l: any) => {
+                if (!l.feature) return;
+                const c = getPlayableCountryCode(l.feature);
+                if (c) { if (!m.has(c)) m.set(c, []); m.get(c)!.push(l); }
+              });
+              (geoLayer as any).__groups = m;
+            }
+            return (geoLayer as any).__groups.get(id) || [];
+          };
+
           // Interactive overrides on mouse hover
           layer.on('mouseover', () => {
             const scheme = countryColors[countryId] || { default: '#6366f1', completed: '#4338ca', selected: '#4f46e5' };
             const hoverFill = scheme.selected;
 
-            geoLayer.eachLayer((l: any) => {
-              if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+            getGroup(countryId).forEach((l: any) => {
+              {
                 const sub = Boolean(l.feature.properties?.isSubDivision);
                 l.setStyle({
                   fillColor: hoverFill,
@@ -997,8 +1059,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             const baseFill = isNowSelected ? scheme.selected : (isNowCompleted ? scheme.completed : scheme.default);
             const baseOpacity = isNowSelected ? 0.95 : (isNowCompleted ? 0.90 : 0.84);
 
-            geoLayer.eachLayer((l: any) => {
-              if (l.feature && getPlayableCountryCode(l.feature) === countryId) {
+            getGroup(countryId).forEach((l: any) => {
+              {
                 const sub = Boolean(l.feature.properties?.isSubDivision);
                 const baseBorder = sub ? baseFill : (isNowSelected ? '#ffffff' : baseFill);
                 const baseWeight = sub ? 0.1 : (isNowSelected ? 2.2 : 0.6);
@@ -1015,13 +1077,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
           layer.on('click', () => {
             setSelectedPreview(country);
-            const coords = countryCoords[countryId];
-            if (coords) {
-              mapInstanceRef.current?.setView(coords, Math.max(mapInstanceRef.current.getZoom(), 4), {
-                animate: true,
-                duration: 0.6
-              });
-            }
+            focusCountry((layer as any).feature, countryCoords[countryId]);
           });
         }
       });
@@ -1094,16 +1150,114 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         circlePr.on('click', () => {
           setSelectedPreview(country);
-          mapInstanceRef.current?.setView(coords, Math.max(mapInstanceRef.current.getZoom(), 4), {
-            animate: true,
-            duration: 0.6
-          });
+          focusCountry(null, coords);
         });
 
         markersRef.current.push(circlePr);
       });
     }
   }, [completedCountries, selectedPreview, darkMode, geoJsonData, scenario, activeCountries]);
+
+  // Bağlı (tampon) devletler: kendi bölge geometrisiyle, ülke adından bağımsız çizilir
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    let group: L.LayerGroup | null = null;
+    const draw = () => {
+      if (group) { group.remove(); group = null; }
+      const g = L.layerGroup();
+      for (const a of getAnnexedTerritories()) {
+        for (const f of (a.features || [])) {
+          L.geoJSON(f, { style: { color: '#ffffff', weight: 2, fillColor: a.color, fillOpacity: 0.7 } })
+            .bindTooltip(`${a.ownerName} (annexed territory)`, { sticky: true }).addTo(g);
+        }
+      }
+      for (const v of getVassalStates()) {
+        for (const f of (v.features || [])) {
+          L.geoJSON(f, { style: { color: v.color, weight: 2.5, fillColor: v.color, fillOpacity: 0.55, dashArray: '5 3' } })
+            .bindTooltip(`${v.flag || '🛡️'} ${v.name} (client state of ${v.suzerainName})`, { sticky: true }).addTo(g);
+        }
+      }
+      g.addTo(map); group = g;
+    };
+    draw();
+    window.addEventListener('vassal_states_updated', draw);
+    return () => { window.removeEventListener('vassal_states_updated', draw); if (group) group.remove(); };
+  }, []);
+
+  // Canlı cephe katmanı: aktif savaşların bölgeleri, kontrol değiştikçe haritada anında renk değiştirir
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    let group: L.LayerGroup | null = null;
+    let shapes: Record<string, any> = {};
+    const SIDE: Record<string, string> = { RU: '#dc2626', UA: '#2563eb', KP: '#dc2626', KR: '#2563eb' };
+    const draw = () => {
+      if (group) { group.remove(); group = null; }
+      const g = L.layerGroup();
+      const ctl = getTerritoryControlMap();
+      const add = (regions: any[], color: (id: string) => string, sideName: (id: string) => string, title: string) => {
+        for (const r of regions) {
+          if (!r.polygon) continue;
+          const owner = ctl[r.id] || r.controllerId || r.originalOwnerId;
+          const c = color(owner);
+          const sty = { color: '#ffffff', weight: 1.6, opacity: 0.9, fillColor: c, fillOpacity: 0.6 };
+          const shape = shapes[r.id];
+          (shape ? L.geoJSON(shape, { style: sty }) : L.polygon(r.polygon, sty))
+            .bindTooltip(`<b>${r.name}</b><br/>${title}<br/>Held by: ${sideName(owner)}`, { sticky: true }).addTo(g);
+        }
+      };
+      if (activeScenarioId === '2026') {
+        add(getTheaterRegions('UA', 'RU').regions, id => SIDE[id] || '#94a3b8', id => (id === 'RU' ? 'Russia' : id === 'UA' ? 'Ukraine' : id), 'Russia-Ukraine front');
+        for (const cid of ['SD', 'MM', 'YE', 'LY']) {
+          const th: any = (PREDEFINED_CIVIL_WAR_THEATERS as any)[cid];
+          if (!th) continue;
+          const f = (id: string) => th.factions.find((x: any) => x.id === id);
+          add(th.regions, id => f(id)?.color || '#94a3b8', id => f(id)?.name || id, th.conflictName);
+        }
+      }
+      if (activeScenarioId === '1950' && activeWarIds.includes('WAR_KOREA_1950')) {
+        add(getTheaterRegions('KR', 'KP').regions, id => SIDE[id] || '#94a3b8', id => (id === 'KP' ? 'North Korea' : id === 'KR' ? 'South Korea' : id), 'Korean War front');
+      }
+      g.addTo(map); group = g;
+    };
+    draw();
+    // gerçek il şekillerini yükle, hazır olunca yeniden çiz
+    const all: any[] = [];
+    if (activeScenarioId === '2026') {
+      all.push(...getTheaterRegions('UA', 'RU').regions);
+      for (const cid of ['SD', 'MM', 'YE', 'LY']) { const th: any = (PREDEFINED_CIVIL_WAR_THEATERS as any)[cid]; if (th) all.push(...th.regions); }
+    }
+    if (activeScenarioId === '1950') all.push(...getTheaterRegions('KR', 'KP').regions);
+    loadWarShapes(all).then(s => { shapes = s; draw(); }).catch(() => {});
+    window.addEventListener('territory_control_updated', draw);
+    return () => { window.removeEventListener('territory_control_updated', draw); if (group) group.remove(); };
+  }, [activeScenarioId, activeWarIds.join(',')]);
+
+  useEffect(() => {
+    const h = (e: any) => setDayNight(!!e.detail);
+    window.addEventListener('ptp-daynight', h);
+    return () => window.removeEventListener('ptp-daynight', h);
+  }, []);
+
+  // Gece/gündüz açma-kapama ve hızlı zaman
+  useEffect(() => {
+    nightLayerRef.current?.setEnabled(dayNight);
+    window.dispatchEvent(new CustomEvent('ptp-daynight', { detail: dayNight }));   // diğer harita ekranları da güncellensin
+    try { localStorage.setItem('ptp_daynight', dayNight ? '1' : '0'); } catch (e) {}
+  }, [dayNight]);
+  useEffect(() => { nightLayerRef.current?.setSpeed(fastTime ? 1800 : 1); }, [fastTime]);
+
+  // Bir ülkeye tıklanınca/seçilince haritayı o ülkeye götür
+  const focusCountry = (feature: any, coords?: [number, number]) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    try {
+      const b = mainLandBounds(feature);
+      if (b) { map.flyToBounds(b, { padding: [80, 80], maxZoom: 7, duration: 1.0 }); return; }
+    } catch (e) {}
+    if (coords) map.flyTo(coords, Math.max(map.getZoom(), 5), { duration: 1.0 });
+  };
 
   // Zoom / Offset Navigation Triggers
   const handleZoomIn = () => {
@@ -1137,12 +1291,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const handleSelectFromList = (country: Country) => {
     setSelectedPreview(country);
     const coords = countryCoords[country.id];
-    if (coords && mapInstanceRef.current) {
-      mapInstanceRef.current.setView(coords, 4, {
-        animate: true,
-        duration: 0.6
-      });
-    }
+    if (coords) focusCountry(null, coords);
   };
 
   return (
@@ -1321,9 +1470,33 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             >
               <RotateCcw className="w-4 h-4" />
             </button>
+            <button
+              onClick={() => setDayNight(v => !v)}
+              className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
+                dayNight
+                  ? (darkMode ? 'bg-indigo-900 border-indigo-700 text-yellow-300' : 'bg-indigo-100 border-indigo-300 text-indigo-700')
+                  : (darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800')
+              }`}
+              title={dayNight ? 'Gece/Gündüz: Açık (kapatmak için tıkla)' : 'Gece/Gündüz: Kapalı (açmak için tıkla)'}
+            >
+              {dayNight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            {dayNight && (
+              <button
+                onClick={() => setFastTime(v => !v)}
+                className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
+                  fastTime
+                    ? (darkMode ? 'bg-amber-900 border-amber-700 text-amber-200' : 'bg-amber-100 border-amber-300 text-amber-700')
+                    : (darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800')
+                }`}
+                title={fastTime ? 'Hızlı zaman: Açık (gerçek zamana dön)' : 'Hızlı zaman: Kapalı (günü hızlandır)'}
+              >
+                <FastForward className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Premium Minimal Control Key Guide */}
-            <div className="hidden md:flex flex-col gap-0.5 px-2 py-1.5 bg-black/75 backdrop-blur-xs text-[8px] text-slate-300 font-mono tracking-wide rounded-lg border border-white/5 shadow-md mt-1 shrink-0 select-none">
+            <div className="hidden md:flex flex-col gap-0.5 px-2 py-1.5 bg-black/75 text-[8px] text-slate-300 font-mono tracking-wide rounded-lg border border-white/5 shadow-md mt-1 shrink-0 select-none">
               <div className="font-extrabold text-indigo-400 mb-0.5 border-b border-white/5 pb-0.5 text-center">KEYBOARD GUIDE</div>
               <div className="flex justify-between gap-3"><span>Keyboard Pan:</span><span className="font-bold text-yellow-400">W, A, S, D</span></div>
               <div className="flex justify-between gap-3"><span>Arrow Keys:</span><span className="font-bold text-yellow-400">↑, ↓, ←, →</span></div>
@@ -1343,14 +1516,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           {/* Coordinates HUD */}
           <div className="absolute bottom-4 right-4 z-30 pointer-events-none px-3 py-1 bg-black/60 rounded text-[10px] text-slate-300 font-mono flex items-center gap-1.5">
             <Compass className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-            <span>
-              {Math.abs(cursorCoords.lat).toFixed(4)}°{cursorCoords.lat >= 0 ? 'N' : 'S'},{' '}
-              {Math.abs(cursorCoords.lng).toFixed(4)}°{cursorCoords.lng >= 0 ? 'E' : 'W'}
-            </span>
+            <span ref={coordsRef}>0.0000°N, 0.0000°E</span>
           </div>
 
           {/* Map Status Overlay Indicator */}
-          <div className="absolute bottom-12 left-4 right-4 z-30 flex justify-between items-center bg-black/60 backdrop-blur-xs p-2 rounded-xl border border-white/5 pointer-events-none text-[10px] text-slate-300 font-mono tracking-wide">
+          <div className="absolute bottom-12 left-4 right-4 z-30 flex justify-between items-center bg-black/60 p-2 rounded-xl border border-white/5 pointer-events-none text-[10px] text-slate-300 font-mono tracking-wide">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
               <span>GLOBAL POLITICAL SYSTEM ONLINE</span>

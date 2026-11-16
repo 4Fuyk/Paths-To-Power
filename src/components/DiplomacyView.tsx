@@ -1,3 +1,4 @@
+import { createFxMap } from '../utils/createFxMap';
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, Party, ScenarioYear } from '../types';
 import { countryColors, PLAYABLE_COUNTRIES } from '../constants/countries';
@@ -842,6 +843,12 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
       return Object.values(diplomaticRelations || {}).some(r => (r as any)?.status === 'At War');
     }
     if (scenario === '2026') {
+      // Aktif çatışmalar: Rusya-Ukrayna, Gazze, Sudan, Myanmar, Yemen, Etiyopya, Somali, DRC, Sahel, Haiti, Libya, Suriye, Afganistan-Pakistan, Mozambik, Nijerya...
+      const WAR3 = ['UKR', 'RUS', 'ISR', 'PSE', 'SDN', 'SSD', 'MMR', 'YEM', 'ETH', 'SOM', 'COD', 'MLI', 'BFA', 'NER', 'HTI', 'LBY', 'SYR', 'AFG', 'PAK', 'MOZ', 'NGA', 'CMR', 'LBN'];
+      const WAR2 = ['UA', 'RU', 'IL', 'PS', 'SD', 'SS', 'MM', 'YE', 'ET', 'SO', 'CD', 'ML', 'BF', 'NE', 'HT', 'LY', 'SY', 'AF', 'PK', 'MZ', 'NG', 'CM', 'LB'];
+      if (WAR3.includes(id3) || (cid && WAR2.includes(cid))) return true;
+    }
+    if (scenario === '2026') {
       return ['UKR', 'RUS', 'ISR', 'PSE'].includes(id3) || cid === 'RU' || cid === 'UA' || cid === 'IL' || cid === 'PS' || name.includes('PALESTINE') || name.includes('ISRAEL') || name.includes('UKRAINE') || name.includes('RUSSIA');
     }
     if (scenario === '1950') {
@@ -940,6 +947,9 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
               interactive: true
             };
           }
+          if (mapMode === 'WARS') {   // WARS modunda yalnızca savaştaki ülkeler görünür
+            return { fillColor: darkMode ? '#0f172a' : '#e2e8f0', color: darkMode ? '#1e293b' : '#cbd5e1', weight: 0.4, opacity: 0.35, fillOpacity: 0.06, interactive: false };
+          }
           
           return {
             fillColor: fillColor,
@@ -962,7 +972,7 @@ export const DiplomacyView: React.FC<DiplomacyViewProps> = ({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
+      const map = createFxMap(L, mapContainerRef.current, {
         center: [15.0, 0.0],
         zoom: 1.8,
         minZoom: 2.0,

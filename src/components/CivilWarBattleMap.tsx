@@ -479,6 +479,7 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const panOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const panMovedRef = useRef<boolean>(false);   // sürükleme sonrası bölge tıklaması sayılmasın
 
   // Resolve ISO3 for country
   const ISO2_TO_ISO3: Record<string, string> = useMemo(() => ({
@@ -617,6 +618,7 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
   const [selectedFrontForPanel, setSelectedFrontForPanel] = useState<ActiveFront | null>(null);
   const [frontGenerals, setFrontGenerals] = useState<Record<string, WarGeneral>>({});
   const [frontCasualties, setFrontCasualties] = useState<Record<string, number>>({});
+  const [hudCollapsed, setHudCollapsed] = useState<boolean>(true);   // kayıp tablosu varsayılan kapalı: haritanın sağını kapatmasın
 
   // Requirement 5: Air Force Squadrons & Missions
   const [airSuperiority, setAirSuperiority] = useState<number>(75);
@@ -1965,6 +1967,7 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
       if (isPanning) {
         const dx = coords.clientX - panStartRef.current.x;
         const dy = coords.clientY - panStartRef.current.y;
+        if (Math.abs(dx) + Math.abs(dy) > 4) panMovedRef.current = true;
         setPan({
           x: panOriginRef.current.x + dx,
           y: panOriginRef.current.y + dy
@@ -2001,6 +2004,15 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
         currentY: mapCoords.y
       });
       return;
+    }
+
+    // Sol/orta tuşla boş alanda sürükle = haritayı kaydır
+    if ((e.button === 0 && (e.target === svgRef.current || (e.target as Element).tagName === 'svg')) || e.button === 1) {
+      e.preventDefault();
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      panOriginRef.current = pan;
+      panMovedRef.current = false;
+      setIsPanning(true);
     }
 
     // Left-click on empty map space = deselect
@@ -3205,15 +3217,15 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
       </div>
 
       {/* 2. TOP-RIGHT CASUALTIES PANEL (Requirement 5) */}
-      <div className="absolute top-4 right-4 z-20 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-3.5 shadow-2xl min-w-[280px] max-w-xs pointer-events-auto max-h-[85vh] overflow-y-auto">
+      <div className={`absolute top-4 right-4 z-20 bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 shadow-2xl min-w-[220px] max-w-[260px] pointer-events-auto ${hudCollapsed ? 'max-h-11 overflow-hidden' : 'max-h-[55vh] overflow-y-auto'}`}>
         <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Swords className="w-3.5 h-3.5 text-rose-500" />
             <span>Casualties & Forces</span>
           </div>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-800 text-slate-300">
-            LIVE WAR HUD
-          </span>
+          <button onClick={() => setHudCollapsed(v => !v)} className="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            {hudCollapsed ? 'EXPAND' : 'COLLAPSE'}
+          </button>
         </div>
 
         {/* Foreign Expeditionary Battalions (Requirement 2) */}
@@ -3439,6 +3451,13 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                   className="transition-all duration-200 cursor-pointer"
                   onPointerDown={(e) => {
                     e.stopPropagation();
+                    // Birim seçili değilken (veya orta tuş) bölge üstünde de sürükleyerek kaydır
+                    if (e.button === 1 || (e.button === 0 && !selectedDivisionId && !isMissileTargeting)) {
+                      panStartRef.current = { x: e.clientX, y: e.clientY };
+                      panOriginRef.current = pan;
+                      panMovedRef.current = false;
+                      setIsPanning(true);
+                    }
                     if (e.button === 2) {
                       e.preventDefault();
                       const mapCoords = getMapCoordinates(e);
@@ -3459,6 +3478,7 @@ export const CivilWarBattleMap: React.FC<CivilWarBattleMapProps> = ({
                     if (hoveredRegionName === rawName) setHoveredRegionName(null);
                   }}
                   onClick={() => {
+                    if (panMovedRef.current) { panMovedRef.current = false; return; }   // sürükleme tıklama değildir
                     handleRegionClick(rawName);
                   }}
                 />

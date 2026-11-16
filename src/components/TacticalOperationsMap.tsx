@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { createFxMap } from '../utils/createFxMap';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -350,7 +351,7 @@ export const TacticalOperationsMap: React.FC<TacticalOperationsMapProps> = ({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const map = L.map(mapRef.current, {
+    const map = createFxMap(L, mapRef.current, {
       center: [30, 15],
       zoom: 2,
       minZoom: 1.8,
