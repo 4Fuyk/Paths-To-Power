@@ -26,14 +26,14 @@ export const ELECTIONS_2026: Election2026[] = [
   {
     id: 'PT_PRES_2026', iso: 'PT', country: 'Portugal', flag: '🇵🇹', date: '2026-02-08', kind: 'Presidential runoff',
     before: { party: 'Independent (PSD background)', leader: 'Marcelo Rebelo de Sousa', ideology: 'Centre-right' },
-    after: { party: 'Socialist Party (PS)', leader: 'António José Seguro', ideology: 'Centre-left / Social democracy', voteShare: 66.7 },
-    changed: true, note: 'Seguro beat the far-right Chega candidate André Ventura in the runoff with about 66.7% (sources differ slightly: 66.6-66.8%).'
+    after: { party: 'Socialist Party (PS)', leader: 'António José Seguro', ideology: 'Centre-left / Social democracy', voteShare: 66.84 },
+    changed: true, note: 'Seguro beat the far-right Chega candidate André Ventura in the runoff with 66.84% (final result).'
   },
   {
     id: 'DK_GEN_2026', iso: 'DK', country: 'Denmark', flag: '🇩🇰', date: '2026-03-24', kind: 'Snap general election',
     before: { party: 'Social Democrats-led coalition', leader: 'Mette Frederiksen', ideology: 'Centre-left (left-right coalition)' },
-    after: { party: 'Social Democrats', leader: 'Mette Frederiksen', ideology: 'Centre-left / Social democracy', voteShare: 21.9 },
-    changed: false, note: 'Inconclusive result: worst Social Democrat result since 1903; coalition talks under way.'
+    after: { party: 'Social Democrats', leader: 'Mette Frederiksen', ideology: 'Centre-left / Social democracy', voteShare: 21.8 },
+    changed: false, note: 'Worst Social Democrat result since 1903, no bloc majority; after 69 days of talks Frederiksen formed a centre-left minority government (Social Democrats, Social Liberals, Green Left, Moderates) on 1 June.'
   },
   {
     id: 'HU_GEN_2026', iso: 'HU', country: 'Hungary', flag: '🇭🇺', date: '2026-04-12', kind: 'Parliamentary election',
@@ -68,8 +68,8 @@ export const ELECTIONS_2026: Election2026[] = [
   {
     id: 'SE_GEN_2026', iso: 'SE', country: 'Sweden', flag: '🇸🇪', date: '2026-09-13', kind: 'General election',
     before: { party: 'Moderate Party-led government', leader: 'Ulf Kristersson', ideology: 'Liberal conservatism / Centre-right' },
-    after: { party: 'Social Democrats', leader: 'Magdalena Andersson', ideology: 'Centre-left / Social democracy', voteShare: 28.1 },
-    changed: true, note: 'The centre-left opposition won 176 of 349 seats; Kristersson announced his resignation.'
+    after: { party: 'Social Democrats', leader: 'Magdalena Andersson', ideology: 'Centre-left / Social democracy', voteShare: 28.02 },
+    changed: true, note: 'The centre-left opposition won 176 of 349 seats in the final count; Kristersson announced his resignation.'
   },
   {
     id: 'BR_R1_2026', iso: 'BR', country: 'Brazil', flag: '🇧🇷', date: '2026-10-04', kind: 'Presidential first round',
