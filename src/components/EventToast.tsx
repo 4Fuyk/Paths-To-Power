@@ -52,7 +52,7 @@ export const EventToastStack: React.FC<{ toasts: ToastItem[]; onClose: (key: str
               <div lang="en" className="opacity-70 text-[10px] font-mono uppercase">{ev.kind} · {ev.date}</div>
               <div><span className="opacity-60">{u('leader')}:</span> <b>{ev.after.leader}</b> ({ev.after.party})</div>
               <div><span className="opacity-60">{u('ideology')}:</span> <b>{ev.after.ideology}</b></div>
-              <div><span className="opacity-60">{u('voteShare')}:</span> <b>{ev.after.voteShare != null ? `${ev.after.voteShare.toFixed(1)}%` : u('noData')}</b></div>
+              <div><span className="opacity-60">{u('voteShare')}:</span> <b>{ev.after.voteShare != null ? `${+ev.after.voteShare.toFixed(2)}%` : u('noData')}</b></div>
               {ev.note && <div className="opacity-70 text-[11px] leading-snug border-t border-white/10 pt-1.5">{ev.note}</div>}
             </div>
           )}
@@ -73,7 +73,7 @@ export const NeighborGovPanel: React.FC<{ events: GovChangeEvent[]; darkMode: bo
         <div key={ev.id} className={`text-[10px] leading-tight p-1.5 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-white border border-slate-200'}`}>
           <div className="font-black">{ev.flag} {ev.country} <span className="font-mono font-normal opacity-60">{ev.date}</span></div>
           <div>{ev.after.leader} · {ev.after.party}</div>
-          <div className="opacity-70">{ev.after.ideology} · {ev.after.voteShare != null ? `${ev.after.voteShare.toFixed(1)}%` : u('noData')}</div>
+          <div className="opacity-70">{ev.after.ideology} · {ev.after.voteShare != null ? `${+ev.after.voteShare.toFixed(2)}%` : u('noData')}</div>
         </div>
       ))}
     </div>

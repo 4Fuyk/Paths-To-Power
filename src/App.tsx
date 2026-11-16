@@ -521,7 +521,7 @@ export default function App() {
         category: 'Elections', icon: '🗳️', countryName: ev.country,
         chosenOptionText: `${ev.after.leader} (${ev.after.party})`,
         outcomeNarrative: `${ev.kind}${ev.note ? ': ' + ev.note : ''}`,
-        consequencesSummary: `Ideology: ${ev.after.ideology}; Vote share: ${ev.after.voteShare != null ? ev.after.voteShare + '%' : 'n/a'}`
+        consequencesSummary: `Ideology: ${ev.after.ideology}; Vote share: ${ev.after.voteShare != null ? +ev.after.voteShare.toFixed(2) + '%' : 'n/a'}`
       })),
       ...prev
     ]);
