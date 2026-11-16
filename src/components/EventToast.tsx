@@ -48,6 +48,7 @@ export const EventToastStack: React.FC<{ toasts: ToastItem[]; onClose: (key: str
               <div className="font-black text-sm">
                 {ev.flag} {ev.country}: {ev.changed ? u('newGovernment') : u('governmentContinues')}
                 {ev.simulated && <span className="ml-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400">{u('simulatedTag')}</span>}
+                {!ev.simulated && ev.resultStatus === 'unverified' && <span title={u('unverifiedHint')} className="ml-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">{u('unverifiedTag')}</span>}
               </div>
               <div lang="en" className="opacity-70 text-[10px] font-mono uppercase">{ev.kind} · {ev.date}</div>
               <div><span className="opacity-60">{u('leader')}:</span> <b>{ev.after.leader}</b> ({ev.after.party})</div>
