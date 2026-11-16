@@ -533,7 +533,10 @@ export default function App() {
     const baseYear = selectedScenario === '1950' ? 1950 : 2026;
     const dateISO = gameDateOf(baseYear, isRuling, campaignTurn, rulingMonthsCount).toISOString().slice(0, 10);
     const ups = tickLiveWars({ scenario: selectedScenario, playerCountryId: selectedCountry.id, dateISO });
-    if (!ups.length || Math.random() > 0.05) return;   // haritalar her seferinde değişir; bildirim/geçmiş kaydı yalnızca ~%30'unda (olay yağmuru olmasın)
+    // Haritalar her tikte değişir; bildirim ve geçmiş kaydı yalnızca %5 olasılıkla yapılır (olay yağmuru olmasın).
+    // Ölçüm: 3x hızda ortalama ~1-1,5 dakikada bir cephe bildirimi (2026: ~68 sn, 1950: ~101 sn).
+    const WAR_NOTIFY_CHANCE = 0.05;
+    if (!ups.length || Math.random() > WAR_NOTIFY_CHANCE) return;
     const items: ToastItem[] = ups.slice(0, 1).map(u2 => ({ key: `war_${u2.warKey}_${Date.now()}`,
       custom: { icon: '⚔️', title: u2.title, subtitle: `Front update · ${u2.date}`, body: u2.body } }));
     setToasts(prev => [...prev, ...items]);
