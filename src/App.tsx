@@ -9,7 +9,7 @@ import { dayNightPreference } from './utils/createFxMap';
 import { neighborElectionsFor, resolveElection, gameDateOf, GovChangeEvent } from './utils/neighborElections';
 import { KOREA_PVA_ENTRY_DATE_ISO } from './constants/globalWarData';
 import { tickLiveWars } from './utils/liveWar';
-import { startRebellionCivilWar } from './utils/rebellion';
+import { startRebellionCivilWar, clearRebellionCivilWars } from './utils/rebellion';
 import { resetTerritorialState } from './utils/territorialControl';
 import { hasNoFreeElections } from './utils/regime';
 import React, { useState, useEffect, useRef } from 'react';
@@ -501,7 +501,7 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   useEffect(() => {
     processedElections.current = new Set(); setNeighborEvents([]); setToasts([]);
-    if (selectedCountry) resetTerritorialState();   // yeni oyun: eski oyundan kalan bölge kontrolü ve bağlı devletler silinsin
+    if (selectedCountry) { resetTerritorialState(); clearRebellionCivilWars(); }   // yeni oyun: eski oyundan kalan bölge kontrolü, bağlı devletler ve isyan savaşı tanımları silinsin
   }, [selectedCountry?.id, selectedScenario]);
   useEffect(() => {
     if (!selectedCountry || !playerParty || selectedScenario !== '2026') return;
