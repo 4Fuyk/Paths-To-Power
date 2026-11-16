@@ -13,7 +13,7 @@ import {
   Globe, Trophy, Users, Landmark, Vote, ArrowRight, HelpCircle, 
   RotateCcw, ZoomIn, ZoomOut, Search, Compass, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Map as MapIcon,
-  Calendar, ShieldAlert, Sun, Moon, FastForward
+  Calendar, ShieldAlert, Sun, Moon
 } from 'lucide-react';
 import { getVassalStates, getVassalStateForRegion, getTerritoryControlMap, getAnnexedTerritories } from '../utils/territorialControl';
 import { loadWarShapes } from '../utils/warShapes';
@@ -341,7 +341,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const fxLayerRef = useRef<TerrainWaterLayer | null>(null);
   const nightLayerRef = useRef<DayNightLayer | null>(null);
   const [dayNight, setDayNight] = useState<boolean>(() => { try { return localStorage.getItem('ptp_daynight') !== '0'; } catch (e) { return true; } });
-  const [fastTime, setFastTime] = useState(false);
   const oceanLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<any[]>([]);
 
@@ -1240,13 +1239,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
     return () => window.removeEventListener('ptp-daynight', h);
   }, []);
 
-  // Gece/gündüz açma-kapama ve hızlı zaman
+  // Gece/gündüz açma-kapama (hız, oyun hızından gelir: bkz. App.tsx)
   useEffect(() => {
     nightLayerRef.current?.setEnabled(dayNight);
     window.dispatchEvent(new CustomEvent('ptp-daynight', { detail: dayNight }));   // diğer harita ekranları da güncellensin
     try { localStorage.setItem('ptp_daynight', dayNight ? '1' : '0'); } catch (e) {}
   }, [dayNight]);
-  useEffect(() => { nightLayerRef.current?.setSpeed(fastTime ? 1800 : 1); }, [fastTime]);
 
   // Bir ülkeye tıklanınca/seçilince haritayı o ülkeye götür
   const focusCountry = (feature: any, coords?: [number, number]) => {
@@ -1481,19 +1479,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({
             >
               {dayNight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
-            {dayNight && (
-              <button
-                onClick={() => setFastTime(v => !v)}
-                className={`p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-center hover:scale-105 shadow-md ${
-                  fastTime
-                    ? (darkMode ? 'bg-amber-900 border-amber-700 text-amber-200' : 'bg-amber-100 border-amber-300 text-amber-700')
-                    : (darkMode ? 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800')
-                }`}
-                title={fastTime ? 'Hızlı zaman: Açık (gerçek zamana dön)' : 'Hızlı zaman: Kapalı (günü hızlandır)'}
-              >
-                <FastForward className="w-4 h-4" />
-              </button>
-            )}
 
             {/* Premium Minimal Control Key Guide */}
             <div className="hidden md:flex flex-col gap-0.5 px-2 py-1.5 bg-black/75 text-[8px] text-slate-300 font-mono tracking-wide rounded-lg border border-white/5 shadow-md mt-1 shrink-0 select-none">

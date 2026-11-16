@@ -8,7 +8,7 @@ import { fxRegister, fxPerf, bindZoomAnim } from './fxScheduler';
 
 export interface DayNightOptions {
   enabled?: boolean;
-  /** Zaman hızı: 1 = gerçek zaman, 1800 = ~48 saniyede bir gün */
+  /** Zaman hızı: 1 = gerçek zaman. Oyunda hız, oyun hızından gelir (bkz. App.tsx); örn. 2880 = 30 saniyede bir gün */
   speed?: number;
   /** Gecenin en koyu opaklığı (0..1) */
   maxDark?: number;
@@ -46,6 +46,8 @@ export class DayNightLayer extends L.Layer {
   private glow = document.createElement('canvas');
   private unreg: (() => void) | null = null; private unzoom: (() => void) | null = null; private frame = 0; private lastKey = ''; private shown = false;
   private sim0 = Date.now(); private real0 = performance.now();
+  /** Oyun hızına bağlı gece/gündüz hızı: App 'ptp-daynight-speed' olayıyla saniyede kaç simülasyon-saniyesi aktığını bildirir (0 = durdu). */
+  private onSpeed = (e: Event) => this.setSpeed(Number((e as CustomEvent).detail) || 0);
 
   constructor(options: DayNightOptions = {}) {
     super();
@@ -75,11 +77,14 @@ export class DayNightLayer extends L.Layer {
     this.cv.style.position = 'absolute'; this.cv.style.pointerEvents = 'none';
     this.cv.className = 'leaflet-zoom-animated';
     pane.appendChild(this.cv); this.cx = this.cv.getContext('2d')!;
+    const initial = (window as any).__ptpDnSpeed;                 // katman sonradan eklenirse mevcut oyun hızını al
+    if (typeof initial === 'number') this.setSpeed(initial);
+    window.addEventListener('ptp-daynight-speed', this.onSpeed);
     this.unzoom = bindZoomAnim(L, map, () => [this.cv]);
     this.unreg = fxRegister(this.tick);
     return this;
   }
-  onRemove(): this { this.unreg?.(); this.unzoom?.(); this.cv?.remove(); this.cv = null; this.map = null; return this; }
+  onRemove(): this { window.removeEventListener('ptp-daynight-speed', this.onSpeed); this.unreg?.(); this.unzoom?.(); this.cv?.remove(); this.cv = null; this.map = null; return this; }
 
   private tick = () => {
     const map = this.map, cv = this.cv;

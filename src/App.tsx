@@ -191,7 +191,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS' | 'FACTION_SELECT'>('START_SCREEN');
+  const [activeScreen, setActiveScreen] = useState<'START_SCREEN' | 'MAP' | 'PARTY_CREATOR' | 'MAIN_DASHBOARD' | 'ELECTION_SIMULATOR' | 'PARTY_CONGRESS' | 'FACTION_SELECT' | 'TACTICAL_BATTLE'>('START_SCREEN');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'settings' | 'languages'>('settings');
   const [gameDifficulty, setGameDifficulty] = useState<GameDifficulty>('NORMAL');
@@ -344,6 +344,12 @@ export default function App() {
   }, []);
   useEffect(() => { setEventOpen(false); }, [activeDynamicEvent?.id]);
   useEffect(() => { setIsAutoPlayingTime(false); }, [selectedCountry?.id, selectedScenario]);   // yeni oyun: zaman durmuş başlar
+  // Gece/gündüz hızı oyun hızına bağlıdır (saniyede simülasyon-saniyesi): oyun durunca gün/gece de durur; tüm haritalar bu olayı dinler
+  useEffect(() => {
+    const v = isAutoPlayingTime ? ({ 1: 1440, 2: 2160, 3: 2880, 4: 5760, 5: 10800 } as const)[timeSpeed] : 0;
+    (window as any).__ptpDnSpeed = v;
+    window.dispatchEvent(new CustomEvent('ptp-daynight-speed', { detail: v }));
+  }, [isAutoPlayingTime, timeSpeed]);
   const [eventOpen, setEventOpen] = useState<boolean>(false);   // olay penceresi kendiliğinden açılmaz
   const lastRebellionMonth = useRef<number>(-100);
   useEffect(() => { lastRebellionMonth.current = -100; }, [selectedCountry?.id, selectedScenario]);

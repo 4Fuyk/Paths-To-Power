@@ -196,7 +196,9 @@ export interface PeaceTreatyTerms {
     color: string;
     flag?: string;
     provinces: string[];
+    features?: any[];            // tampon devletin harita şekilleri (PeaceConferenceModal üretir)
   };
+  annexedFeatures?: any[];       // ilhak edilen bölgelerin harita şekilleri
   newGovernmentType?: string;
   newIdeology?: string;
   newReligion?: string;
